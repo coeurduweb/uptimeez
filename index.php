@@ -329,6 +329,30 @@ function handle_post(): ?array
                 ? ['ok', 'Réglages enregistrés.' . ($newPass !== '' ? ' Nouveau mot de passe actif.' : '')]
                 : ['bad', 'Impossible d\'écrire config.php (droits en écriture ?).'];
 
+        // ---- Rapport mensuel automatique ---------------------------------
+        case 'save_autoreport':
+            Config::save(['report' => [
+                'enabled'     => isset($_POST['report_enabled']),
+                'day'         => max(1, min(28, (int)($_POST['report_day'] ?? 1))),
+                'subject'     => str_cut(trim((string)($_POST['report_subject'] ?? '')), 180),
+                'fallback_to' => str_cut(trim((string)($_POST['report_fallback'] ?? '')), 400),
+            ]]);
+            return ['ok', t('Envoi automatique enregistré.')];
+
+        case 'save_site_report':
+            $sid = (int)($_POST['site_id'] ?? 0);
+            if (!Db::one('SELECT id FROM sites WHERE id = ?', [$sid])) return ['bad', t('Site inconnu')];
+            Db::update('sites', [
+                'report_to'      => str_cut(trim((string)($_POST['report_to'] ?? '')), 400) ?: null,
+                'report_enabled' => isset($_POST['site_report_enabled']) ? 1 : 0,
+            ], 'id = :__i', ['__i' => $sid]);
+            return ['ok', t('Destinataires enregistrés.')];
+
+        case 'send_site_report':
+            $sid = (int)($_POST['site_id'] ?? 0);
+            $r   = Uptimer\Report::sendFor($sid);
+            return [$r['ok'] ? 'ok' : 'bad', $r['info']];
+
         case 'test_notify':
             $ch  = (string)($_POST['channel'] ?? '');
             $res = Notifier::test($ch);

@@ -140,6 +140,14 @@ final class Db
             group_name {$str(120)} DEFAULT NULL,
             expect_string {$str(255)} DEFAULT NULL,
             notes {$txt},
+
+            /* Rapport mensuel : destinataires du client, et trace du dernier
+               envoi pour ne jamais l'expédier deux fois le même mois. */
+            report_enabled {$bool} NOT NULL DEFAULT 0,
+            report_to {$str(500)} DEFAULT NULL,
+            report_sent_key {$str(10)} DEFAULT NULL,
+            report_sent_at {$ts} DEFAULT NULL,
+
             created_at {$ts} NOT NULL
         ){$eng}";
 

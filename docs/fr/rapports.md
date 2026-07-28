@@ -33,6 +33,52 @@ agrégats journaliers, conservés indéfiniment : un rapport à un an reste donc
 
 ---
 
+## Le rapport mensuel qui part tout seul
+
+Une agence qui envoie chaque mois un état de disponibilité à ses clients transforme
+un travail invisible en travail visible. C'est ce qui permet de facturer la
+surveillance au lieu de l'offrir.
+
+**Rapport → Envoi automatique du rapport.** Trois réglages et c'est fait :
+
+| Réglage | Ce qu'il fait |
+|---|---|
+| Envoyer automatiquement | Demande que le canal e-mail soit configuré et testé |
+| Jour du mois | Le 1er par défaut. Un jour au-delà du 28 retombe sur le dernier jour d'un mois plus court |
+| Objet du message | `{site}`, `{month}` et `{app}` sont remplacés |
+| Destinataires par défaut | Utilisés pour les sites sans destinataire propre. Vide pour n'envoyer qu'aux clients nommés |
+
+Puis, dans le même panneau, une ligne par site : les destinataires, un interrupteur,
+la date du dernier envoi, et un bouton **Envoyer maintenant** qui n'attend pas la
+date programmée.
+
+**Chaque client reçoit ses sites, et rien d'autre.** Les destinataires se règlent par
+site : un client ne voit jamais les chiffres d'un autre.
+
+**L'envoi part une fois par mois, pas une fois par jour.** Il est marqué par une clé
+de mois, donc la passe de cron qui tourne chaque minute ne peut pas produire de
+doublon. Et un envoi qui échoue, parce que le serveur de messagerie était
+momentanément indisponible, ne consomme pas le mois : il sera retenté le lendemain.
+
+**Ce que contient le courrier.** Le chiffre de disponibilité et l'indisponibilité
+cumulée, le temps de réponse et son p95, une bande jour par jour, une ligne par page
+surveillée, la liste des interruptions avec cause et durée, et un avertissement si une
+mise en page a dérivé.
+
+Le courrier est composé pour des clients de messagerie et non pour un navigateur :
+tableaux et styles en ligne, aucune feuille externe, aucune image distante, aucun SVG.
+La comparaison visuelle d'une mise en page cassée reste sur le rapport en ligne, vers
+lequel le courrier renvoie quand une page d'état publique est activée. Uptimer ne met
+jamais dans la boîte d'un client un lien qui demande le mot de passe de l'agence.
+
+Forcer un envoi à la main :
+
+```bash
+php cron.php --report      # envoie tous les rapports dus, tout de suite
+```
+
+---
+
 ## La page d'état publique
 
 **Réglages → Jeton de la page d'état publique.** Renseignez une chaîne aléatoire ; la page devient accessible à :

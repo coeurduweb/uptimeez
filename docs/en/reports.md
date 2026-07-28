@@ -32,6 +32,51 @@ purged.
 
 ---
 
+## The monthly report that sends itself
+
+An agency that e-mails each client a monthly availability statement turns invisible
+work into visible work. That is what lets you charge for monitoring instead of
+throwing it in.
+
+**Report → Automatic report sending.** Three settings and you are done:
+
+| Setting | What it does |
+|---|---|
+| Send automatically | Requires the e-mail channel to be configured and tested |
+| Day of the month | 1 by default. A day past the 28th falls back to the last day of a shorter month |
+| Message subject | `{site}`, `{month}` and `{app}` are replaced |
+| Default recipients | Used for sites with no recipient of their own. Leave empty to send only to clients you named |
+
+Then, in the same panel, one line per site: the recipients, an on/off switch, when the
+last report went out, and a **Send now** button that does not wait for the scheduled
+date.
+
+**Each client gets their own sites, and nothing else.** Recipients are set per site,
+so a client never sees another client's figures.
+
+**It goes out once a month, not once a day.** The send is stamped with a month key,
+so the cron pass that runs every minute cannot produce a duplicate. And a send that
+fails, because the mail server was momentarily unavailable, does not consume the
+month: it will be retried the next day.
+
+**What the e-mail contains.** The availability figure and the cumulative downtime,
+the response time and its p95, a day-by-day strip, one line per monitored page, the
+list of outages with cause and duration, and a warning if a page layout has drifted.
+
+The e-mail is built for mail clients, not for a browser: tables and inline styles,
+no external stylesheet, no remote image, no SVG. The visual comparison of a broken
+layout stays on the online report, which the e-mail links to when a public status
+page is enabled. Uptimer never puts a link requiring the agency password into a
+client's inbox.
+
+Forcing a run by hand:
+
+```bash
+php cron.php --report      # sends every report that is due, right now
+```
+
+---
+
 ## The public status page
 
 **Settings → Public status page token.** Enter a random string; the page becomes available at:

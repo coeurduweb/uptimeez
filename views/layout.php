@@ -111,7 +111,8 @@ $uiMode  = Ui::mode();
         <label class="sr-only" for="lang-pick"><?= te('Langue') ?></label>
         <select id="lang-pick" name="lang" onchange="this.form.submit()" title="<?= te('Langue') ?>">
           <?php foreach (I18n::available() as $code => $native): ?>
-            <option value="<?= e($code) ?>"<?= $code === $lang ? ' selected' : '' ?>><?= e($native) ?></option>
+            <option value="<?= e($code) ?>"<?= $code === $lang ? ' selected' : '' ?>>
+              <?= e(I18n::flag($code)) ?> <?= e($native) ?></option>
           <?php endforeach; ?>
         </select>
         <noscript><button class="btn btn-sm" type="submit">OK</button></noscript>
@@ -132,7 +133,8 @@ $uiMode  = Ui::mode();
   <label class="sr-only" for="lang-pick-2"><?= te('Langue') ?></label>
   <select id="lang-pick-2" name="lang" onchange="this.form.submit()">
     <?php foreach (I18n::available() as $code => $native): ?>
-      <option value="<?= e($code) ?>"<?= $code === $lang ? ' selected' : '' ?>><?= e($native) ?></option>
+      <option value="<?= e($code) ?>"<?= $code === $lang ? ' selected' : '' ?>>
+        <?= e(I18n::flag($code)) ?> <?= e($native) ?></option>
     <?php endforeach; ?>
   </select>
   <noscript><button class="btn btn-sm" type="submit">OK</button></noscript>

@@ -5,10 +5,14 @@
  * Volontairement sobre : un client n'a pas besoin de nos réglages, il veut savoir
  * si son site a été disponible, combien de temps il ne l'a pas été, et pourquoi.
  */
+use Uptimer\Auth;
+use Uptimer\Config;
 use Uptimer\Db;
 use Uptimer\Notify\Notifier;
 use Uptimer\Stats;
 use Uptimer\Ui;
+
+$csrf = Auth::csrf();
 
 $sites = Db::all('SELECT s.id, s.name, s.domain FROM sites s
                   WHERE EXISTS (SELECT 1 FROM monitors m WHERE m.site_id = s.id)
@@ -205,3 +209,105 @@ $mons = $site ? Db::all('SELECT * FROM monitors WHERE site_id = ? ORDER BY role 
   a[href]::after { content: ""; }
 }
 </style>
+
+<!-- ============ ENVOI AUTOMATIQUE (jamais imprimé) ============ -->
+<section class="no-print mt-lg">
+  <?= Ui::accOpen('autoreport', 'bell', t('Envoi automatique du rapport'),
+        Config::get('report.enabled', false)
+          ? t('actif, le {day} de chaque mois', ['day' => (int)Config::get('report.day', 1)])
+          : t('inactif'),
+        false, Config::get('report.enabled', false) ? 'none' : 'none') ?>
+  <?= Ui::accBody() ?>
+    <p class="small soft prose"><?= te('Chaque client reçoit le rapport de ses sites, et rien d\'autre. L\'envoi part une fois par mois sur le mois écoulé : un cron qui tourne toutes les minutes n\'expédie rien de plus.') ?></p>
+
+    <form method="post" class="row" data-dirty-watch>
+      <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
+      <input type="hidden" name="action" value="save_autoreport">
+      <label class="switchrow" style="flex:1 1 260px">
+        <input type="checkbox" name="report_enabled" <?= Config::get('report.enabled', false) ? 'checked' : '' ?>>
+        <span class="sw-text"><span class="sw-title"><?= te('Envoyer le rapport automatiquement') ?></span>
+          <span class="hint"><?= te('Demande que le canal e-mail soit configuré et testé.') ?></span></span>
+      </label>
+      <div class="field" style="flex:0 0 130px">
+        <label for="rday"><?= te('Jour du mois') ?></label>
+        <input id="rday" type="number" name="report_day" min="1" max="28"
+               value="<?= (int)Config::get('report.day', 1) ?>">
+      </div>
+      <div class="field" style="flex:1 1 320px">
+        <label for="rsubj"><?= te('Objet du message') ?><?= hint('Trois variables sont remplacées : {site}, {month} et {app}.') ?></label>
+        <input id="rsubj" type="text" name="report_subject"
+               value="<?= e((string)Config::get('report.subject', '')) ?>"
+               placeholder="<?= te('Disponibilité de {site} : {month}') ?>">
+      </div>
+      <div class="field" style="flex:1 1 320px">
+        <label for="rfb"><?= te('Destinataires par défaut') ?><?= hint('Utilisés pour les sites qui n\'ont pas de destinataire propre. Laissez vide pour n\'envoyer qu\'aux clients explicitement renseignés.') ?></label>
+        <input id="rfb" type="text" name="report_fallback"
+               value="<?= e((string)Config::get('report.fallback_to', '')) ?>"
+               placeholder="<?= te('vous@agence.fr, astreinte@agence.fr') ?>" spellcheck="false">
+      </div>
+      <div class="savebar" data-savebar hidden>
+        <span class="sb-note"><?= Ui::icon('info', 15) ?> <?= te('Modifications non enregistrées') ?></span>
+        <span class="grow"></span>
+        <button type="button" class="btn btn-sm" data-reset-form><?= te('Annuler') ?></button>
+        <button class="btn btn-primary btn-sm"><?= te('Enregistrer') ?></button>
+      </div>
+      <div class="row mt" data-static-save style="flex:1 1 100%">
+        <button class="btn btn-primary"><?= te('Enregistrer les réglages') ?></button>
+      </div>
+    </form>
+
+    <?php
+    $allSites = Db::all('SELECT s.*, (SELECT COUNT(*) FROM monitors m WHERE m.site_id = s.id) AS n
+                         FROM sites s ORDER BY s.name ASC');
+    if ($allSites): ?>
+      <div class="table-scroll mt"><table class="tbl">
+        <thead><tr>
+          <th><?= te('Site') ?></th><th><?= te('Destinataires') ?></th>
+          <th class="num"><?= te('Envoi') ?></th><th class="num"><?= te('Dernier envoi') ?></th><th></th>
+        </tr></thead>
+        <tbody>
+        <?php foreach ($allSites as $st): ?>
+          <tr>
+            <td><strong><?= e((string)$st['name']) ?></strong>
+              <div class="tiny muted"><?= e((string)$st['domain']) ?> ·
+                <?= tne((int)$st['n'], 'une sonde', '{n} sondes') ?></div></td>
+            <td>
+              <form method="post" class="row tight">
+                <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
+                <input type="hidden" name="action" value="save_site_report">
+                <input type="hidden" name="site_id" value="<?= (int)$st['id'] ?>">
+                <input type="text" name="report_to" style="min-width:220px"
+                       value="<?= e((string)($st['report_to'] ?? '')) ?>"
+                       placeholder="<?= te('client@exemple.fr') ?>" spellcheck="false"
+                       aria-label="<?= te('Destinataires') ?>">
+                <label class="switchrow tight">
+                  <input type="checkbox" name="site_report_enabled"
+                         <?= (int)($st['report_enabled'] ?? 0) === 1 ? 'checked' : '' ?>>
+                  <span class="sw-text"><span class="sw-title tiny"><?= te('Actif') ?></span></span>
+                </label>
+                <button class="btn btn-sm"><?= te('Enregistrer') ?></button>
+              </form>
+            </td>
+            <td class="num small">
+              <?= (int)($st['report_enabled'] ?? 0) === 1
+                    ? Ui::badge(t('programmé'), 'ok') : Ui::badge(t('désactivé'), 'neutral') ?>
+            </td>
+            <td class="num small nowrap"><?= $st['report_sent_at']
+                  ? e(Notifier::when((string)$st['report_sent_at'])) : '—' ?></td>
+            <td class="num">
+              <form method="post">
+                <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
+                <input type="hidden" name="action" value="send_site_report">
+                <input type="hidden" name="site_id" value="<?= (int)$st['id'] ?>">
+                <button class="btn btn-sm btn-ghost nowrap"
+                        title="<?= te('Envoie immédiatement le rapport du mois écoulé, sans attendre la date programmée.') ?>">
+                  <?= Ui::icon('bell', 14) ?> <?= te('Envoyer maintenant') ?></button>
+              </form>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table></div>
+    <?php endif; ?>
+  <?= Ui::accClose() ?>
+</section>

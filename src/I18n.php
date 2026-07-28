@@ -18,19 +18,27 @@ final class I18n
 {
     /**
      * Les dix langues les plus parlées au monde (nombre total de locuteurs).
-     * code => [nom anglais, nom dans la langue, sens d'écriture, drapeau/étiquette courte]
+     * code => [nom anglais, nom dans la langue, sens d'écriture, étiquette courte, drapeau]
+     *
+     * Le drapeau est une aide au repérage, pas une vérité : une langue n'est pas
+     * un pays. L'espagnol se parle surtout hors d'Espagne, l'arabe dans vingt
+     * pays, l'anglais partout. On retient donc le drapeau le plus reconnaissable
+     * pour trouver sa ligne vite, et le nom de la langue reste ce qui compte.
+     *
+     * C'est la seule exception assumée à la règle « aucun emoji dans
+     * l'interface » : ici l'emoji identifie plus vite que n'importe quelle icône.
      */
     public const LANGS = [
-        'en' => ['English',    'English',   'ltr', 'EN'],
-        'zh' => ['Chinese',    '中文',       'ltr', '中文'],
-        'hi' => ['Hindi',      'हिन्दी',      'ltr', 'हिन्दी'],
-        'es' => ['Spanish',    'Español',   'ltr', 'ES'],
-        'ar' => ['Arabic',     'العربية',    'rtl', 'ع'],
-        'fr' => ['French',     'Français',  'ltr', 'FR'],
-        'bn' => ['Bengali',    'বাংলা',      'ltr', 'বাং'],
-        'pt' => ['Portuguese', 'Português', 'ltr', 'PT'],
-        'ru' => ['Russian',    'Русский',   'ltr', 'RU'],
-        'ur' => ['Urdu',       'اردو',       'rtl', 'اردو'],
+        'en' => ['English',    'English',   'ltr', 'EN',   '🇬🇧'],
+        'zh' => ['Chinese',    '中文',       'ltr', '中文', '🇨🇳'],
+        'hi' => ['Hindi',      'हिन्दी',      'ltr', 'हिन्दी', '🇮🇳'],
+        'es' => ['Spanish',    'Español',   'ltr', 'ES',   '🇪🇸'],
+        'ar' => ['Arabic',     'العربية',    'rtl', 'ع',    '🇸🇦'],
+        'fr' => ['French',     'Français',  'ltr', 'FR',   '🇫🇷'],
+        'bn' => ['Bengali',    'বাংলা',      'ltr', 'বাং',  '🇧🇩'],
+        'pt' => ['Portuguese', 'Português', 'ltr', 'PT',   '🇵🇹'],
+        'ru' => ['Russian',    'Русский',   'ltr', 'RU',   '🇷🇺'],
+        'ur' => ['Urdu',       'اردو',       'rtl', 'اردو', '🇵🇰'],
     ];
 
     public const DEFAULT = 'en';
@@ -161,7 +169,7 @@ final class I18n
         return $n === 1 ? 0 : min(1, $forms - 1);
     }
 
-    /** Liste des langues proposées, dans l'ordre d'affichage. */
+    /** Liste des langues proposées : code => nom dans la langue. */
     public static function available(): array
     {
         $out = [];
@@ -169,6 +177,12 @@ final class I18n
             $out[$code] = $meta[1];
         }
         return $out;
+    }
+
+    /** Drapeau d'aide au repérage. Voir la note sur LANGS. */
+    public static function flag(string $lang): string
+    {
+        return self::LANGS[$lang][4] ?? '';
     }
 
     public static function missing(): array

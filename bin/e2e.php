@@ -581,6 +581,51 @@ $r = $req('/index.php?p=report&range=365d');
 ok('rapport sur un an', $r['code'] === 200 && $noPhpError($r));
 
 // =========================================================================
+title('Rapport mensuel automatique');
+// =========================================================================
+$r = $req('/index.php?p=report&ui=expert');
+ok('panneau d\'envoi automatique présent', $has($r, 'save_autoreport') && $has($r, 'Jour du mois'));
+ok('la liste des sites propose des destinataires', $has($r, 'save_site_report'));
+
+// Enregistrement des réglages généraux.
+$r = $req('/index.php?p=report', ['csrf' => $tok, 'action' => 'save_autoreport',
+    'report_enabled' => '1', 'report_day' => '3',
+    'report_subject' => 'Suivi {site} - {month}', 'report_fallback' => 'agence@exemple.fr']);
+ok('réglages d\'envoi enregistrés', $has($r, 'enregistr') || $r['code'] < 400);
+
+// Destinataires d'un site, puis envoi à la demande. Le canal e-mail est
+// désactivé sur cette instance : l'échec doit être explicite, pas silencieux.
+$sid = (int)$val('SELECT id FROM sites ORDER BY id LIMIT 1');
+$r = $req('/index.php?p=report', ['csrf' => $tok, 'action' => 'save_site_report',
+    'site_id' => (string)$sid, 'report_to' => 'client@exemple.fr', 'site_report_enabled' => '1']);
+$saved = (string)$val('SELECT report_to FROM sites WHERE id = ?', [$sid]);
+ok('destinataires du site enregistrés', $saved === 'client@exemple.fr', $saved);
+ok('envoi activé pour le site', (int)$val('SELECT report_enabled FROM sites WHERE id = ?', [$sid]) === 1);
+
+$r = $req('/index.php?p=report', ['csrf' => $tok, 'action' => 'send_site_report',
+    'site_id' => (string)$sid]);
+ok('envoi à la demande : réponse explicite',
+   $has($r, 'canal e-mail') || $has($r, 'esure') || $has($r, 'destinataire'), 'HTTP ' . $r['code']);
+ok('un envoi en échec ne marque pas le mois',
+   $val('SELECT report_sent_key FROM sites WHERE id = ?', [$sid]) === null);
+
+// Une adresse invalide ne doit pas être retenue comme destinataire.
+$req('/index.php?p=report', ['csrf' => $tok, 'action' => 'save_site_report',
+    'site_id' => (string)$sid, 'report_to' => 'pas-une-adresse', 'site_report_enabled' => '1']);
+$r = $req('/index.php?p=report', ['csrf' => $tok, 'action' => 'send_site_report', 'site_id' => (string)$sid]);
+ok('adresse invalide : envoi refusé', $has($r, 'destinataire') || $has($r, 'ecipient'));
+
+// Un site inconnu ne provoque pas d'erreur serveur.
+$r = $req('/index.php?p=report', ['csrf' => $tok, 'action' => 'send_site_report', 'site_id' => '999999']);
+ok('site inconnu : refus propre', $r['code'] < 500 && $noPhpError($r));
+
+// Le cron sait forcer les envois sans casser.
+$out = shell_exec('UPTIMER_CONFIG=' . escapeshellarg($cfgFile) . ' '
+    . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --report 2>&1');
+ok('cron --report s\'exécute sans erreur',
+   $out !== null && !preg_match('~Fatal|Uncaught~', (string)$out), str_cut(trim((string)$out), 60));
+
+// =========================================================================
 title('Réglages');
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
     'app_name' => 'Uptimer E2E renommée', 'base_url' => $APP, 'timezone' => 'Europe/Paris',

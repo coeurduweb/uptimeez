@@ -44,6 +44,54 @@ final class Mail
         return ['ok' => (bool)$ok, 'info' => $ok ? 'mail() acceptée par le serveur' : 'mail() a échoué (voir logs PHP)'];
     }
 
+    /**
+     * Envoi d'un document : sujet libre, destinataires libres, corps déjà composé.
+     *
+     * Un rapport mensuel n'est pas une alerte : pas de préfixe [ALERTE], pas de
+     * priorité haute, et des destinataires qui sont ceux du client concerné et
+     * non ceux de l'astreinte.
+     */
+    public static function sendDocument(array $to, string $subject, string $html, string $text): array
+    {
+        $recipients = [];
+        foreach ($to as $mail) {
+            $mail = trim((string)$mail);
+            if ($mail !== '' && filter_var($mail, FILTER_VALIDATE_EMAIL)) $recipients[$mail] = true;
+        }
+        $recipients = array_keys($recipients);
+        if (!$recipients) return ['ok' => false, 'info' => t('Aucun destinataire configuré')];
+        if (!Config::get('notify.mail.enabled', false)) {
+            return ['ok' => false, 'info' => t('Le canal e-mail est désactivé dans les réglages.')];
+        }
+
+        $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimer@' . (gethostname() ?: 'localhost'));
+        $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimer'));
+
+        if (Config::get('notify.mail.transport', 'mail') === 'smtp') {
+            return Smtp::send($recipients, $from, $fromName, $subject, $html, $text);
+        }
+
+        $boundary = 'uptimer' . bin2hex(random_bytes(8));
+        $headers  = [
+            'From: ' . self::encodeName($fromName) . ' <' . $from . '>',
+            'Reply-To: ' . $from,
+            'MIME-Version: 1.0',
+            'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
+            'X-Mailer: Uptimer',
+            'Auto-Submitted: auto-generated',
+        ];
+        $msg = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
+             . $text . "\r\n\r\n"
+             . "--{$boundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
+             . $html . "\r\n\r\n--{$boundary}--";
+        $ok = @mail(implode(',', $recipients), '=?UTF-8?B?' . base64_encode($subject) . '?=',
+                    $msg, implode("\r\n", $headers), '-f' . $from);
+        return ['ok' => (bool)$ok,
+                'info' => $ok ? t('Rapport remis au serveur de messagerie ({n} destinataire(s))',
+                                  ['n' => count($recipients)])
+                              : t('mail() a échoué (voir les journaux PHP)')];
+    }
+
     private static function subjectPrefix(string $sev): string
     {
         return match ($sev) {

@@ -207,6 +207,7 @@ répond encore 200, la couche données est tombée et vous le savez en une véri
 | **Tâches cron silencieuses** | Un battement dead-man : votre script de sauvegarde appelle Uptimer quand il a fini. **C'est le silence qui déclenche l'alerte**, la seule panne qu'aucune requête HTTP ne peut voir. |
 | **Temps de réponse** | DNS, connexion, TLS, premier octet, total. Seuil calé sur le p95 mesuré du site, pas sur un chiffre rond. |
 | **Pannes groupées** | Dix sites qui tombent sur une même IP, c'est *un* incident, pas dix alertes. |
+| **Rapport client mensuel** | Disponibilité, interruptions, temps de réponse, envoyés à chaque client le jour choisi. Une fois par mois, jamais deux, retenté le lendemain si le serveur de messagerie était en panne. |
 
 ---
 
@@ -233,6 +234,7 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Pannes regroupées par IP de serveur | ✅ automatique | ❌ | ❌ | ⚠️ à configurer | ❌ | ✅ topologie | ⚠️ à configurer |
 | Battement dead-man (cron, sauvegardes) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
 | Rapport client imprimable | ✅ intégré | ⚠️ formules payantes | ❌ | ✅ | ❌ | ⚠️ | ✅ |
+| Rapport mensuel envoyé à chaque client | ✅ | ❌ | ❌ | ⚠️ interne seulement | ❌ | ❌ | ⚠️ interne seulement |
 | Page d'état publique | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 | Interrupteur interface simple / complète | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Langues de l'interface | **10 + RTL** | 1 | 1 | plusieurs | nombreuses (communauté) | plusieurs | plusieurs |

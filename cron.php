@@ -98,6 +98,14 @@ try {
         if ($n) $out('  ' . $n . ' agrégat(s) d\'uptime recalculé(s)');
     }
 
+    // --- 3 bis. Rapports mensuels forcés (php cron.php --report) ---------
+    if (in_array('--report', $argv ?? [], true)) {
+        $rep = Uptimer\Report::runMonthly();
+        $out(sprintf('  rapport mensuel : %d envoyé(s), %d en échec, %d ignoré(s)',
+            $rep['sent'], $rep['failed'], $rep['skipped']));
+        foreach ($rep['detail'] as $d) $out('    ' . $d['site'] . ' : ' . $d['info']);
+    }
+
     // --- 4. Entretien quotidien (vers 3 h du matin) ----------------------
     $today = date('Y-m-d');
     if ((int)date('G') === 3 && Db::setting('daily_done') !== $today) {
@@ -110,6 +118,16 @@ try {
         Stats::refreshStale(0, 500);
         $out(sprintf('  entretien : %d jour(s) consolidé(s), %d mesure(s) purgée(s), %d domaine(s) vérifié(s)',
             $roll, $pur, $dom));
+
+        // Rapports mensuels : l'envoi est marqué par une clé de mois, donc le
+        // repasser ici chaque jour ne peut pas produire de doublon.
+        $rep = Uptimer\Report::runMonthly();
+        if ($rep['sent'] || $rep['failed']) {
+            $out(sprintf('  rapport mensuel : %d envoyé(s), %d en échec', $rep['sent'], $rep['failed']));
+            foreach ($rep['detail'] as $d) {
+                if (!$d['ok']) $out('    ' . $d['site'] . ' : ' . $d['info']);
+            }
+        }
     }
 
     // --- 5. Consolidation du jour en cours (pour la frise 30 jours) ------

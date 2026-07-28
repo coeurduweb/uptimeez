@@ -615,6 +615,147 @@ check('un mode inconnu retombe sur simple',
     in_array('simple', Uptimer\Ui::MODES, true) && !in_array('nawak', Uptimer\Ui::MODES, true), true);
 
 // =========================================================================
+section('Rapport mensuel : programmation et composition');
+// =========================================================================
+use Uptimer\Report;
+
+// --- Le mois couvert est toujours le mois écoulé -------------------------
+check('mois couvert par un envoi du 1er mars', Report::monthKey('2026-03-01'), '2026-02');
+check('mois couvert par un envoi du 31 mars', Report::monthKey('2026-03-31'), '2026-02');
+check('bascule d\'année en janvier', Report::monthKey('2026-01-05'), '2025-12');
+[$rFrom, $rTo] = Report::monthRange('2026-03-10');
+check('début du mois couvert', $rFrom, '2026-02-01 00:00:00');
+check('fin du mois couvert, année bissextile', $rTo, '2026-02-28 23:59:59');
+[$rFrom2, $rTo2] = Report::monthRange('2024-03-10');
+check('février 2024 comptait 29 jours', $rTo2, '2024-02-29 23:59:59');
+
+// --- Destinataires -------------------------------------------------------
+Uptimer\Config::set('report.fallback_to', 'secours@agence.fr');
+check('séparateurs variés',
+    Report::recipients(['report_to' => 'a@b.fr, c@d.fr; e@f.fr  g@h.fr']),
+    ['a@b.fr', 'c@d.fr', 'e@f.fr', 'g@h.fr']);
+check('adresses invalides écartées',
+    Report::recipients(['report_to' => 'bon@exemple.fr, pas-une-adresse, @rien, x@y']),
+    ['bon@exemple.fr']);
+check('doublons fusionnés',
+    Report::recipients(['report_to' => 'a@b.fr, a@b.fr, A@b.fr']), ['a@b.fr', 'A@b.fr']);
+check('repli sur les destinataires par défaut',
+    Report::recipients(['report_to' => '']), ['secours@agence.fr']);
+Uptimer\Config::set('report.fallback_to', '');
+check('sans repli, aucun destinataire', Report::recipients(['report_to' => '']), []);
+
+// --- Base isolée pour la programmation et les chiffres ------------------
+$tmpR = sys_get_temp_dir() . '/uptimer-report-' . bin2hex(random_bytes(3)) . '.sqlite';
+$prevDb = Uptimer\Config::get('db.sqlite');
+Uptimer\Config::set('db.sqlite', $tmpR);
+Uptimer\Db::migrate();
+
+$rsid = Uptimer\Db::insert('sites', ['name' => 'Client Témoin', 'domain' => 'temoin.fr',
+    'report_enabled' => 1, 'report_to' => 'client@temoin.fr', 'created_at' => now()]);
+$rmid = Uptimer\Db::insert('monitors', ['site_id' => $rsid, 'name' => 'Accueil',
+    'url' => 'https://temoin.fr/', 'kind' => 'page', 'role' => 'primary', 'method' => 'GET',
+    'interval_sec' => 300, 'timeout_sec' => 15, 'retries' => 0, 'slow_ms' => 3000,
+    'expect_status' => '200-299', 'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0,
+    'check_noindex' => 0, 'ssl_warn_days' => 14, 'css_drop_pct' => 35, 'enabled' => 1,
+    'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'follow_redirects' => 1]);
+// Un mois de mesures : 28 jours pleins, dont un avec 30 minutes d'interruption.
+[$mFrom] = Report::monthRange('2026-03-10');
+for ($d = 1; $d <= 28; $d++) {
+    $day = sprintf('2026-02-%02d', $d);
+    Uptimer\Db::insert('daily_stats', ['monitor_id' => $rmid, 'day' => $day,
+        'checks' => 288, 'fails' => $d === 12 ? 6 : 0, 'degraded' => 0,
+        'downtime_sec' => $d === 12 ? 1800 : 0, 'avg_ms' => 420.0, 'p95_ms' => 700,
+        'min_ms' => 300, 'max_ms' => 900]);
+}
+Uptimer\Db::insert('incidents', ['monitor_id' => $rmid, 'started_at' => '2026-02-12 04:10:00',
+    'ended_at' => '2026-02-12 04:40:00', 'duration_sec' => 1800, 'severity' => 'down',
+    'reason_code' => 'HTTP_5XX', 'message' => 'Le serveur renvoie une erreur',
+    'checks_failed' => 6, 'notify_count' => 1]);
+
+$rdata = Report::data($rsid, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
+check('mesures agrégées sur le mois', $rdata['checks'], 288 * 28);
+check('uptime calculé sur les échecs réels', round((float)$rdata['uptime'], 2), 99.93);
+check('indisponibilité cumulée', $rdata['down_sec'], 1800);
+check('bande de 28 jours', count($rdata['days']), 28);
+check('une interruption listée', count($rdata['incidents']), 1);
+check('temps de réponse moyen', $rdata['avg_ms'], 420);
+
+// --- Programmation ------------------------------------------------------
+Uptimer\Config::set('report.enabled', false);
+check('envoi désactivé : rien n\'est dû', Report::dueSites('2026-03-01'), []);
+Uptimer\Config::set('report.enabled', true);
+Uptimer\Config::set('report.day', 5);
+check('avant le jour programmé : rien n\'est dû', Report::dueSites('2026-03-03'), []);
+check('le jour programmé : le site est dû', count(Report::dueSites('2026-03-05')), 1);
+check('après le jour programmé : encore dû', count(Report::dueSites('2026-03-19')), 1);
+// Une programmation au 31 doit tomber le dernier jour d'un mois plus court.
+Uptimer\Config::set('report.day', 31);
+check('programmation au 31, dernier jour de février', count(Report::dueSites('2026-02-28')), 1);
+Uptimer\Config::set('report.day', 1);
+
+// Un rapport déjà parti ce mois-là ne repart pas.
+Uptimer\Db::update('sites', ['report_sent_key' => '2026-02'], 'id = :i', ['i' => $rsid]);
+check('déjà envoyé ce mois : rien n\'est dû', Report::dueSites('2026-03-10'), []);
+Uptimer\Db::update('sites', ['report_sent_key' => null], 'id = :i', ['i' => $rsid]);
+check('mois suivant : de nouveau dû', count(Report::dueSites('2026-03-10')), 1);
+// Sans destinataire, rien n'est dû non plus.
+Uptimer\Db::update('sites', ['report_to' => null], 'id = :i', ['i' => $rsid]);
+check('sans destinataire : rien n\'est dû', Report::dueSites('2026-03-10'), []);
+Uptimer\Db::update('sites', ['report_to' => 'client@temoin.fr'], 'id = :i', ['i' => $rsid]);
+
+// --- Composition du courrier -------------------------------------------
+$rsite = Uptimer\Db::one('SELECT * FROM sites WHERE id = ?', [$rsid]);
+$rhtml = Report::html($rsite, $rdata, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
+$rtext = Report::text($rsite, $rdata, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
+check('le courrier porte le nom du client', str_contains($rhtml, 'Client Témoin'), true);
+check('le courrier porte le mois couvert', str_contains($rhtml, 'février 2026'), true);
+check('le courrier porte le chiffre de disponibilité', str_contains($rhtml, '99,93'), true);
+check('le courrier liste l\'interruption', str_contains($rhtml, 'Erreur serveur') && str_contains($rhtml, '12/02'), true);
+// Contraintes propres au courrier : rien d'externe, rien que les clients ne rendent pas.
+check('aucune ressource distante', (bool)preg_match('~(src|href)=["\']https?://~i', $rhtml), false);
+check('aucun SVG dans le courrier', str_contains($rhtml, '<svg'), false);
+check('styles en ligne uniquement', str_contains($rhtml, '<style'), false);
+check('mise en page par tableaux', str_contains($rhtml, '<table'), true);
+check('version texte sans balise', (bool)preg_match('~<[a-z]~i', $rtext), false);
+check('version texte avec les chiffres', str_contains($rtext, '99,93'), true);
+
+// Le nom d'un site vient de l'utilisateur : il doit être échappé dans le courrier.
+Uptimer\Db::update('sites', ['name' => '<script>alert(1)</script> & Cie'], 'id = :i', ['i' => $rsid]);
+$hostileSite = Uptimer\Db::one('SELECT * FROM sites WHERE id = ?', [$rsid]);
+$hh = Report::html($hostileSite, $rdata, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
+check('nom de site échappé dans le courrier', str_contains($hh, '<script>alert(1)</script>'), false);
+check('nom de site présent sous forme échappée', str_contains($hh, '&lt;script&gt;'), true);
+Uptimer\Db::update('sites', ['name' => 'Client Témoin'], 'id = :i', ['i' => $rsid]);
+
+// --- Objet du message ---------------------------------------------------
+Uptimer\Config::set('report.subject', '');
+$r1 = Report::sendFor($rsid, '2026-03-10');
+check('sans canal e-mail, l\'envoi échoue proprement', $r1['ok'], false);
+check('et le motif est explicite', mb_strlen((string)$r1['info']) > 10, true);
+check('objet composé avec le site et le mois',
+    str_contains((string)$r1['subject'], 'Client Témoin') && str_contains((string)$r1['subject'], 'février'), true);
+Uptimer\Config::set('report.subject', 'Suivi {site} - {month} - {app}');
+$r2 = Report::sendFor($rsid, '2026-03-10');
+check('gabarit d\'objet respecté',
+    str_contains((string)$r2['subject'], 'Suivi Client Témoin - février 2026 - ' . Uptimer\I18n::APP), true);
+// Un échec ne doit pas marquer le mois comme envoyé.
+check('un échec ne consomme pas le mois',
+    (string)Uptimer\Db::val('SELECT report_sent_key FROM sites WHERE id = ?', [$rsid]), '');
+check('un échec laisse le site dû', count(Report::dueSites('2026-03-10')), 1);
+
+// Un mois sans aucune mesure ne produit pas de rapport vide.
+$emptySid = Uptimer\Db::insert('sites', ['name' => 'Sans mesure', 'domain' => 'vide.fr',
+    'report_enabled' => 1, 'report_to' => 'x@vide.fr', 'created_at' => now()]);
+$r3 = Report::sendFor($emptySid, '2026-03-10');
+check('aucune mesure : rapport non envoyé', $r3['ok'], false);
+check('et le motif le dit', str_contains((string)$r3['info'], 'esure'), true);
+
+Uptimer\Config::set('report.enabled', false);
+Uptimer\Config::set('report.subject', '');
+Uptimer\Config::set('db.sqlite', $prevDb);
+@unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
+
+// =========================================================================
 section('Silhouette : ce que le visiteur verrait');
 // =========================================================================
 use Uptimer\Check\Silhouette;

@@ -201,6 +201,7 @@ gone and you know within one check.
 | **Silent cron jobs** | A dead-man heartbeat: your backup script calls Uptimer when it finishes. **Silence raises the alert**, the one failure no HTTP request can ever see. |
 | **Response time** | DNS, connect, TLS, first byte, total. Threshold tuned from the site's own measured p95, not a round number. |
 | **Grouped outages** | Ten sites failing on one IP is *one* incident, not ten alerts. |
+| **Monthly client report** | Availability, outages, response times, e-mailed to each client on the day you choose. Once a month, never twice, retried the next day if the mail server was down. |
 
 ---
 
@@ -227,6 +228,7 @@ request; the table lives in this file.
 | Outages grouped by server IP | ✅ automatic | ❌ | ❌ | ⚠️ dependency config | ❌ | ✅ topology | ⚠️ config |
 | Dead-man heartbeat (cron, backups) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
 | Printable client report | ✅ built in | ⚠️ paid plans | ❌ | ✅ | ❌ | ⚠️ | ✅ |
+| Monthly report e-mailed to each client on its own | ✅ | ❌ | ❌ | ⚠️ internal only | ❌ | ❌ | ⚠️ internal only |
 | Public status page | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 | Simple / Full interface switch | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Interface languages | **10 + RTL** | 1 | 1 | several | many (community) | several | several |
