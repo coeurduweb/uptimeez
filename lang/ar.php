@@ -1,12 +1,14 @@
 <?php
 /**
- * Uptimer, Arabic catalogue (right-to-left)
+ * Uptimer, Arabic catalogue (right-to-left).
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
  * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
- * What is left: php bin/i18n-audit.php --manquants=ar
+ *
+ * Regenerate with: php bin/i18n-sync.php
+ * What is left:    php bin/i18n-audit.php --manquants=ar
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
     'Cadence' => 'المعدّل',
     'Canal' => 'القناة',
     'Cause' => 'السبب',
+    'Ce que voit le visiteur' => 'ما يراه الزائر',
     'Chargement' => 'جارٍ التحميل',
     'Chronologie' => 'الجدول الزمني',
     'Code' => 'الرمز',
@@ -76,6 +79,7 @@ return [
     'La mise en page est cassée' => 'تنسيق الصفحة معطوب',
     'La page a disparu' => 'الصفحة اختفت',
     'La page est en noindex' => 'الصفحة على noindex',
+    'La page telle qu\'un visiteur la voit' => 'الصفحة كما يراها الزائر',
     'Langue' => 'اللغة',
     'Le certificat SSL est expiré' => 'انتهت صلاحية شهادة SSL',
     'Le certificat SSL est refusé par les navigateurs' => 'المتصفحات ترفض شهادة SSL',
@@ -86,6 +90,7 @@ return [
     'Le serveur renvoie une erreur' => 'الخادم يُرجع خطأ',
     'Le signal attendu n\'est pas arrivé' => 'الإشارة المتوقعة لم تصل',
     'Le temps de réponse dépasse votre seuil' => 'زمن الاستجابة يتجاوز حدّك',
+    'Maintenant' => 'الآن',
     'Message' => 'الرسالة',
     'Mettre en pause' => 'إيقاف مؤقت',
     'Mettre en pause 1 h' => 'إيقاف لمدة ساعة',
@@ -121,9 +126,11 @@ return [
     'Rien à surveiller pour l\'instant' => 'لا شيء للمراقبة بعد',
     'Réactiver' => 'إعادة التنشيط',
     'Réapprendre la référence' => 'إعادة تعلّم المرجع',
+    'Référence' => 'المرجع',
     'Réglages' => 'الإعدادات',
     'Réponse' => 'الاستجابة',
     'Se déconnecter' => 'تسجيل الخروج',
+    'Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.' => 'شكل معاد بناؤه من HTML ومن CSS المحمّل. ليست لقطة شاشة.',
     'Simple' => 'مبسّط',
     'Site' => 'الموقع',
     'Sonde' => 'مِجَس',
@@ -153,6 +160,7 @@ return [
     'Vue mur d\'écran :' => 'عرض الحائط:',
     'Vérifier' => 'فحص',
     'Vérifier maintenant' => 'الفحص الآن',
+    'conforme à la référence' => 'مطابق للمرجع',
     'depuis {duration}' => 'منذ {duration}',
     'dernière passe {when}' => 'آخر جولة {when}',
     'en cours' => 'جارٍ',
@@ -175,6 +183,7 @@ return [
     'une sonde en ligne' => 'مِجَس واحد يعمل',
     'uptime et temps de réponse des dernières 24 h' => 'زمن التشغيل والاستجابة في آخر 24 ساعة',
     'uptime moyen {pct}' => 'متوسط زمن التشغيل {pct}',
+    '{n} % de différence avec la référence' => '{n} % اختلاف عن المرجع',
     '{n} en pause' => '{n} موقوف مؤقتًا',
     '{n} points à surveiller' => '{n} نقاط تحت المراقبة|{n} نقطة تحت المراقبة',
     '{n} sites sans rien à signaler' => '{n} مواقع لا شيء يُذكر عنها|{n} موقعًا لا شيء يُذكر عنه',

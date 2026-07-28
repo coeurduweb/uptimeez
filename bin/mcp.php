@@ -239,6 +239,14 @@ function mcp_tools(): array
                         'stylesheets_total' => $css['sheets_total'] ?? null,
                         'class_coverage_pct' => $css['coverage'] ?? null,
                     ] : null,
+                    'silhouette' => [
+                        'drift_pct' => (int)($m['silhouette_drift'] ?? 0),
+                        'reference_at' => $m['silhouette_ref_at'] ?? null,
+                        'current_at' => $m['silhouette_at'] ?? null,
+                        'note' => 'A reconstruction of the page layout from HTML and loaded CSS, not a '
+                                . 'screenshot. A drift above 35 % means a visitor sees a different page. '
+                                . 'The SVG images are visible on the monitor page in the web interface.',
+                    ],
                     'recent_incidents' => $inc,
                     'automatic_decisions' => \Uptimer\Tune::decisions($m),
                 ];
@@ -369,9 +377,12 @@ function mcp_tools(): array
                 switch ($fix) {
                     case 'relearn':
                         Db::update('monitors', ['css_baseline' => null, 'css_baseline_at' => null,
-                                                'css_checked_at' => null, 'css_state' => null],
+                                                'css_checked_at' => null, 'css_state' => null,
+                                                'silhouette_ref' => null, 'silhouette_ref_sig' => null,
+                                                'silhouette_ref_at' => null, 'silhouette_drift' => 0],
                                    'id = :__i', ['__i' => $id]);
-                        return ['done' => true, 'effect' => 'CSS reference cleared, relearned on next analysis'];
+                        return ['done' => true,
+                                'effect' => 'CSS reference and page silhouette cleared, relearned on next analysis'];
                     case 'raise_slow':
                         $w = Stats::window($id, 7 * 86400, $m);
                         $base = max((int)($w['p95_ms'] ?? 0), (int)($m['last_ms'] ?? 0), (int)$m['slow_ms']);

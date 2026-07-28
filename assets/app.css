@@ -702,3 +702,27 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
 .demo-flag code { margin-inline-start: auto; font-size: .72rem; padding: .1rem .4rem;
                   border-radius: 4px; background: var(--surface-3); color: var(--text-soft); }
 @media (max-width: 640px) { .demo-flag code { margin-inline-start: 0; } }
+
+/* ===========================================================================
+   Silhouette de page : la comparaison avant/après
+   ========================================================================= */
+.sil-wrap { margin: 0 0 var(--s5); }
+.sil-head { display: flex; align-items: center; gap: .35rem; margin-bottom: .55rem;
+            font-size: .82rem; }
+.sil-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); align-items: start; }
+.sil-pair.sil-solo { grid-template-columns: minmax(0, 420px); }
+.sil { margin: 0; min-width: 0; }
+.sil figcaption { display: flex; gap: .4rem; align-items: baseline; margin-bottom: .3rem;
+                  font-size: .74rem; font-weight: 600; text-transform: uppercase;
+                  letter-spacing: .04em; color: var(--text-soft); }
+.sil figcaption .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.sil-view { border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden;
+            background: #fbfcfe; max-height: 320px; }
+.sil-view svg { display: block; width: 100%; height: auto; }
+/* Une silhouette qui a dérivé se signale au premier regard. */
+.sil-bad .sil-view { border-color: var(--bad); box-shadow: 0 0 0 2px color-mix(in srgb, var(--bad) 18%, transparent); }
+@media (max-width: 720px) { .sil-pair { grid-template-columns: 1fr; } }
+@media print {
+  .sil-pair { grid-template-columns: 1fr 1fr; }
+  .sil-view { max-height: none; break-inside: avoid; }
+}

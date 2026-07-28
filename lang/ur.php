@@ -1,12 +1,14 @@
 <?php
 /**
- * Uptimer, Urdu catalogue (right-to-left)
+ * Uptimer, Urdu catalogue (right-to-left).
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
  * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
- * What is left: php bin/i18n-audit.php --manquants=ur
+ *
+ * Regenerate with: php bin/i18n-sync.php
+ * What is left:    php bin/i18n-audit.php --manquants=ur
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
     'Cadence' => 'شرح',
     'Canal' => 'چینل',
     'Cause' => 'وجہ',
+    'Ce que voit le visiteur' => 'وزیٹر کیا دیکھتا ہے',
     'Chargement' => 'لوڈ ہو رہا ہے',
     'Chronologie' => 'ٹائم لائن',
     'Code' => 'کوڈ',
@@ -76,6 +79,7 @@ return [
     'La mise en page est cassée' => 'صفحے کا لے آؤٹ ٹوٹ گیا',
     'La page a disparu' => 'صفحہ غائب ہو گیا',
     'La page est en noindex' => 'صفحہ noindex پر ہے',
+    'La page telle qu\'un visiteur la voit' => 'صفحہ جیسا وزیٹر دیکھتا ہے',
     'Langue' => 'زبان',
     'Le certificat SSL est expiré' => 'SSL سرٹیفکیٹ کی مدت ختم',
     'Le certificat SSL est refusé par les navigateurs' => 'براؤزرز SSL سرٹیفکیٹ مسترد کرتے ہیں',
@@ -86,6 +90,7 @@ return [
     'Le serveur renvoie une erreur' => 'سرور ایک خرابی واپس کر رہا ہے',
     'Le signal attendu n\'est pas arrivé' => 'متوقع سگنل نہیں آیا',
     'Le temps de réponse dépasse votre seuil' => 'جواب کا وقت آپ کی حد سے زیادہ',
+    'Maintenant' => 'اب',
     'Message' => 'پیغام',
     'Mettre en pause' => 'معطل کریں',
     'Mettre en pause 1 h' => '1 گھنٹہ معطل',
@@ -121,9 +126,11 @@ return [
     'Rien à surveiller pour l\'instant' => 'ابھی نگرانی کے لیے کچھ نہیں',
     'Réactiver' => 'دوبارہ فعال',
     'Réapprendre la référence' => 'حوالہ دوبارہ سیکھیں',
+    'Référence' => 'حوالہ',
     'Réglages' => 'ترتیبات',
     'Réponse' => 'جواب',
     'Se déconnecter' => 'سائن آؤٹ',
+    'Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.' => 'HTML اور لوڈ شدہ CSS سے دوبارہ بنایا گیا خاکہ۔ یہ اسکرین شاٹ نہیں ہے۔',
     'Simple' => 'سادہ',
     'Site' => 'سائٹ',
     'Sonde' => 'مانیٹر',
@@ -153,6 +160,7 @@ return [
     'Vue mur d\'écran :' => 'وال ویو:',
     'Vérifier' => 'جانچیں',
     'Vérifier maintenant' => 'ابھی جانچیں',
+    'conforme à la référence' => 'حوالہ سے مطابقت',
     'depuis {duration}' => '{duration} سے',
     'dernière passe {when}' => 'آخری پاس {when}',
     'en cours' => 'جاری',
@@ -175,6 +183,7 @@ return [
     'une sonde en ligne' => '1 مانیٹر آن لائن',
     'uptime et temps de réponse des dernières 24 h' => 'گزشتہ 24 گھنٹے کا اپ ٹائم اور جواب کا وقت',
     'uptime moyen {pct}' => 'اوسط اپ ٹائم {pct}',
+    '{n} % de différence avec la référence' => 'حوالہ سے {n} % فرق',
     '{n} en pause' => '{n} معطل',
     '{n} points à surveiller' => '{n} نکات نگرانی میں',
     '{n} sites sans rien à signaler' => '{n} سائٹس میں کچھ قابل ذکر نہیں',

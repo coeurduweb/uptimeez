@@ -1,12 +1,14 @@
 <?php
 /**
- * Uptimer, Spanish catalogue
+ * Uptimer, Spanish catalogue.
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
  * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
- * What is left: php bin/i18n-audit.php --manquants=es
+ *
+ * Regenerate with: php bin/i18n-sync.php
+ * What is left:    php bin/i18n-audit.php --manquants=es
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
     'Cadence' => 'Cadencia',
     'Canal' => 'Canal',
     'Cause' => 'Causa',
+    'Ce que voit le visiteur' => 'Lo que ve el visitante',
     'Chargement' => 'Cargando',
     'Chronologie' => 'Cronología',
     'Code' => 'Código',
@@ -76,6 +79,7 @@ return [
     'La mise en page est cassée' => 'El diseño de la página está roto',
     'La page a disparu' => 'La página ha desaparecido',
     'La page est en noindex' => 'La página está en noindex',
+    'La page telle qu\'un visiteur la voit' => 'La página tal como la ve un visitante',
     'Langue' => 'Idioma',
     'Le certificat SSL est expiré' => 'El certificado SSL ha caducado',
     'Le certificat SSL est refusé par les navigateurs' => 'Los navegadores rechazan el certificado SSL',
@@ -86,6 +90,7 @@ return [
     'Le serveur renvoie une erreur' => 'El servidor devuelve un error',
     'Le signal attendu n\'est pas arrivé' => 'La señal esperada no ha llegado',
     'Le temps de réponse dépasse votre seuil' => 'El tiempo de respuesta supera tu umbral',
+    'Maintenant' => 'Ahora',
     'Message' => 'Mensaje',
     'Mettre en pause' => 'Pausar',
     'Mettre en pause 1 h' => 'Pausar 1 h',
@@ -121,9 +126,11 @@ return [
     'Rien à surveiller pour l\'instant' => 'Nada que monitorizar aún',
     'Réactiver' => 'Reactivar',
     'Réapprendre la référence' => 'Reaprender la referencia',
+    'Référence' => 'Referencia',
     'Réglages' => 'Ajustes',
     'Réponse' => 'Respuesta',
     'Se déconnecter' => 'Cerrar sesión',
+    'Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.' => 'Silueta reconstruida a partir del HTML y del CSS cargado. No es una captura de pantalla.',
     'Simple' => 'Simple',
     'Site' => 'Sitio',
     'Sonde' => 'Sonda',
@@ -153,6 +160,7 @@ return [
     'Vue mur d\'écran :' => 'Vista de muro:',
     'Vérifier' => 'Comprobar',
     'Vérifier maintenant' => 'Comprobar ahora',
+    'conforme à la référence' => 'coincide con la referencia',
     'depuis {duration}' => 'desde hace {duration}',
     'dernière passe {when}' => 'última pasada {when}',
     'en cours' => 'en curso',
@@ -175,6 +183,7 @@ return [
     'une sonde en ligne' => 'una sonda en línea',
     'uptime et temps de réponse des dernières 24 h' => 'disponibilidad y tiempo de respuesta de las últimas 24 h',
     'uptime moyen {pct}' => 'disponibilidad media {pct}',
+    '{n} % de différence avec la référence' => '{n} % de diferencia con la referencia',
     '{n} en pause' => '{n} en pausa',
     '{n} points à surveiller' => '{n} puntos a vigilar',
     '{n} sites sans rien à signaler' => '{n} sitios sin nada que señalar',

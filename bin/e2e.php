@@ -267,6 +267,48 @@ $r = $req('/index.php?p=monitor&id=' . $dbId);
 ok('fiche base HS : diagnostic adapté', $has($r, 'base de données ne répond plus'));
 
 // =========================================================================
+title('Silhouette : la page telle qu\'un visiteur la voit');
+// =========================================================================
+// La sonde du faux site au CSS cassé doit produire deux silhouettes et un écart.
+$req('/api.php?action=check&id=' . $brokenId, ['csrf' => $tok]);
+$row = $db('SELECT silhouette_ref, silhouette_now, silhouette_drift, silhouette_at
+            FROM monitors WHERE id = ?', [$brokenId])[0] ?? [];
+ok('silhouette actuelle enregistrée',
+   str_starts_with((string)($row['silhouette_now'] ?? ''), '<svg'),
+   strlen((string)($row['silhouette_now'] ?? '')) . ' octets');
+ok('date de silhouette renseignée', !empty($row['silhouette_at']));
+
+// La sonde saine sert de référence : son écart doit être nul.
+$req('/api.php?action=check&id=' . $okId, ['csrf' => $tok]);
+$good = $db('SELECT silhouette_ref, silhouette_drift FROM monitors WHERE id = ?', [$okId])[0] ?? [];
+ok('référence mémorisée sur un état sain',
+   str_starts_with((string)($good['silhouette_ref'] ?? ''), '<svg'));
+ok('aucun écart sur une page saine', (int)($good['silhouette_drift'] ?? -1) === 0);
+
+$r = $req('/index.php?p=monitor&id=' . $brokenId . '&ui=expert');
+ok('la fiche affiche la comparaison', $has($r, 'sil-pair') && $has($r, 'visiteur'));
+ok('la fiche précise que ce n\'est pas une capture', $has($r, 'capture d'));
+ok('le SVG est bien servi dans la page', $has($r, '<svg') && $has($r, 'silhouette'));
+// Rien de ce que le site contrôle ne doit entrer dans le SVG. On isole chaque
+// silhouette servie et on regarde à l'intérieur, pas ailleurs dans la page.
+$svgs = [];
+if (preg_match_all('~<svg[^>]*class="silhouette".*?</svg>~s', $r['body'], $mm)) $svgs = $mm[0];
+$dirty = [];
+foreach ($svgs as $svg) {
+    if (str_contains($svg, '<script')) $dirty[] = 'script';
+    if (preg_match('~\son[a-z]+\s*=~i', $svg)) $dirty[] = 'gestionnaire';
+    if (preg_match('~<(?!/?(?:svg|rect|path)\b)[a-z]~i', $svg)) $dirty[] = 'balise inattendue';
+}
+ok('silhouettes servies sans rien d\'exécutable',
+   count($svgs) >= 1 && $dirty === [], count($svgs) . ' silhouette(s) · ' . implode(' ', $dirty));
+
+// « Réapprendre la référence » efface aussi la silhouette de référence.
+$req('/api.php?action=fix&id=' . $brokenId, ['csrf' => $tok, 'fix' => 'relearn']);
+$after = $db('SELECT silhouette_ref, silhouette_drift FROM monitors WHERE id = ?', [$brokenId])[0] ?? [];
+ok('réapprendre efface la référence visuelle',
+   ($after['silhouette_ref'] ?? null) === null && (int)$after['silhouette_drift'] === 0);
+
+// =========================================================================
 title('Périodes longues');
 foreach (['1h', '24h', '7d', '30d', '90d', '120d', '180d', '365d'] as $range) {
     $rr = $req('/index.php?p=monitor&id=' . $okId . '&range=' . $range);

@@ -70,12 +70,22 @@ below the fold.
 <tr>
 <td width="50%" valign="top">
 
-**Broken layout, explained.** Not "CSS looks odd": the exact file, the exact cause, and the message the
+**Broken layout, shown.** Not a number, a picture: the page as a visitor sees it, next to what it used to be,
+with the measured difference. Reconstructed from the HTML and the loaded CSS, no browser involved.
+
+<img src="docs/img/silhouette.png" alt="Side-by-side silhouettes: the reference page with its centred container and three columns, and the current page with everything stacked at full width, marked 71 % different">
+
+</td>
+<td width="50%" valign="top">
+
+**And the exact cause underneath.** Not "CSS looks odd": the failing file, its HTTP status, and the message the
 browser console would have printed.
 
 <img src="docs/img/css-broken.png" alt="Page resources panel showing the failing stylesheet, its HTTP status, the cause, and reconstructed browser console errors">
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Nothing hidden, nothing imposed.** One switch moves the whole interface between *Simple*, which shows only
@@ -204,6 +214,7 @@ request; the table lives in this file.
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement only | ❌ | ❌ | ⚠️ write a synthetic script |
 | Browser-console errors reconstructed | ✅ | ❌ | ⚠️ in script logs | ❌ | ❌ | ❌ | ⚠️ in script logs |
+| Before / after picture of the broken page | ✅ silhouette | ❌ | ⚠️ screenshot in a script | ⚠️ screenshot | ❌ | ❌ | ⚠️ screenshot |
 | Database down behind a 200 | ✅ signatures + proof string | ⚠️ manual keyword | ⚠️ manual assertion | ⚠️ manual keyword | ⚠️ manual keyword | ⚠️ build it yourself | ⚠️ manual assertion |
 | Proof string inferred automatically | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Forgotten `noindex` alert | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |

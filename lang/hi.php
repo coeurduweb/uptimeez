@@ -1,12 +1,14 @@
 <?php
 /**
- * Uptimer, Hindi catalogue
+ * Uptimer, Hindi catalogue.
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
  * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
- * What is left: php bin/i18n-audit.php --manquants=hi
+ *
+ * Regenerate with: php bin/i18n-sync.php
+ * What is left:    php bin/i18n-audit.php --manquants=hi
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
     'Cadence' => 'दर',
     'Canal' => 'चैनल',
     'Cause' => 'कारण',
+    'Ce que voit le visiteur' => 'विज़िटर क्या देखता है',
     'Chargement' => 'लोड हो रहा है',
     'Chronologie' => 'समयरेखा',
     'Code' => 'कोड',
@@ -76,6 +79,7 @@ return [
     'La mise en page est cassée' => 'पृष्ठ का लेआउट टूटा है',
     'La page a disparu' => 'पृष्ठ गायब हो गया',
     'La page est en noindex' => 'पृष्ठ noindex पर है',
+    'La page telle qu\'un visiteur la voit' => 'जैसा एक विज़िटर देखता है',
     'Langue' => 'भाषा',
     'Le certificat SSL est expiré' => 'SSL प्रमाणपत्र समाप्त हो गया',
     'Le certificat SSL est refusé par les navigateurs' => 'ब्राउज़र SSL प्रमाणपत्र अस्वीकार करते हैं',
@@ -86,6 +90,7 @@ return [
     'Le serveur renvoie une erreur' => 'सर्वर त्रुटि लौटा रहा है',
     'Le signal attendu n\'est pas arrivé' => 'अपेक्षित संकेत नहीं आया',
     'Le temps de réponse dépasse votre seuil' => 'प्रतिक्रिया समय आपकी सीमा से अधिक',
+    'Maintenant' => 'अब',
     'Message' => 'संदेश',
     'Mettre en pause' => 'रोकें',
     'Mettre en pause 1 h' => '1 घंटे रोकें',
@@ -121,9 +126,11 @@ return [
     'Rien à surveiller pour l\'instant' => 'अभी निगरानी के लिए कुछ नहीं',
     'Réactiver' => 'फिर चालू करें',
     'Réapprendre la référence' => 'संदर्भ फिर सीखें',
+    'Référence' => 'संदर्भ',
     'Réglages' => 'सेटिंग्स',
     'Réponse' => 'प्रतिक्रिया',
     'Se déconnecter' => 'साइन आउट',
+    'Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.' => 'HTML और लोड हुए CSS से पुनर्निर्मित रूपरेखा। यह स्क्रीनशॉट नहीं है।',
     'Simple' => 'सरल',
     'Site' => 'साइट',
     'Sonde' => 'मॉनिटर',
@@ -153,6 +160,7 @@ return [
     'Vue mur d\'écran :' => 'वॉल व्यू:',
     'Vérifier' => 'जाँचें',
     'Vérifier maintenant' => 'अभी जाँचें',
+    'conforme à la référence' => 'संदर्भ से मेल खाता है',
     'depuis {duration}' => '{duration} से',
     'dernière passe {when}' => 'पिछली पास {when}',
     'en cours' => 'चालू',
@@ -175,6 +183,7 @@ return [
     'une sonde en ligne' => '1 मॉनिटर चालू',
     'uptime et temps de réponse des dernières 24 h' => 'पिछले 24 घंटे का अपटाइम और प्रतिक्रिया समय',
     'uptime moyen {pct}' => 'औसत अपटाइम {pct}',
+    '{n} % de différence avec la référence' => 'संदर्भ से {n} % भिन्न',
     '{n} en pause' => '{n} रुके हुए',
     '{n} points à surveiller' => '{n} बिंदुओं पर ध्यान दें',
     '{n} sites sans rien à signaler' => '{n} साइटों में कुछ भी बताने योग्य नहीं',

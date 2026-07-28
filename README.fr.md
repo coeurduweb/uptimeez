@@ -71,12 +71,22 @@ jamais sous la ligne de flottaison.
 <tr>
 <td width="50%" valign="top">
 
-**La mise en page cassée, expliquée.** Pas « le CSS a l'air bizarre » : le fichier exact, la cause exacte, et
-le message que la console du navigateur aurait affiché.
+**La mise en page cassée, montrée.** Pas un chiffre, une image : la page telle qu'un visiteur la voit, à côté de
+ce qu'elle était, avec l'écart mesuré. Reconstruite depuis le HTML et le CSS chargé, sans navigateur.
+
+<img src="docs/img/silhouette.png" alt="Silhouettes côte à côte : la page de référence avec son conteneur centré et ses trois colonnes, et la page actuelle avec tout empilé sur toute la largeur, marquée 71 % de différence">
+
+</td>
+<td width="50%" valign="top">
+
+**Et la cause exacte juste en dessous.** Pas « le CSS a l'air bizarre » : le fichier fautif, son code HTTP, et le
+message que la console du navigateur aurait affiché.
 
 <img src="docs/img/css-broken.png" alt="Panneau des ressources de la page montrant la feuille de style en échec, son code HTTP, la cause et les erreurs de console reconstituées">
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Rien de caché, rien d'imposé.** Un interrupteur fait passer toute l'interface entre *Simple*, qui ne montre
@@ -210,6 +220,7 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration seulement | ❌ | ❌ | ⚠️ à scripter |
 | Erreurs de console reconstituées | ✅ | ❌ | ⚠️ dans les logs du script | ❌ | ❌ | ❌ | ⚠️ dans les logs |
+| Image avant / après de la page cassée | ✅ silhouette | ❌ | ⚠️ capture dans un script | ⚠️ capture | ❌ | ❌ | ⚠️ capture |
 | Base de données tombée derrière un 200 | ✅ signatures + chaîne de preuve | ⚠️ mot-clé manuel | ⚠️ assertion manuelle | ⚠️ mot-clé manuel | ⚠️ mot-clé manuel | ⚠️ à construire | ⚠️ assertion manuelle |
 | Chaîne de preuve déduite automatiquement | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Alerte sur un `noindex` oublié | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |

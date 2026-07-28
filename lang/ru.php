@@ -1,12 +1,14 @@
 <?php
 /**
- * Uptimer, Russian catalogue
+ * Uptimer, Russian catalogue.
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
  * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
- * What is left: php bin/i18n-audit.php --manquants=ru
+ *
+ * Regenerate with: php bin/i18n-sync.php
+ * What is left:    php bin/i18n-audit.php --manquants=ru
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
     'Cadence' => 'Частота',
     'Canal' => 'Канал',
     'Cause' => 'Причина',
+    'Ce que voit le visiteur' => 'Что видит посетитель',
     'Chargement' => 'Загрузка',
     'Chronologie' => 'Хронология',
     'Code' => 'Код',
@@ -76,6 +79,7 @@ return [
     'La mise en page est cassée' => 'Вёрстка страницы сломана',
     'La page a disparu' => 'Страница исчезла',
     'La page est en noindex' => 'Страница помечена noindex',
+    'La page telle qu\'un visiteur la voit' => 'Страница, какой её видит посетитель',
     'Langue' => 'Язык',
     'Le certificat SSL est expiré' => 'SSL-сертификат истёк',
     'Le certificat SSL est refusé par les navigateurs' => 'Браузеры отклоняют SSL-сертификат',
@@ -86,6 +90,7 @@ return [
     'Le serveur renvoie une erreur' => 'Сервер возвращает ошибку',
     'Le signal attendu n\'est pas arrivé' => 'Ожидаемый сигнал не пришёл',
     'Le temps de réponse dépasse votre seuil' => 'Время отклика превышает порог',
+    'Maintenant' => 'Сейчас',
     'Message' => 'Сообщение',
     'Mettre en pause' => 'Приостановить',
     'Mettre en pause 1 h' => 'Пауза на 1 ч',
@@ -121,9 +126,11 @@ return [
     'Rien à surveiller pour l\'instant' => 'Пока нечего отслеживать',
     'Réactiver' => 'Возобновить',
     'Réapprendre la référence' => 'Заново выучить эталон',
+    'Référence' => 'Эталон',
     'Réglages' => 'Настройки',
     'Réponse' => 'Отклик',
     'Se déconnecter' => 'Выйти',
+    'Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.' => 'Силуэт восстановлен из HTML и загруженного CSS. Это не снимок экрана.',
     'Simple' => 'Простой',
     'Site' => 'Сайт',
     'Sonde' => 'Проверка',
@@ -153,13 +160,14 @@ return [
     'Vue mur d\'écran :' => 'Экран-стена:',
     'Vérifier' => 'Проверить',
     'Vérifier maintenant' => 'Проверить сейчас',
+    'conforme à la référence' => 'совпадает с эталоном',
     'depuis {duration}' => 'уже {duration}',
     'dernière passe {when}' => 'последний проход {when}',
     'en cours' => 'идёт',
     'hors service' => 'не работает',
     'la configurer' => 'настроить её',
     'la tâche planifiée n\'a jamais tourné' => 'запланированная задача ни разу не запускалась',
-    'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'показанные сайты настоящие, все измерения выдуманы. Сбои: на тестовых поддоменах, которых не существует.',
+    'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'показанные сайты настоящие, все измерения выдуманы. Сбои — на тестовых поддоменах, которых не существует.',
     'pris en compte' => 'принято',
     'période :' => 'Период',
     'réglages' => 'Настройки',
@@ -175,6 +183,7 @@ return [
     'une sonde en ligne' => 'одна проверка в норме',
     'uptime et temps de réponse des dernières 24 h' => 'доступность и время отклика за 24 часа',
     'uptime moyen {pct}' => 'средняя доступность {pct}',
+    '{n} % de différence avec la référence' => 'отличие от эталона на {n} %',
     '{n} en pause' => '{n} приостановлено',
     '{n} points à surveiller' => '{n} момента под наблюдением|{n} моментов под наблюдением',
     '{n} sites sans rien à signaler' => '{n} сайта без замечаний|{n} сайтов без замечаний',

@@ -248,6 +248,31 @@ if ($probe) {
         'Bêta Deezer'       => ['degraded', 'SLOW',     'Temps de réponse élevé : 2,60 s'],
         'Recette La Poste'  => ['degraded', 'NOINDEX',  'Page en noindex : balise meta robots : noindex, nofollow'],
     ];
+    // Silhouettes de démonstration : une page de boulangerie mise en page, et la
+    // même sans CSS. C'est la comparaison que l'on montre à un client.
+    $demoHtml = '<body><header class="site-header"><nav class="nav-main"><a href="/">Accueil</a>'
+        . '<a href="/carte">La carte</a><a href="/contact">Contact</a></nav></header>'
+        . '<main class="container"><h1 class="hero-title">Votre boutique en ligne</h1>'
+        . '<p>Livraison en 24 h, paiement sécurisé, retours gratuits pendant trente jours.</p>'
+        . '<div class="card-grid">'
+        . '<div class="card"><img src="a.jpg"><h3>Nouveautés</h3><p>La collection de saison</p></div>'
+        . '<div class="card"><img src="b.jpg"><h3>Promotions</h3><p>Jusqu\'à 40 %</p></div>'
+        . '<div class="card"><img src="c.jpg"><h3>Best-sellers</h3><p>Les plus commandés</p></div>'
+        . '</div><a class="btn" href="/panier">Voir le panier</a></main>'
+        . '<footer class="footer-main"><p>Mentions légales, CGV, contact</p></footer></body>';
+    $demoCss = '.container{max-width:1140px;margin:0 auto;padding:0 24px}'
+        . '.site-header{background:#fff;padding:14px}.nav-main{display:flex;gap:18px}'
+        . '.hero-title{font-size:2.6rem;text-align:center}'
+        . '.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}'
+        . '.card{background:#fff;border-radius:14px;padding:18px}'
+        . '.btn{background:#3b5bdb;border-radius:8px;padding:12px 22px}'
+        . '.footer-main{background:#f1f5f9;padding:28px;text-align:center}';
+    $sOk = Uptimer\Check\Silhouette::build($demoHtml, $demoCss);
+    $sKo = Uptimer\Check\Silhouette::build($demoHtml, '');
+    $silRef = $sOk['svg']; $silRefSig = $sOk['signature'];
+    $silKo  = $sKo['svg'];  $silKoSig  = $sKo['signature'];
+    $silDrift = (int)round(Uptimer\Check\Silhouette::distance($silRefSig, $silKoSig) * 100);
+
     // Rapport de ressources réaliste, pour que l'accordéon « Ressources de la
     // page » montre à quoi ressemble un vrai diagnostic.
     $cssBroken = jenc([
@@ -305,7 +330,14 @@ if ($probe) {
             'last_check_at' => date('Y-m-d H:i:s', time() - random_int(10, 200)),
             'last_status_code' => $st === 'down' && $reason === 'HTTP_5XX' ? 500 : 200,
             'last_ms' => $st === 'degraded' && $reason === 'SLOW' ? random_int(2600, 3200) : random_int(180, 900),
-            'css_state' => $reason === 'CSS_BROKEN' ? 'broken' : 'ok',
+            'silhouette_ref'     => $silRef,
+        'silhouette_ref_sig' => jenc($silRefSig),
+        'silhouette_ref_at'  => date('Y-m-d H:i:s', time() - 9 * 86400),
+        'silhouette_now'     => $reason === 'CSS_BROKEN' ? $silKo : $silRef,
+        'silhouette_now_sig' => jenc($reason === 'CSS_BROKEN' ? $silKoSig : $silRefSig),
+        'silhouette_at'      => date('Y-m-d H:i:s', time() - 120),
+        'silhouette_drift'   => $reason === 'CSS_BROKEN' ? $silDrift : 0,
+        'css_state' => $reason === 'CSS_BROKEN' ? 'broken' : 'ok',
             'css_checked_at' => now(),
             'css_detail' => $reason === 'CSS_BROKEN' ? $cssBroken : null,
             'css_baseline' => $reason === 'CSS_BROKEN' ? $cssRef : null,

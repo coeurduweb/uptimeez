@@ -114,9 +114,14 @@ switch ($action) {
         switch ($what) {
             case 'relearn':
                 $undo = ['css_baseline' => $mon['css_baseline'], 'css_baseline_at' => $mon['css_baseline_at'],
-                         'css_state' => $mon['css_state'], 'css_checked_at' => $mon['css_checked_at']];
+                         'css_state' => $mon['css_state'], 'css_checked_at' => $mon['css_checked_at'],
+                         'silhouette_ref' => $mon['silhouette_ref'] ?? null,
+                         'silhouette_ref_sig' => $mon['silhouette_ref_sig'] ?? null,
+                         'silhouette_drift' => (int)($mon['silhouette_drift'] ?? 0)];
                 Db::update('monitors', ['css_baseline' => null, 'css_baseline_at' => null,
-                                        'css_checked_at' => null, 'css_state' => null],
+                                        'css_checked_at' => null, 'css_state' => null,
+                                        'silhouette_ref' => null, 'silhouette_ref_sig' => null,
+                                        'silhouette_ref_at' => null, 'silhouette_drift' => 0],
                            'id = :__i', ['__i' => $id]);
                 $msg = t('Référence CSS effacée : elle sera réapprise à la prochaine analyse.');
                 break;

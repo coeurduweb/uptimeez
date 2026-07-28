@@ -6,6 +6,7 @@ namespace Uptimer;
 use Uptimer\Check\Css;
 use Uptimer\Check\Database;
 use Uptimer\Check\DomainExpiry;
+use Uptimer\Check\Silhouette;
 use Uptimer\Check\Ssl;
 use Uptimer\Detect\Discovery;
 use Uptimer\Notify\Notifier;
@@ -552,6 +553,23 @@ final class Runner
             if ($det['css']['state'] === 'ok' && !$lock && !empty($det['css']['baseline'])) {
                 $upd['css_baseline']    = jenc($det['css']['baseline']);
                 $upd['css_baseline_at'] = $ts;
+            }
+            // Silhouette : la référence se prend sur un état sain, l'actuelle à
+            // chaque analyse. C'est l'écart entre les deux qui parle au client.
+            if (!empty($det['css']['silhouette'])) {
+                $sig  = $det['css']['silhouette_sig'] ?? [];
+                $refS = jdec($mon['silhouette_ref_sig'] ?? null);
+                $upd['silhouette_now']     = $det['css']['silhouette'];
+                $upd['silhouette_now_sig'] = jenc($sig);
+                $upd['silhouette_at']      = $ts;
+                if ($det['css']['state'] === 'ok' && !$lock) {
+                    $upd['silhouette_ref']     = $det['css']['silhouette'];
+                    $upd['silhouette_ref_sig'] = jenc($sig);
+                    $upd['silhouette_ref_at']  = $ts;
+                    $upd['silhouette_drift']   = 0;
+                } elseif ($refS) {
+                    $upd['silhouette_drift'] = (int)round(Silhouette::distance($refS, $sig) * 100);
+                }
             }
         }
         if (isset($det['watch_state'])) {

@@ -95,6 +95,38 @@ Modern page builders hide blocks (`opacity: 0`) and reveal them with a script. I
 answers `200`, the CSS is fine, and the content is *invisible*. Uptimer counts blocks left waiting for a reveal
 and flags it : a failure mode that looks perfect from every other angle.
 
+### The silhouette: showing instead of describing
+
+A number does not settle an argument with a client. An image does.
+
+So on every audit, Uptimer reconstructs a **silhouette** of the page: the block
+structure read from the HTML, laid out according to what the CSS actually loaded
+allows. Headings, paragraphs, images, buttons, columns. It stores the silhouette
+of a healthy state as the reference, and compares the current one against it.
+
+When a stylesheet fails, the silhouette changes exactly as the page changes: no
+more centred container, no more columns, everything stacked at full width,
+images enormous. That is precisely what the visitor is looking at.
+
+The monitor page shows both side by side with the measured difference, and any
+site above 20 % difference appears in the client report under "What the visitor
+sees".
+
+**It is not a screenshot, and the interface says so.** Uptimer runs no browser:
+that is what lets it check hundreds of sites from shared hosting. The silhouette
+is a functional reconstruction, and for this purpose it is enough.
+
+The difference is measured on five traits a visitor perceives: is the content
+still held in a centred container, are there still columns, has the page grown
+much taller, is the variety of block types still there, does everything now span
+the full width. Above 35 %, a visitor sees a different page.
+
+**A security note, because it matters here.** The silhouette is an SVG injected
+directly into the page. Nothing the monitored site controls ever reaches it: the
+renderer emits only numbers and a fixed palette, no text, no class name, no
+attribute from the site. The test suite verifies it with deliberately hostile
+HTML.
+
 ### What you get out of it
 
 Beyond the verdict, the monitor page reconstructs **what the browser console would have printed**:

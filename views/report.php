@@ -136,6 +136,28 @@ $mons = $site ? Db::all('SELECT * FROM monitors WHERE site_id = ? ORDER BY role 
                            array_merge($ids, [date('Y-m-d H:i:s', time() - $secs)]));
   }
   ?>
+  <?php
+  // Une panne de mise en page se démontre en montrant la page, pas en la décrivant.
+  $sils = $ids ? Db::all('SELECT name, silhouette_ref, silhouette_now, silhouette_drift
+                          FROM monitors WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
+                            AND silhouette_drift >= 20
+                            AND silhouette_ref IS NOT NULL AND silhouette_now IS NOT NULL
+                          ORDER BY silhouette_drift DESC LIMIT 2', $ids) : [];
+  if ($sils): ?>
+    <h3 class="rep-h3"><?= te('Ce que voit le visiteur') ?></h3>
+    <?php foreach ($sils as $sl): ?>
+      <p class="small soft"><strong><?= e((string)$sl['name']) ?></strong> :
+        <?= te('{n} % de différence avec la référence', ['n' => (int)$sl['silhouette_drift']]) ?>.
+        <?= te('Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.') ?></p>
+      <div class="sil-pair">
+        <figure class="sil"><figcaption><?= te('Référence') ?></figcaption>
+          <div class="sil-view"><?= $sl['silhouette_ref'] ?></div></figure>
+        <figure class="sil sil-bad"><figcaption><?= te('Maintenant') ?></figcaption>
+          <div class="sil-view"><?= $sl['silhouette_now'] ?></div></figure>
+      </div>
+    <?php endforeach; ?>
+  <?php endif; ?>
+
   <h3 class="rep-h3"><?= te('Interruptions constatées') ?></h3>
   <?php if (!$incidents): ?>
     <p class="rep-good"><?= Ui::icon('check', 16) ?> <?= te('Aucune interruption sur la période.') ?></p>

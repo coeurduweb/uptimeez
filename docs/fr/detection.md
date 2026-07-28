@@ -98,6 +98,40 @@ Les constructeurs de pages modernes masquent des blocs (`opacity: 0`) et les ré
 échoue, la page répond `200`, le CSS est bon, et le contenu est *invisible*. Uptimer compte les blocs restés en
 attente de révélation et le signale : une panne qui paraît parfaite sous tous les autres angles.
 
+### La silhouette : montrer au lieu de décrire
+
+Un chiffre ne clôt pas une discussion avec un client. Une image, si.
+
+À chaque analyse, Uptimer reconstruit donc une **silhouette** de la page : la
+structure des blocs lue dans le HTML, mise en page selon ce que le CSS réellement
+chargé permet de faire. Titres, paragraphes, images, boutons, colonnes. Il garde
+la silhouette d'un état sain comme référence, et compare l'actuelle avec elle.
+
+Quand une feuille de style tombe, la silhouette change exactement comme la page
+change : plus de conteneur centré, plus de colonnes, tout empilé sur toute la
+largeur, images démesurées. C'est précisément ce que le visiteur a sous les yeux.
+
+La fiche de la sonde montre les deux côte à côte avec l'écart mesuré, et tout
+site au-delà de 20 % d'écart apparaît dans le rapport client, sous « Ce que voit
+le visiteur ».
+
+**Ce n'est pas une capture d'écran, et l'interface le dit.** Uptimer n'exécute
+aucun navigateur : c'est ce qui lui permet de vérifier des centaines de sites
+depuis un mutualisé. La silhouette est une reconstruction fonctionnelle, et pour
+cet usage elle suffit.
+
+L'écart se mesure sur cinq traits que le visiteur perçoit : le contenu est-il
+encore tenu dans un conteneur centré, y a-t-il encore des colonnes, la page
+s'est-elle beaucoup allongée, la variété des types de blocs subsiste-t-elle, tout
+occupe-t-il désormais la largeur. Au-delà de 35 %, un visiteur voit une autre
+page.
+
+**Une note de sécurité, parce qu'elle compte ici.** La silhouette est un SVG
+injecté directement dans la page. Rien de ce que contrôle le site surveillé n'y
+entre jamais : le rendu n'émet que des nombres et une palette fixe, aucun texte,
+aucun nom de classe, aucun attribut venu du site. La suite de tests le vérifie
+avec du HTML volontairement hostile.
+
 ### Ce que vous en obtenez
 
 Au-delà du verdict, la fiche de la sonde reconstitue **ce que la console du navigateur aurait affiché** :

@@ -187,7 +187,48 @@ echo Ui::accOpen('res', 'layers', t('Ressources de la page'),
                    ['when' => Notifier::when($cssDetail['at'] ?? $mon['css_checked_at'])]) : '',
     $cs === 'broken' || $cs === 'warn', $resTone, $resBadge);
 echo Ui::accBody();
+
+// La silhouette avant tout le reste : une image se comprend sans lecture, et
+// c'est elle qu'on montre au client. Le détail technique vient après.
+$silRef  = (string)($mon['silhouette_ref'] ?? '');
+$silNow  = (string)($mon['silhouette_now'] ?? '');
+$drift   = (int)($mon['silhouette_drift'] ?? 0);
 ?>
+  <?php if ($silNow !== ''): ?>
+    <div class="sil-wrap">
+      <div class="sil-head">
+        <strong><?= te('La page telle qu\'un visiteur la voit') ?></strong>
+        <?= hint('Silhouette reconstruite depuis le HTML et le CSS réellement chargé. Ce n\'est pas une capture d\'écran : c\'est la structure que le navigateur pourrait mettre en page. Quand une feuille de style tombe, la silhouette change exactement comme la page change.') ?>
+        <span class="grow"></span>
+        <?php if ($silRef !== '' && $drift > 0): ?>
+          <span class="badge badge-<?= $drift >= 35 ? 'bad' : 'warn' ?>">
+            <?= te('{n} % de différence avec la référence', ['n' => $drift]) ?></span>
+        <?php elseif ($silRef !== ''): ?>
+          <span class="badge badge-ok"><?= te('conforme à la référence') ?></span>
+        <?php endif; ?>
+      </div>
+      <div class="sil-pair<?= $silRef === '' ? ' sil-solo' : '' ?>">
+        <?php if ($silRef !== ''): ?>
+          <figure class="sil">
+            <figcaption><?= te('Référence') ?>
+              <span class="muted"><?= e(Notifier::when((string)($mon['silhouette_ref_at'] ?? ''))) ?></span>
+            </figcaption>
+            <div class="sil-view"><?= $silRef /* SVG produit par nous, jamais par le site */ ?></div>
+          </figure>
+        <?php endif; ?>
+        <figure class="sil<?= $drift >= 35 ? ' sil-bad' : '' ?>">
+          <figcaption><?= te('Maintenant') ?>
+            <span class="muted"><?= e(Notifier::when((string)($mon['silhouette_at'] ?? ''))) ?></span>
+          </figcaption>
+          <div class="sil-view"><?= $silNow ?></div>
+        </figure>
+      </div>
+      <?php if ($silRef === ''): ?>
+        <p class="tiny muted mb0"><?= te('La référence sera mémorisée à la première analyse d\'une page saine.') ?></p>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
   <?php if (!$cssDetail): ?>
     <p class="muted small mb0">
       <?= (int)$mon['check_css'] === 1

@@ -1,12 +1,14 @@
 <?php
 /**
- * Uptimer, Bengali catalogue
+ * Uptimer, Bengali catalogue.
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
  * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
- * What is left: php bin/i18n-audit.php --manquants=bn
+ *
+ * Regenerate with: php bin/i18n-sync.php
+ * What is left:    php bin/i18n-audit.php --manquants=bn
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
     'Cadence' => 'হার',
     'Canal' => 'চ্যানেল',
     'Cause' => 'কারণ',
+    'Ce que voit le visiteur' => 'দর্শক যা দেখেন',
     'Chargement' => 'লোড হচ্ছে',
     'Chronologie' => 'সময়রেখা',
     'Code' => 'কোড',
@@ -76,6 +79,7 @@ return [
     'La mise en page est cassée' => 'পৃষ্ঠার লেআউট ভেঙেছে',
     'La page a disparu' => 'পৃষ্ঠাটি নেই',
     'La page est en noindex' => 'পৃষ্ঠাটি noindex-এ আছে',
+    'La page telle qu\'un visiteur la voit' => 'একজন দর্শক যেমন দেখেন',
     'Langue' => 'ভাষা',
     'Le certificat SSL est expiré' => 'SSL সার্টিফিকেট মেয়াদোত্তীর্ণ',
     'Le certificat SSL est refusé par les navigateurs' => 'ব্রাউজার SSL সার্টিফিকেট প্রত্যাখ্যান করে',
@@ -86,6 +90,7 @@ return [
     'Le serveur renvoie une erreur' => 'সার্ভার ত্রুটি ফেরত দিচ্ছে',
     'Le signal attendu n\'est pas arrivé' => 'প্রত্যাশিত সংকেত আসেনি',
     'Le temps de réponse dépasse votre seuil' => 'প্রতিক্রিয়া সময় আপনার সীমা ছাড়িয়েছে',
+    'Maintenant' => 'এখন',
     'Message' => 'বার্তা',
     'Mettre en pause' => 'বিরত রাখুন',
     'Mettre en pause 1 h' => '১ ঘণ্টা বিরত',
@@ -121,9 +126,11 @@ return [
     'Rien à surveiller pour l\'instant' => 'এখনো নজরে রাখার কিছু নেই',
     'Réactiver' => 'আবার চালু',
     'Réapprendre la référence' => 'রেফারেন্স আবার শেখান',
+    'Référence' => 'রেফারেন্স',
     'Réglages' => 'সেটিংস',
     'Réponse' => 'প্রতিক্রিয়া',
     'Se déconnecter' => 'সাইন আউট',
+    'Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.' => 'HTML ও লোড হওয়া CSS থেকে পুনর্নির্মিত রূপরেখা। এটি স্ক্রিনশট নয়।',
     'Simple' => 'সরল',
     'Site' => 'সাইট',
     'Sonde' => 'মনিটর',
@@ -153,6 +160,7 @@ return [
     'Vue mur d\'écran :' => 'ওয়াল ভিউ:',
     'Vérifier' => 'যাচাই',
     'Vérifier maintenant' => 'এখনই যাচাই',
+    'conforme à la référence' => 'রেফারেন্সের সাথে মেলে',
     'depuis {duration}' => '{duration} ধরে',
     'dernière passe {when}' => 'শেষ পাস {when}',
     'en cours' => 'চলমান',
@@ -175,6 +183,7 @@ return [
     'une sonde en ligne' => '১টি মনিটর চালু',
     'uptime et temps de réponse des dernières 24 h' => 'গত ২৪ ঘণ্টার আপটাইম ও প্রতিক্রিয়া সময়',
     'uptime moyen {pct}' => 'গড় আপটাইম {pct}',
+    '{n} % de différence avec la référence' => 'রেফারেন্স থেকে {n} % ভিন্ন',
     '{n} en pause' => '{n}টি বিরত',
     '{n} points à surveiller' => '{n}টি বিষয় নজরে রাখুন',
     '{n} sites sans rien à signaler' => '{n}টি সাইটে জানানোর কিছু নেই',

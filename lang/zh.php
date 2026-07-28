@@ -1,12 +1,14 @@
 <?php
 /**
- * Uptimer, Chinese (Mandarin) catalogue
+ * Uptimer, Chinese catalogue.
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
  * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
- * What is left: php bin/i18n-audit.php --manquants=zh
+ *
+ * Regenerate with: php bin/i18n-sync.php
+ * What is left:    php bin/i18n-audit.php --manquants=zh
  */
 declare(strict_types=1);
 
@@ -32,6 +34,7 @@ return [
     'Cadence' => '频率',
     'Canal' => '通道',
     'Cause' => '原因',
+    'Ce que voit le visiteur' => '访客看到的内容',
     'Chargement' => '加载中',
     'Chronologie' => '时间线',
     'Code' => '代码',
@@ -76,6 +79,7 @@ return [
     'La mise en page est cassée' => '页面样式已损坏',
     'La page a disparu' => '页面已不存在',
     'La page est en noindex' => '页面被设为 noindex',
+    'La page telle qu\'un visiteur la voit' => '访客所看到的页面',
     'Langue' => '语言',
     'Le certificat SSL est expiré' => 'SSL 证书已过期',
     'Le certificat SSL est refusé par les navigateurs' => '浏览器拒绝该 SSL 证书',
@@ -86,6 +90,7 @@ return [
     'Le serveur renvoie une erreur' => '服务器返回错误',
     'Le signal attendu n\'est pas arrivé' => '预期信号未到达',
     'Le temps de réponse dépasse votre seuil' => '响应时间超过阈值',
+    'Maintenant' => '现在',
     'Message' => '消息',
     'Mettre en pause' => '暂停',
     'Mettre en pause 1 h' => '暂停 1 小时',
@@ -121,9 +126,11 @@ return [
     'Rien à surveiller pour l\'instant' => '暂无监测对象',
     'Réactiver' => '重新启用',
     'Réapprendre la référence' => '重新学习基准',
+    'Référence' => '参考基准',
     'Réglages' => '设置',
     'Réponse' => '响应',
     'Se déconnecter' => '退出登录',
+    'Silhouette reconstruite depuis le HTML et le CSS chargé, ce n\'est pas une capture d\'écran.' => '轮廓由 HTML 和已加载的 CSS 重建，并非屏幕截图。',
     'Simple' => '简洁',
     'Site' => '站点',
     'Sonde' => '监测项',
@@ -153,6 +160,7 @@ return [
     'Vue mur d\'écran :' => '大屏视图：',
     'Vérifier' => '检查',
     'Vérifier maintenant' => '立即检查',
+    'conforme à la référence' => '与基准一致',
     'depuis {duration}' => '已持续 {duration}',
     'dernière passe {when}' => '上次巡检 {when}',
     'en cours' => '进行中',
@@ -175,6 +183,7 @@ return [
     'une sonde en ligne' => '1 个监测项在线',
     'uptime et temps de réponse des dernières 24 h' => '最近 24 小时的可用率与响应时间',
     'uptime moyen {pct}' => '平均可用率 {pct}',
+    '{n} % de différence avec la référence' => '与基准相差 {n} %',
     '{n} en pause' => '{n} 个已暂停',
     '{n} points à surveiller' => '{n} 项需要关注',
     '{n} sites sans rien à signaler' => '{n} 个站点无异常',

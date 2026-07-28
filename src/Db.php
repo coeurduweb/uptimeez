@@ -195,6 +195,18 @@ final class Db
             css_state {$str(20)} DEFAULT NULL,
             css_checked_at {$ts} DEFAULT NULL,
             css_detail {$txt},
+
+            /* Silhouette : la page telle qu'un visiteur la verrait, reconstruite
+               sans navigateur. La référence est prise sur un état sain, l'actuelle
+               à chaque analyse, et l'écart entre les deux se lit en pourcentage. */
+            silhouette_ref {$txt},
+            silhouette_ref_sig {$txt},
+            silhouette_ref_at {$ts} DEFAULT NULL,
+            silhouette_now {$txt},
+            silhouette_now_sig {$txt},
+            silhouette_at {$ts} DEFAULT NULL,
+            silhouette_drift {$int} NOT NULL DEFAULT 0,
+
             ssl_checked_at {$ts} DEFAULT NULL,
             content_hash {$str(40)} DEFAULT NULL,
             content_hash_at {$ts} DEFAULT NULL,

@@ -615,6 +615,107 @@ check('un mode inconnu retombe sur simple',
     in_array('simple', Uptimer\Ui::MODES, true) && !in_array('nawak', Uptimer\Ui::MODES, true), true);
 
 // =========================================================================
+section('Silhouette : ce que le visiteur verrait');
+// =========================================================================
+use Uptimer\Check\Silhouette;
+
+$pageHtml = '<!doctype html><html><head><title>T</title><style>.x{color:red}</style></head><body>'
+    . '<header class="site-header"><nav class="nav-main"><a href="/">Accueil</a><a href="/c">Contact</a></nav></header>'
+    . '<main class="container"><h1 class="hero-title">Boulangerie du Marché</h1>'
+    . '<p>Pain au levain cuit sur place chaque matin, farines biologiques.</p>'
+    . '<div class="card-grid">'
+    . '<div class="card"><img src="a.jpg"><h3>Pains</h3><p>Levain naturel</p></div>'
+    . '<div class="card"><img src="b.jpg"><h3>Viennoiseries</h3><p>Beurre AOP</p></div>'
+    . '<div class="card"><img src="c.jpg"><h3>Traiteur</h3><p>Sur commande</p></div>'
+    . '</div><a class="btn" href="/x">Commander</a></main>'
+    . '<footer class="footer-main"><p>Tous droits réservés</p></footer></body></html>';
+$pageCss = '.container{max-width:1100px;margin:0 auto;padding:0 24px}'
+    . '.site-header{background:#fff;padding:12px}.nav-main{display:flex;gap:16px}'
+    . '.hero-title{font-size:2.5rem;text-align:center}'
+    . '.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}'
+    . '.card{background:#fff;border-radius:12px;padding:16px}'
+    . '.btn{background:#3b5bdb;border-radius:8px;padding:10px 20px}'
+    . '.footer-main{background:#f1f5f9;padding:24px;text-align:center}';
+
+$sil  = Silhouette::build($pageHtml, $pageCss);
+$bare = Silhouette::build($pageHtml, '');
+
+check('silhouette produite', str_starts_with($sil['svg'], '<svg'), true);
+check('SVG bien fermé', str_ends_with(trim($sil['svg']), '</svg>'), true);
+check('des blocs sont dessinés', $sil['nodes'] > 8, true);
+check('signature complète',
+    array_keys($sil['signature']), ['contained', 'columns', 'height', 'variety', 'density']);
+
+// --- Le CSS change tout : c'est le principe même de la mesure -------------
+check('avec CSS : contenu dans un conteneur centré', $sil['signature']['contained'] > 0.5, true);
+check('sans CSS : plus rien n\'est contenu', $bare['signature']['contained'] < 0.2, true);
+check('avec CSS : des colonnes existent', $sil['signature']['columns'] >= 1, true);
+check('sans CSS : plus de colonnes', $bare['signature']['columns'], 0);
+check('sans CSS : la page s\'allonge', $bare['signature']['height'] > $sil['signature']['height'], true);
+check('sans CSS : tout occupe la largeur', $bare['signature']['density'] > 0.8, true);
+
+$drift = Silhouette::distance($sil['signature'], $bare['signature']);
+check('écart mesuré supérieur au seuil d\'alerte', $drift > 0.35, true);
+check('écart identique à lui-même', Silhouette::distance($sil['signature'], $sil['signature']), 0.0);
+check('écart borné à 1', $drift <= 1.0, true);
+check('signature vide : pas d\'écart inventé', Silhouette::distance([], $sil['signature']), 0.0);
+
+// --- Le SVG est produit par nous, jamais par le site ---------------------
+// La silhouette est injectée brute dans la page : si un contenu du site pouvait
+// y entrer, ce serait une XSS stockée. On le vérifie avec du HTML hostile.
+$hostile = '<body><h1 class="a&quot;onload=alert(1)">' . '<script>alert(1)</script>'
+    . '</h1><p>' . htmlspecialchars('"><svg onload=alert(1)>') . '</p>'
+    . '<div class="\'><script>alert(2)</script>">bloc</div>'
+    . '<img src=x onerror=alert(3)></body>';
+$hs = Silhouette::build($hostile, '.a{display:flex}');
+check('aucun script dans le SVG', str_contains($hs['svg'], '<script'), false);
+check('aucun gestionnaire d\'évènement', (bool)preg_match('~\bon[a-z]+\s*=~i', $hs['svg']), false);
+check('aucun texte du site dans le SVG', str_contains($hs['svg'], 'alert'), false);
+check('le SVG ne contient que des formes',
+    (bool)preg_match('~^<svg[^>]*>(?:<(?:rect|path)\b[^>]*/>)*</svg>$~', $hs['svg']), true);
+
+// --- Robustesse : le collecteur ne doit jamais s'étouffer -----------------
+foreach ([
+    ['vide', ''],
+    ['sans corps', '<html><head><title>x</title></head></html>'],
+    ['balises non fermées', '<body><div><section><p>texte<div><span>'],
+    ['fermetures orphelines', '<body></div></section></p></body>'],
+    ['profondeur extrême', '<body>' . str_repeat('<div>', 200) . 'x' . str_repeat('</div>', 200) . '</body>'],
+    ['largeur extrême', '<body>' . str_repeat('<p>texte</p>', 500) . '</body>'],
+    ['octets invalides', "<body><p>\xC3\x28 texte \xE2\x82</p></body>"],
+    ['entités', '<body><p>&lt;&gt;&amp;&nbsp;&#233;</p></body>'],
+] as [$label, $bad]) {
+    $r = Silhouette::build($bad, $pageCss);
+    check('HTML ' . $label . ' : silhouette valide',
+        str_starts_with($r['svg'], '<svg') && str_ends_with(trim($r['svg']), '</svg>'), true);
+}
+foreach ([
+    ['CSS vide', ''],
+    ['CSS tronqué', '.a{display:flex'],
+    ['accolades déséquilibrées', '}}}.a{color:red}{{{'],
+    ['CSS gigantesque', str_repeat('.c' . 'x{padding:4px}', 3000)],
+] as [$label, $badCss]) {
+    $r = Silhouette::build($pageHtml, $badCss);
+    check($label . ' : silhouette valide', str_starts_with($r['svg'], '<svg'), true);
+}
+
+// --- Coût : le plafond de nœuds tient -----------------------------------
+$huge = '<body>' . str_repeat('<section class="card"><h2>T</h2><p>texte assez long pour compter</p>'
+      . '<img src="a.jpg"></section>', 400) . '</body>';
+$t0 = microtime(true);
+$r  = Silhouette::build($huge, $pageCss);
+$ms = (microtime(true) - $t0) * 1000;
+check('page énorme : nombre de blocs plafonné', $r['nodes'] <= 120, true);
+check('page énorme : analysée en moins de 500 ms', $ms < 500, true);
+check('SVG de taille raisonnable', strlen($r['svg']) < 40000, true);
+
+// --- La silhouette entre bien dans le résultat de l'audit ---------------
+$audit = Uptimer\Check\Css::audit('https://exemple.fr/', $pageHtml, null, [], ['silhouette' => true]);
+check('l\'audit CSS renvoie une silhouette', isset($audit['silhouette'], $audit['silhouette_sig']), true);
+$audit2 = Uptimer\Check\Css::audit('https://exemple.fr/', $pageHtml, null, [], ['silhouette' => false]);
+check('la silhouette peut être désactivée', isset($audit2['silhouette']), false);
+
+// =========================================================================
 section('Serveur MCP : protocole et outils');
 // =========================================================================
 /**

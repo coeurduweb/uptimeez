@@ -341,6 +341,15 @@ final class Css
             $result['state'] = 'warn'; $result['severity'] = 'warn'; $result['reason'] = 'CSS_DEGRADED';
         }
 
+        // ---- 8. Silhouette : ce que le visiteur verrait --------------------
+        // On la calcule à chaque audit, avec le CSS réellement chargé. Comparée
+        // à celle d'un état sain, elle montre la panne au lieu de la décrire.
+        if ($opt['silhouette'] ?? true) {
+            $sil = Silhouette::build($html, $clean);
+            $result['silhouette']     = $sil['svg'];
+            $result['silhouette_sig'] = $sil['signature'];
+        }
+
         $result['metrics']  = $metrics;
         $result['delta']    = $delta;
         $result['console']  = array_slice($console, 0, 12);
