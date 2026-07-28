@@ -7,9 +7,14 @@ use Uptimer\Stats;
 use Uptimer\Ui;
 
 $appName  = (string)Config::get('app.name', 'Uptimer');
-$isPublic = ($view ?? '') === 'status';
+$isClient = ($view ?? '') === 'client';
+$isPublic = ($view ?? '') === 'status' || $isClient;
 $isLogin  = ($view ?? '') === 'login';
-$summary  = (!$isLogin) ? Stats::summary() : [];
+// L'espace client ne doit rien savoir des autres clients : son compteur de
+// pannes est celui de ses sites, fourni par la page, jamais le total global.
+// Sans cette distinction, le titre de l'onglet annoncerait « (3) » à un client
+// dont les trois sites vont bien.
+$summary  = $isClient ? (array)($clientSummary ?? []) : ((!$isLogin) ? Stats::summary() : []);
 $titles = [
     'today'    => t('Aujourd\'hui'),      'dashboard' => t('Tableau de bord'),
     'monitor'  => t('Sonde'),             'monitors'  => t('Sondes'),
@@ -17,8 +22,11 @@ $titles = [
     'import'   => t('Ajouter des sites'), 'settings'  => t('Réglages'),
     'login'    => t('Connexion'),         'status'    => t('État des services'),
     'report'   => t('Rapport client'),
+    'clients'  => t('Clients'),
 ];
-$pageTitle = $titles[$view] ?? $appName;
+$pageTitle = $isClient && ($client['name'] ?? '') !== ''
+    ? (string)$client['name']
+    : ($titles[$view] ?? $appName);
 // Une fiche de sonde appartient à la section « Sondes » : l'onglet reste marqué
 // pour ne pas perdre le repère de navigation.
 $navCurrent = $view === 'monitor' ? 'monitors' : ($view === 'events' ? 'incidents' : $view);
@@ -34,8 +42,14 @@ $nav = [
     'monitors'  => [t('Sondes'),       'list',    true],
     'incidents' => [t('Incidents'),    'history', true],
     'report'    => [t('Rapport'),      'file',    false],
+    'clients'   => [t('Clients'),      'users',   false],
     'settings'  => [t('Réglages'),     'sliders', true],
 ];
+// L'onglet Clients n'a de sens que si l'agence en a créé au moins un : sinon
+// c'est un écran vide de plus dans une barre déjà chargée.
+if (!$isLogin && !$isPublic && !Uptimer\Db::val('SELECT COUNT(*) FROM clients')) {
+    unset($nav['clients']);
+}
 if (!expert()) {
     // Un écran ouvert explicitement reste dans la barre : on ne fait jamais
     // disparaître l'onglet de la page où l'on se trouve. Le filtrage conserve

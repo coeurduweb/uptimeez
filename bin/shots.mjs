@@ -76,6 +76,42 @@ console.log('Thème clair :');
   await shot(page, '/index.php?p=incidents&lang=fr', 'incidents.png');
   await shot(page, '/index.php?p=settings&lang=fr&ui=expert', 'settings.png');
   await shot(page, '/index.php?p=import&lang=fr', 'import.png');
+
+  // Mode agence : la liste des clients, premier bloc ouvert pour montrer le
+  // rattachement des sites et le lien à envoyer.
+  // On ouvre le bloc du client qui a le plus de sites : une capture avec une
+  // seule ligne ne montre pas ce que fait l'écran.
+  const richest = async p => p.evaluate(() => {
+    let best = null, bestN = -1;
+    for (const det of document.querySelectorAll('table.tbl tbody tr details.acc')) {
+      const owner = det.closest('tr')?.previousElementSibling?.textContent || '';
+      if (owner.includes('accès fermé')) continue;
+      const n = parseInt((det.querySelector('.acc-note')?.textContent || '').replace(/\D+/g, ''), 10) || 1;
+      if (n > bestN) { bestN = n; best = det.id; }
+    }
+    return best;
+  });
+  await shot(page, '/index.php?p=clients&lang=fr&ui=expert', 'clients.png', {
+    before: async p => {
+      const id = await richest(p);
+      if (id) await p.evaluate(i => { document.getElementById(i).open = true; }, id);
+      await p.waitForTimeout(200);
+    },
+  });
+  // L'espace client tel que le client le voit : le lien se lit sur l'écran
+  // précédent, personne n'a besoin de connaître le jeton pour produire l'image.
+  const cliTok = await page.evaluate(() => {
+    let best = '', bestN = -1;
+    for (const det of document.querySelectorAll('table.tbl tbody tr details.acc')) {
+      const owner = det.closest('tr')?.previousElementSibling?.textContent || '';
+      if (owner.includes('accès fermé')) continue;
+      const n = parseInt((det.querySelector('.acc-note')?.textContent || '').replace(/\D+/g, ''), 10) || 1;
+      const m = (det.querySelector('input[readonly]')?.value || '').match(/k=([0-9a-f]{32})/);
+      if (m && n > bestN) { bestN = n; best = m[1]; }
+    }
+    return best;
+  });
+  if (cliTok) await shot(page, `/index.php?p=client&k=${cliTok}&lang=fr`, 'client-space.png');
   await shot(page, '/index.php?p=report&lang=fr', 'report.png', { full: true });
 
   // Fiche d'une sonde en panne de mise en page, accordéon ouvert.

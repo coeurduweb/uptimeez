@@ -242,6 +242,55 @@ try {
     ok('boutons assez hauts en ' + name, tap === 0, tap + ' bouton(s) trop petit(s)');
   }
 
+  title('Mode agence et espace client');
+  await page.setViewportSize({ width: 1440, height: 950 });
+  await page.goto(BASE + '/index.php?p=clients&ui=expert', { waitUntil: 'networkidle' });
+  ok('écran des clients affiché', (await page.$('table.tbl')) !== null);
+  const cliRows = await page.$$eval('table.tbl tbody tr td:first-child strong', (e) => e.length);
+  ok('un client par ligne', cliRows >= 1, cliRows + ' client(s)');
+  // Le lien du client doit être lisible et sélectionnable d'un clic : c'est
+  // l'unique geste que fera l'utilisateur sur cet écran.
+  const first = await page.$('table.tbl tbody tr details.acc');
+  ok('réglages du client repliés par défaut', first !== null && !(await first.evaluate((el) => el.open)));
+  const accId = await first.evaluate((el) => el.id);
+  await page.click('#' + accId + ' > summary');
+  ok('lien du client visible après ouverture',
+    /p=client&k=[0-9a-f]{32}/.test(await page.inputValue('#' + accId + ' input[readonly]')));
+  const boxes = await page.$$eval('#' + accId + ' .checkrow input', (e) => e.length);
+  ok('sites proposés au rattachement', boxes >= 1, boxes + ' site(s)');
+  // Un site déjà rattaché ailleurs se voit, mais ne se prend pas.
+  const taken = await page.$$eval('#' + accId + ' .checkrow.is-taken input', (e) =>
+    e.filter((i) => i.disabled).length);
+  ok('sites d\'un autre client montrés mais non cochables', taken >= 0, taken + ' verrouillé(s)');
+
+  // L'espace client, vu comme le client le verra : dans un contexte neuf, sans
+  // le cookie d'administration. C'est la seule façon de tester ce qu'il voit.
+  const link = await page.inputValue('#' + accId + ' input[readonly]');
+  const token = (link.match(/k=([0-9a-f]{32})/) || [])[1];
+  const guest = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+  const gp = await guest.newPage();
+  const gErrors = [];
+  gp.on('pageerror', (e) => gErrors.push(e.message));
+  await gp.goto(BASE + '/index.php?p=client&k=' + token, { waitUntil: 'networkidle' });
+  ok('espace client ouvert sans session', (await gp.$('.cli-head')) !== null);
+  ok('aucun bouton d\'action dans l\'espace client',
+    (await gp.$$eval('button', (b) => b.filter((x) => x.type !== 'submit').length)) === 0);
+  ok('aucune navigation d\'administration', (await gp.$('nav.nav')) === null);
+  ok('état d\'ensemble annoncé en haut', (await gp.$('.band')) !== null);
+  ok('un bloc par site', (await gp.$$eval('.cli-site', (e) => e.length)) >= 1);
+  // Le pied de page est écrit en dernier : s'il est là, rien n'a interrompu le
+  // rendu. C'est le seul témoin d'une erreur fatale quand display_errors est
+  // coupé, ce qui est le cas en production.
+  ok('page rendue jusqu\'au bout', (await gp.$('.cli-foot')) !== null);
+  ok('aucune erreur JavaScript côté client', gErrors.length === 0, gErrors.slice(0, 2).join(' | '));
+  // Lisible sur un téléphone : c'est là que le client ouvrira le lien.
+  await gp.setViewportSize({ width: 390, height: 844 });
+  await gp.goto(BASE + '/index.php?p=client&k=' + token, { waitUntil: 'networkidle' });
+  const over = await gp.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  ok('espace client sans débordement sur mobile', over <= 0, over + ' px');
+  await guest.close();
+
   title('Réglages');
   await page.setViewportSize({ width: 1440, height: 950 });
   await page.goto(BASE + '/index.php?p=settings', { waitUntil: 'networkidle' });

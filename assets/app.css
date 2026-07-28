@@ -732,3 +732,50 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
 .adv-list li { font-size: .78rem; line-height: 1.35; }
 .adv-list a { font-family: var(--mono, ui-monospace, monospace); font-size: .74rem; }
 .v-ok { color: var(--ok); } .v-warn { color: var(--warn); }
+
+/* ===========================================================================
+   Mode agence : la liste des clients et l'espace en lecture seule
+   ========================================================================= */
+.page-head { display: flex; justify-content: space-between; align-items: flex-start;
+             gap: var(--s4); margin: var(--s5) 0 var(--s4); flex-wrap: wrap; }
+.page-head p { margin: .35rem 0 0; max-width: 68ch; font-size: 13.5px; }
+
+/* Une cellule qui porte un formulaire n'a pas à réagir au survol comme une
+   ligne de données : le repère visuel doit rester sur la ligne du client. */
+table.tbl td.cell-form { padding: 0 var(--s4) var(--s4); background: var(--surface); }
+table.tbl tr:hover td.cell-form { background: var(--surface); }
+
+.txt-bad { color: var(--bad); } .txt-warn { color: var(--warn); }
+
+fieldset.fs { border: 1px solid var(--border); border-radius: var(--r-sm);
+              padding: var(--s3) var(--s4); margin: var(--s4) 0 0; }
+fieldset.fs legend { padding: 0 6px; font-size: 12.5px; font-weight: 650;
+                     text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+/* Rattachement des sites : des cases à cocher qui restent lisibles à trente
+   lignes, et cliquables au doigt (44 px de hauteur utile). */
+.checkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+             gap: 2px var(--s4); margin-top: var(--s2); }
+.checkrow { display: flex; gap: var(--s3); align-items: baseline; padding: 9px 4px;
+            border-radius: var(--r-sm); cursor: pointer; font-size: 13.5px; min-height: 40px; }
+.checkrow:hover { background: var(--surface-2); }
+.checkrow input { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; cursor: pointer; }
+.checkrow .tiny { display: block; }
+/* Un site déjà pris par un autre client : visible, mais clairement pas dispo. */
+.checkrow.is-taken { opacity: .55; cursor: not-allowed; }
+.checkrow.is-taken input { cursor: not-allowed; }
+
+/* L'espace client : sobre, sans action, lisible sur un téléphone. */
+.cli-head { text-align: center; margin: var(--s6) 0 var(--s4); }
+.cli-head h1 { font-size: 25px; }
+.cli-head p { margin: .4rem 0 0; color: var(--text-soft); font-size: 13.5px; }
+.cli-site { display: grid; grid-template-columns: 26px 1fr 220px 110px; gap: var(--s4);
+            align-items: center; padding: var(--s4); border-bottom: 1px solid var(--border); }
+.cli-site:last-child { border-bottom: 0; }
+.cli-site .cli-name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.cli-site .cli-dom { font-size: 12.5px; color: var(--muted); }
+.cli-foot { text-align: center; margin-top: var(--s5); font-size: 12.5px; color: var(--muted); }
+@media (max-width: 760px) {
+  .cli-site { grid-template-columns: 26px 1fr; row-gap: var(--s2); }
+  .cli-site > :nth-child(3), .cli-site > :nth-child(4) { grid-column: 2; }
+}

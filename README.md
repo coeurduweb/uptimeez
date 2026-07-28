@@ -189,6 +189,36 @@ That string is **derived automatically**, in this order of preference: footer co
 title, first nav item, H1. It is never taken from an error page. If it vanishes while the page still answers 200, the data layer is
 gone and you know within one check.
 
+### One link per client, and nothing of anyone else
+
+You monitor thirty sites belonging to twelve people. Each wants to know whether theirs is fine. None of them has
+any business seeing the other twenty-nine.
+
+Every other tool answers this with user accounts, roles and permissions. Uptimer gives you a client, a checkbox
+list of their sites, and a link.
+
+![Clients screen](docs/img/clients.png)
+
+The link opens a page with no account and no password: a band saying **everything is working** or **one of your
+sites is not responding**, one block per site with its 24-hour curve and 30-day uptime, and the recent outages
+with their duration. No button, no setting, no jargon, and it reads well on the phone where the client will
+actually open it.
+
+![Client space](docs/img/client-space.png)
+
+The link is the password, so it is treated like one: a 128-bit random token, `noindex` and `no-referrer` on the
+page, `no-store` caching, one click to change the link if it travelled too far, and one switch to close the access
+without losing the history. An unknown link, a malformed link and a closed link return **the same response**, so
+probing reveals nothing.
+
+Partitioning is not a display concern: every read filters on the client, and no identifier from the URL enters
+those queries. Appending `&client_id=7` to someone's link changes nothing. The test suites check exactly that,
+hostile tokens included.
+
+Already grouped your sites at import time? One button turns those groups into clients.
+
+→ **[Agency mode](docs/en/agency-mode.md)**
+
 ### Vulnerable versions, before anything breaks
 
 Uptimer already reads the HTML of every page it checks, and that HTML almost always says which version is
@@ -258,6 +288,8 @@ request; the table lives in this file.
 | Dead-man heartbeat (cron, backups) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
 | Printable client report | ✅ built in | ⚠️ paid plans | ❌ | ✅ | ❌ | ⚠️ | ✅ |
 | Monthly report e-mailed to each client on its own | ✅ | ❌ | ❌ | ⚠️ internal only | ❌ | ❌ | ⚠️ internal only |
+| Per-client read-only access, no account to create | ✅ one link | ⚠️ status page only | ❌ | ⚠️ user accounts | ⚠️ status page only | ❌ | ⚠️ user accounts |
+| Client sees only their own sites | ✅ by construction | ❌ | ❌ | ⚠️ role configuration | ❌ | ⚠️ build it yourself | ⚠️ role configuration |
 | Public status page | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 | Simple / Full interface switch | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Interface languages | **10 + RTL** | 1 | 1 | several | many (community) | several | several |
@@ -337,7 +369,7 @@ Then you can simply ask:
 > *"Add these twelve domains, but show me what you would create first."*
 > *"The Leboncoin staging redesign is intentional, relearn its reference and check it again."*
 
-**Eight read-only tools** are exposed by default:
+**Ten read-only tools** are exposed by default:
 
 | Tool | Answers |
 |---|---|
@@ -348,6 +380,8 @@ Then you can simply ask:
 | `incidents` | Outages over a period, with total downtime, for an SLA answer |
 | `report` | The ready-to-send report for a ticket or a client e-mail |
 | `response_time_series` | The curve, to tell a spike from a trend |
+| `security_advisories` | Which sites run a version covered by a published advisory, worst severity first |
+| `list_clients` | Every client, their sites, their state, and whether they still look at their space |
 | `security_target_check` | Would this address be refused before any request? |
 
 **Four more with `--write`**: `check_now`, `apply_fix`, `set_enabled`, `add_sites`. Read-only is the default on
@@ -440,7 +474,6 @@ uptimer/
 
 The [backlog](BACKLOG.md) holds the competitor research and the user stories behind each decision. Next up:
 
-- Multi-client agency mode, with a read-only access you can hand to a client
 - Core Web Vitals on the pages that matter
 - Importers for the main competing tools, so migrating is a five-minute job
 - A daily digest instead of per-event alerts, for people who prefer one e-mail

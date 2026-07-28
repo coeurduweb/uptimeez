@@ -414,6 +414,25 @@ foreach (Db::all('SELECT id, name, cms FROM sites') as $st) {
 echo 'inventaire : ' . Db::val('SELECT COUNT(*) FROM components') . " composant(s), "
    . Db::val('SELECT COUNT(*) FROM components WHERE vuln_count > 0') . " avec faille publiée\n";
 
+// --- Clients de l'agence --------------------------------------------------
+// Les groupes saisis plus haut font déjà le classement : on montre la reprise
+// automatique plutôt que de saisir une deuxième fois la même chose.
+$cl = Uptimer\Client::fromGroups();
+foreach (Db::all('SELECT id, name FROM clients') as $c) {
+    Db::update('clients', [
+        'contact_email' => 'contact@' . Uptimer\Detect\Stack::slug((string)$c['name']) . '.exemple.fr',
+        // Un client consulte son lien de temps en temps : sans cette trace, la
+        // colonne « lien consulté » de la démonstration serait toujours vide.
+        'last_seen_at'  => date('Y-m-d H:i:s', time() - random_int(2, 96) * 3600),
+        'views'         => random_int(3, 48),
+        // La préproduction ne se montre pas au client : accès fermé, ce qui
+        // donne à voir l'état correspondant dans l'écran de gestion.
+        'enabled'       => (string)$c['name'] === 'Préprod' ? 0 : 1,
+    ], 'id = :__i', ['__i' => (int)$c['id']]);
+}
+echo 'clients : ' . $cl['created'] . ' créé(s) depuis les groupes, '
+   . $cl['linked'] . " site(s) rattaché(s)\n";
+
 foreach (Db::all('SELECT id FROM monitors') as $m) Stats::refresh((int)$m['id']);
 Stats::rollup(date('Y-m-d'));
 for ($d = 1; $d <= 30; $d++) Stats::rollup(date('Y-m-d', time() - $d * 86400));

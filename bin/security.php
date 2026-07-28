@@ -367,6 +367,86 @@ ok('A01', 'jeton public tronqué refusé', $r['code'] === 404);
 $r = $req('/index.php?p=status&token=jeton-public-secret', null, ['nojar' => true]);
 ok('A01', 'jeton public exact accepté', $r['code'] === 200);
 
+// ---- Espace client : le cloisonnement, testé de l'extérieur -------------
+// C'est le point d'entrée le plus exposé du produit : une page sans
+// authentification qui montre des données réelles. Chaque cas est vérifié
+// depuis un client HTTP sans cookie.
+$dbf = $tmp . '/sec.sqlite';
+$pdo = new PDO('sqlite:' . $dbf);
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$mkCli = function (string $name, string $siteName) use ($pdo): array {
+    $tok = bin2hex(random_bytes(16));
+    $pdo->prepare('INSERT INTO clients (name, token, contact_email, enabled, created_at, views)
+                   VALUES (?, ?, ?, 1, ?, 0)')
+        ->execute([$name, $tok, strtolower($name) . '@exemple.fr', date('Y-m-d H:i:s')]);
+    $cid = (int)$pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO sites (name, domain, client_id, created_at) VALUES (?, ?, ?, ?)')
+        ->execute([$siteName, strtolower(str_replace(' ', '', $siteName)) . '.test', $cid, date('Y-m-d H:i:s')]);
+    return [$cid, $tok];
+};
+[$cid1, $tok1] = $mkCli('ClientUn', 'SiteSecretUn');
+[$cid2, $tok2] = $mkCli('ClientDeux', 'SiteSecretDeux');
+
+$r = $req('/index.php?p=client&k=' . $tok1, null, ['nojar' => true]);
+ok('A01', 'espace client servi sur jeton valide', $r['code'] === 200, 'HTTP ' . $r['code']);
+ok('A01', 'espace client cloisonné : rien de l\'autre client',
+    str_contains($r['body'], 'SiteSecretUn') && !str_contains($r['body'], 'SiteSecretDeux'));
+ok('A01', 'espace client sans jeton d\'écriture ni script d\'administration',
+    !str_contains($r['body'], 'csrf') && !str_contains($r['body'], 'app.js'));
+ok('A01', 'espace client non indexable',
+    stripos($r['head'], 'noindex') !== false && stripos($r['head'], 'no-referrer') !== false);
+
+// Référence indirecte : ajouter un identifiant ne doit rien changer (BOLA).
+$bola = [];
+foreach (['client_id=' . $cid2, 'id=' . $cid2, 'site=' . $cid2, 'client=' . $cid2,
+          'k[]=' . $tok1, 'p=clients'] as $extra) {
+    $rr = $req('/index.php?p=client&k=' . $tok1 . '&' . $extra, null, ['nojar' => true]);
+    if (str_contains($rr['body'], 'SiteSecretDeux')) $bola[] = $extra;
+}
+ok('A01', 'aucun paramètre ne change le périmètre affiché', $bola === [], implode(' ', $bola));
+
+// Jetons hostiles : injection, traversée, débordement, casse, troncature.
+$bad = [];
+foreach (['', ' ', substr($tok1, 0, 30), $tok1 . 'a', strtoupper($tok1),
+          "' OR 1=1 --", $tok1 . "' OR '1'='1", '../../config.php',
+          '%00' . $tok1, str_repeat('a', 5000), '0x' . $tok1] as $t) {
+    $rr = $req('/index.php?p=client&k=' . rawurlencode($t), null, ['nojar' => true]);
+    // Un jeton refusé doit donner 404, et surtout jamais de contenu client.
+    if ($rr['code'] === 200 || str_contains($rr['body'], 'SiteSecret')) $bad[] = str_cut($t, 20);
+    if (preg_match('~(Fatal error|SQLSTATE|Uncaught)~', $rr['body'])) $bad[] = 'erreur:' . str_cut($t, 14);
+}
+ok('A01', 'jeton hostile : refusé sans erreur ni fuite', $bad === [], implode(' | ', $bad));
+
+// Énumération : un lien coupé et un lien inexistant doivent être indiscernables.
+$pdo->prepare('UPDATE clients SET enabled = 0 WHERE id = ?')->execute([$cid2]);
+$rClosed  = $req('/index.php?p=client&k=' . $tok2, null, ['nojar' => true]);
+$rUnknown = $req('/index.php?p=client&k=' . bin2hex(random_bytes(16)), null, ['nojar' => true]);
+ok('A01', 'accès fermé et jeton inconnu : réponses indiscernables',
+    $rClosed['code'] === $rUnknown['code'] && $rClosed['body'] === $rUnknown['body'],
+    'HTTP ' . $rClosed['code'] . ' vs ' . $rUnknown['code']);
+
+// Écriture depuis l'espace client : aucune action ne doit aboutir.
+$writes = [];
+foreach ([['client_delete', ['client_id' => $cid2]],
+          ['client_rotate', ['client_id' => $cid1]],
+          ['client_save',   ['client_id' => $cid1, 'client_name' => 'PIRATÉ', 'sites' => [1]]],
+          ['delete_monitor', ['id' => 1]],
+          ['save_settings', ['app_name' => 'PIRATÉ']]] as [$action, $fields]) {
+    $rr = $req('/index.php?p=client&k=' . $tok1, ['action' => $action] + $fields, ['nojar' => true]);
+    $names = $pdo->query('SELECT name FROM clients')->fetchAll(PDO::FETCH_COLUMN);
+    if (in_array('PIRATÉ', $names, true)) $writes[] = $action;
+}
+$still = (int)$pdo->query('SELECT COUNT(*) FROM clients')->fetchColumn();
+ok('A01', 'aucune écriture atteignable depuis un jeton client',
+    $writes === [] && $still === 2, implode(' ', $writes));
+$tokAfter = (string)$pdo->query('SELECT token FROM clients WHERE id = ' . $cid1)->fetchColumn();
+ok('A01', 'le jeton client ne peut pas se régénérer lui-même', $tokAfter === $tok1);
+
+// L'écran de gestion des clients reste derrière l'authentification.
+$r = $req('/index.php?p=clients', null, ['nojar' => true]);
+ok('A01', 'écran de gestion des clients refusé sans session',
+    $r['code'] !== 200 || str_contains($r['body'], 'type="password"'), 'HTTP ' . $r['code']);
+
 // Cron par URL : clé obligatoire.
 $r = $req('/cron.php');
 ok('A01', 'cron par URL sans clé refusé', $r['code'] === 403 || str_contains($r['body'], 'Clé'));

@@ -878,6 +878,113 @@ Uptimer\Config::set('db.sqlite', $prevDb);
 @unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
 
 // =========================================================================
+section('Mode agence : cloisonnement et révocation');
+// =========================================================================
+use Uptimer\Client;
+
+// Un client, deux clients, et des sites qui n'appartiennent qu'à l'un d'eux.
+$cA = Client::create('Agence Alpha', 'alpha@exemple.fr');
+$cB = Client::create('Agence Beta');
+check('deux clients distincts', $cA > 0 && $cB > 0 && $cA !== $cB, true);
+$rowA = Uptimer\Db::one('SELECT * FROM clients WHERE id = ?', [$cA]);
+$rowB = Uptimer\Db::one('SELECT * FROM clients WHERE id = ?', [$cB]);
+check('jeton en 32 hexadécimaux', (bool)preg_match('~^[0-9a-f]{32}$~', (string)$rowA['token']), true);
+check('deux jetons différents', $rowA['token'] !== $rowB['token'], true);
+check('nom vide remplacé, pas refusé',
+    trim((string)Uptimer\Db::val('SELECT name FROM clients WHERE id = ?', [Client::create('   ')])) !== '', true);
+
+$sA1 = Uptimer\Db::insert('sites', ['name' => 'Alpha un', 'domain' => 'a1.test', 'created_at' => now()]);
+$sA2 = Uptimer\Db::insert('sites', ['name' => 'Alpha deux', 'domain' => 'a2.test', 'created_at' => now()]);
+$sB1 = Uptimer\Db::insert('sites', ['name' => 'Beta un', 'domain' => 'b1.test', 'created_at' => now()]);
+check('rattachement de deux sites', Client::setSites($cA, [$sA1, $sA2]), 2);
+Client::setSites($cB, [$sB1]);
+
+// --- Le cloisonnement, testé sur les lectures elles-mêmes ---------------
+$namesA = array_column(Client::sites($cA), 'name');
+sort($namesA);
+check('un client ne lit que ses sites', $namesA, ['Alpha deux', 'Alpha un']);
+check('aucun site de l\'autre client dans la liste',
+    in_array('Beta un', array_column(Client::sites($cA), 'name'), true), false);
+check('les identifiants de sondes sont ceux du client', Client::monitorIds($cB), []);
+
+// --- Un site n'appartient qu'à un client ---------------------------------
+Client::setSites($cB, [$sB1, $sA1]);
+check('rattacher ailleurs déplace, sans dupliquer',
+    (int)Uptimer\Db::val('SELECT client_id FROM sites WHERE id = ?', [$sA1]), $cB);
+check('l\'ancien client ne le voit plus',
+    in_array('Alpha un', array_column(Client::sites($cA), 'name'), true), false);
+Client::setSites($cB, [$sB1]);
+Client::setSites($cA, [$sA1, $sA2]);
+
+// --- Jetons : ce qui est accepté, ce qui ne l'est pas --------------------
+check('jeton valide accepté', (int)(Client::byToken((string)$rowA['token'])['id'] ?? 0), $cA);
+foreach (['', '   ', 'abc', str_repeat('z', 32), str_repeat('a', 20), str_repeat('a', 200),
+          "' OR 1=1 --", '../../etc/passwd', strtoupper((string)$rowA['token'])] as $bad) {
+    check('jeton refusé : ' . (trim($bad) === '' ? '(vide)' : str_cut($bad, 16)),
+          Client::byToken($bad), null);
+}
+$old = (string)$rowA['token'];
+$new = Client::rotate($cA);
+check('changer le jeton coupe l\'ancien', Client::byToken($old), null);
+check('le nouveau jeton ouvre le même client', (int)(Client::byToken($new)['id'] ?? 0), $cA);
+check('changer le jeton ne détache aucun site', count(Client::sites($cA)), 2);
+
+Uptimer\Db::update('clients', ['enabled' => 0], 'id = :__i', ['__i' => $cA]);
+check('accès fermé : jeton valide mais refusé', Client::byToken($new), null);
+Uptimer\Db::update('clients', ['enabled' => 1], 'id = :__i', ['__i' => $cA]);
+check('accès réouvert avec le même jeton', (int)(Client::byToken($new)['id'] ?? 0), $cA);
+
+// --- Consultation ---------------------------------------------------------
+Client::touch($cA);
+Client::touch($cA);
+check('visites comptées', (int)Uptimer\Db::val('SELECT views FROM clients WHERE id = ?', [$cA]), 2);
+check('dernière consultation datée',
+    Uptimer\Db::val('SELECT last_seen_at FROM clients WHERE id = ?', [$cA]) !== null, true);
+
+// --- Synthèse ------------------------------------------------------------
+$ov = Client::overview($cA);
+check('synthèse comptant les sites du client', $ov['sites'], 2);
+check('sans sonde, aucun état affirmé', $ov['worst'], 'unknown');
+check('client sans site : synthèse vide, pas d\'erreur', Client::overview(999999)['sites'], 0);
+
+// --- Suppression : réversible, sans perte -------------------------------
+Client::delete($cB);
+check('client supprimé', Uptimer\Db::one('SELECT id FROM clients WHERE id = ?', [$cB]), null);
+check('son site existe toujours',
+    (string)Uptimer\Db::val('SELECT name FROM sites WHERE id = ?', [$sB1]), 'Beta un');
+check('son site est simplement détaché',
+    Uptimer\Db::val('SELECT client_id FROM sites WHERE id = ?', [$sB1]), null);
+
+// --- Reprise des groupes -------------------------------------------------
+Uptimer\Db::update('sites', ['group_name' => 'Mairie de Fréjus'], 'id = :__i', ['__i' => $sB1]);
+$fg = Client::fromGroups();
+check('un client créé depuis le groupe', $fg['created'], 1);
+check('le site du groupe est rattaché', $fg['linked'], 1);
+$fg2 = Client::fromGroups();
+check('deuxième passage : rien de plus', $fg2['created'] + $fg2['linked'], 0);
+check('aucun client en double',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM clients WHERE name = ?', ['Mairie de Fréjus']), 1);
+
+// --- Destinataires hérités ----------------------------------------------
+$siteA = Uptimer\Db::one('SELECT * FROM sites WHERE id = ?', [$sA1]);
+check('adresse du client utilisée à défaut', Client::reportRecipients($siteA), 'alpha@exemple.fr');
+$siteA['report_to'] = 'propre@exemple.fr';
+check('adresse propre au site prioritaire',
+    Client::reportRecipients($siteA), 'propre@exemple.fr');
+check('site sans client : aucune adresse inventée',
+    Client::reportRecipients(['report_to' => '', 'client_id' => null]), '');
+
+// --- L'URL de l'espace ---------------------------------------------------
+Uptimer\Config::set('app.base_url', 'https://suivi.agence.fr/');
+$url = Client::url(Uptimer\Db::one('SELECT * FROM clients WHERE id = ?', [$cA]));
+check('URL sans double barre oblique', substr_count($url, '//'), 1);
+check('URL portant le jeton', str_contains($url, $new), true);
+
+// Nettoyage : ces enregistrements ne doivent pas peser sur les tests suivants.
+foreach (Uptimer\Db::all('SELECT id FROM clients') as $c) Client::delete((int)$c['id']);
+Uptimer\Db::q('DELETE FROM sites WHERE domain IN (?, ?, ?)', ['a1.test', 'a2.test', 'b1.test']);
+
+// =========================================================================
 section('Silhouette : ce que le visiteur verrait');
 // =========================================================================
 use Uptimer\Check\Silhouette;

@@ -184,6 +184,10 @@ $csrf = function () use ($req): string {
 };
 $has = fn(array $r, string $needle): bool => str_contains($r['body'], $needle);
 $noPhpError = fn(array $r): bool => !preg_match('~(Fatal error|Uncaught \w+|Undefined (variable|method|array key)|SQLSTATE\[)~', $r['body']);
+// Une page HTML doit se terminer. Avec display_errors coupé, une erreur fatale
+// ne laisse aucune trace dans le corps : seule l'absence de </html> la trahit.
+$complete = fn(array $r): bool => !str_contains($r['head'], 'text/html')
+    || str_contains($r['body'], '</html>');
 
 // =========================================================================
 title('Accès et authentification');
@@ -626,6 +630,188 @@ ok('cron --report s\'exécute sans erreur',
    $out !== null && !preg_match('~Fatal|Uncaught~', (string)$out), str_cut(trim((string)$out), 60));
 
 // =========================================================================
+title('Mode agence : un client ne voit que ses sites');
+// =========================================================================
+// Un visiteur anonyme, cookies séparés : c'est la seule façon de prouver que
+// l'espace client s'ouvre sans session d'administration, et pas parce qu'on
+// était déjà connecté.
+$anonJar = $tmp . '/anon.txt';
+@unlink($anonJar);
+$anon = function (string $path, ?array $post = null) use ($APP, $anonJar): array {
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $APP . $path, CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true,
+        CURLOPT_COOKIEJAR => $anonJar, CURLOPT_COOKIEFILE => $anonJar,
+        CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 60,
+    ]);
+    if ($post !== null) {
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
+    }
+    $raw  = (string)curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hlen = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    curl_close($ch);
+    return ['code' => $code, 'body' => substr($raw, $hlen), 'head' => substr($raw, 0, $hlen)];
+};
+
+// Trois sites aux noms bien distincts. L'import de ce banc ne crée qu'un site
+// (tout est sur 127.0.0.1) et son nom se retrouve partout dans les pages : il
+// ne peut pas servir à prouver une absence. On fabrique donc de quoi tester.
+$mkSite = function (string $name, string $domain, ?string $group = null) use ($SITE): array {
+    $sid = Uptimer\Db::insert('sites', ['name' => $name, 'domain' => $domain,
+        'group_name' => $group, 'created_at' => now()]);
+    $mid = Uptimer\Db::insert('monitors', ['site_id' => $sid, 'name' => $name,
+        'url' => $SITE . '/', 'kind' => 'page', 'role' => 'primary', 'method' => 'GET',
+        'interval_sec' => 300, 'timeout_sec' => 15, 'retries' => 0, 'expect_status' => '200-299',
+        'enabled' => 1, 'status' => 'up', 'uptime_30d' => 99.9, 'setup_state' => 'done',
+        'created_at' => now(), 'next_check_at' => now()]);
+    return [$sid, $mid];
+};
+[$sA] = $mkSite('Alpha Immobilier', 'alpha-exemple.test');
+[$sB] = $mkSite('Beta Pressing', 'beta-exemple.test');
+[$sC] = $mkSite('Gamma Studio', 'gamma-exemple.test', 'Groupe Gamma');
+$nameA = 'Alpha Immobilier';
+$nameB = 'Beta Pressing';
+ok('trois sites de test en place',
+    (int)$val('SELECT COUNT(*) FROM sites WHERE domain LIKE ?', ['%-exemple.test']) === 3);
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_create',
+    'client_name' => 'Client Alpha', 'client_email' => 'alpha@exemple.fr']);
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_create',
+    'client_name' => 'Client Beta', 'client_email' => 'beta@exemple.fr']);
+$alpha = $db("SELECT * FROM clients WHERE name = 'Client Alpha'")[0] ?? null;
+$beta  = $db("SELECT * FROM clients WHERE name = 'Client Beta'")[0] ?? null;
+ok('deux clients créés', $alpha !== null && $beta !== null);
+ok('jeton généré, imprévisible et unique',
+    $alpha && $beta && preg_match('~^[0-9a-f]{32}$~', (string)$alpha['token']) === 1
+    && $alpha['token'] !== $beta['token'], substr((string)($alpha['token'] ?? ''), 0, 10) . '…');
+
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_save',
+    'client_id' => (int)$alpha['id'], 'client_name' => 'Client Alpha',
+    'client_email' => 'alpha@exemple.fr', 'client_enabled' => '1', 'sites' => [$sA]]);
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_save',
+    'client_id' => (int)$beta['id'], 'client_name' => 'Client Beta',
+    'client_email' => 'beta@exemple.fr', 'client_enabled' => '1', 'sites' => [$sB]]);
+ok('rattachement des sites enregistré',
+    (int)$val('SELECT client_id FROM sites WHERE id = ?', [$sA]) === (int)$alpha['id']
+    && (int)$val('SELECT client_id FROM sites WHERE id = ?', [$sB]) === (int)$beta['id']);
+
+// ---- Le test qui compte : l'espace d'Alpha ne parle jamais de Beta ------
+$ra = $anon('/index.php?p=client&k=' . (string)$alpha['token']);
+ok('espace client ouvert sans authentification', $ra['code'] === 200 && $noPhpError($ra),
+    'HTTP ' . $ra['code']);
+// Une page tronquée par une erreur fatale passe inaperçue quand display_errors
+// est coupé : on exige donc la présence du pied de page, écrit en dernier.
+ok('page rendue jusqu\'au bout, pas coupée par une erreur',
+    str_contains($ra['body'], 'cli-foot') && str_contains($ra['body'], '</html>'));
+ok('le client voit son site', str_contains($ra['body'], $nameA), $nameA);
+ok('le client ne voit pas le site de l\'autre', !str_contains($ra['body'], $nameB), $nameB);
+ok('aucune navigation d\'administration dans l\'espace',
+    !str_contains($ra['body'], 'p=settings') && !str_contains($ra['body'], 'p=monitors')
+    && !str_contains($ra['body'], 'p=clients'));
+// Le seul formulaire toléré est le sélecteur de langue, en GET.
+$posts = preg_match_all('~<form[^>]*method=["\']post~i', $ra['body']);
+ok('aucun formulaire d\'écriture dans l\'espace', $posts === 0, $posts . ' formulaire(s) POST');
+ok('jeton d\'administration absent de la page',
+    !str_contains($ra['body'], 'UPTIMER') && !str_contains($ra['body'], 'csrf'));
+ok('page non indexable et sans référent sortant',
+    stripos($ra['head'], 'x-robots-tag: noindex') !== false
+    && stripos($ra['head'], 'referrer-policy: no-referrer') !== false);
+
+// ---- Ce qui doit échouer ------------------------------------------------
+ok('jeton inconnu : introuvable', $anon('/index.php?p=client&k=' . str_repeat('a', 32))['code'] === 404);
+ok('sans jeton : introuvable', $anon('/index.php?p=client')['code'] === 404);
+foreach (["' OR 1=1 --", '../../config.php', '<script>x</script>', str_repeat('f', 400)] as $bad) {
+    $rb = $anon('/index.php?p=client&k=' . rawurlencode($bad));
+    ok('jeton hostile rejeté sans erreur : ' . str_cut($bad, 18),
+        $rb['code'] === 404 && $noPhpError($rb), 'HTTP ' . $rb['code']);
+}
+// Un identifiant dans l'URL ne doit rien changer : c'est le jeton qui décide.
+$rc = $anon('/index.php?p=client&k=' . (string)$alpha['token'] . '&client_id=' . (int)$beta['id']
+          . '&site=' . $sB . '&id=' . $sB);
+ok('identifiant ajouté dans l\'URL sans effet',
+    $rc['code'] === 200 && str_contains($rc['body'], $nameA) && !str_contains($rc['body'], $nameB));
+
+// ---- Lecture seule : aucune écriture atteignable avec le jeton ----------
+$before = (int)$val('SELECT COUNT(*) FROM clients');
+$rw = $anon('/index.php?p=client&k=' . (string)$alpha['token'],
+            ['action' => 'client_delete', 'client_id' => (int)$beta['id'], 'csrf' => $tok]);
+ok('POST hostile depuis l\'espace client sans effet',
+    (int)$val('SELECT COUNT(*) FROM clients') === $before
+    && (int)$val('SELECT COUNT(*) FROM clients WHERE id = ?', [(int)$beta['id']]) === 1);
+$rw = $anon('/index.php?p=clients');
+ok('écran de gestion inaccessible sans session',
+    $rw['code'] !== 200 || !str_contains($rw['body'], 'Ajouter un client'), 'HTTP ' . $rw['code']);
+$rw = $anon('/index.php?p=monitors');
+ok('liste des sondes inaccessible sans session',
+    $rw['code'] !== 200 || str_contains($rw['body'], 'mot de passe') || str_contains($rw['body'], 'Connexion'),
+    'HTTP ' . $rw['code']);
+
+// ---- Révocation ---------------------------------------------------------
+$oldTok = (string)$alpha['token'];
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_rotate',
+    'client_id' => (int)$alpha['id']]);
+$newTok = (string)$val('SELECT token FROM clients WHERE id = ?', [(int)$alpha['id']]);
+ok('changer le lien coupe l\'ancien', $newTok !== $oldTok
+    && $anon('/index.php?p=client&k=' . $oldTok)['code'] === 404
+    && $anon('/index.php?p=client&k=' . $newTok)['code'] === 200);
+
+// Accès fermé : le lien existe toujours, la page non.
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_save',
+    'client_id' => (int)$alpha['id'], 'client_name' => 'Client Alpha',
+    'client_email' => 'alpha@exemple.fr', 'sites' => [$sA]]);
+ok('accès fermé : même réponse qu\'un lien inconnu',
+    $anon('/index.php?p=client&k=' . $newTok)['code'] === 404);
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_save',
+    'client_id' => (int)$alpha['id'], 'client_name' => 'Client Alpha',
+    'client_email' => 'alpha@exemple.fr', 'client_enabled' => '1', 'sites' => [$sA]]);
+ok('accès réouvert sans rien perdre',
+    $anon('/index.php?p=client&k=' . $newTok)['code'] === 200
+    && (int)$val('SELECT client_id FROM sites WHERE id = ?', [$sA]) === (int)$alpha['id']);
+
+// ---- Le rapport mensuel retombe sur l'adresse du client ----------------
+Uptimer\Db::update('sites', ['report_to' => null], 'id = :__i', ['__i' => $sA]);
+$siteRow = $db('SELECT * FROM sites WHERE id = ?', [$sA])[0];
+ok('destinataire hérité du client quand le site n\'en a pas',
+    in_array('alpha@exemple.fr', Uptimer\Report::recipients($siteRow), true),
+    implode(', ', Uptimer\Report::recipients($siteRow)) ?: '(aucun)');
+// Et l'inverse : ce que porte le site gagne toujours sur l'adresse du client.
+Uptimer\Db::update('sites', ['report_to' => 'direct@exemple.fr'], 'id = :__i', ['__i' => $sA]);
+$siteOwn = $db('SELECT * FROM sites WHERE id = ?', [$sA])[0];
+ok('adresse propre au site prioritaire sur celle du client',
+    Uptimer\Report::recipients($siteOwn) === ['direct@exemple.fr']);
+
+// ---- Suppression : les sites survivent ---------------------------------
+$sitesBefore = (int)$val('SELECT COUNT(*) FROM sites');
+$monBefore   = (int)$val('SELECT COUNT(*) FROM monitors');
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_delete',
+    'client_id' => (int)$beta['id']]);
+ok('client supprimé sans emporter ses sites',
+    (int)$val('SELECT COUNT(*) FROM clients WHERE id = ?', [(int)$beta['id']]) === 0
+    && (int)$val('SELECT COUNT(*) FROM sites') === $sitesBefore
+    && (int)$val('SELECT COUNT(*) FROM monitors') === $monBefore
+    && $val('SELECT client_id FROM sites WHERE id = ?', [$sB]) === null);
+
+// ---- Reprise des groupes existants -------------------------------------
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_from_groups']);
+$fromGroup = (int)$val("SELECT COUNT(*) FROM clients WHERE name = 'Groupe Gamma'");
+ok('client repris depuis un groupe existant', $fromGroup === 1,
+    $fromGroup . ' client(s) « Groupe Gamma »');
+ok('le site du groupe est bien rattaché',
+    (int)$val('SELECT client_id FROM sites WHERE id = ?', [$sC])
+      === (int)$val("SELECT id FROM clients WHERE name = 'Groupe Gamma'"));
+$r = $req('/index.php?p=clients', ['csrf' => $tok, 'action' => 'client_from_groups']);
+ok('reprise idempotente : aucun doublon',
+    (int)$val("SELECT COUNT(*) FROM clients WHERE name = 'Groupe Gamma'") === 1);
+
+// ---- L'écran de gestion, côté agence -----------------------------------
+$r = $req('/index.php?p=clients&ui=expert');
+ok('écran de gestion des clients affiché',
+    $r['code'] === 200 && $noPhpError($r) && $has($r, 'Client Alpha') && $has($r, 'Ajouter un client'));
+ok('lien de chaque client proposé à la copie', $has($r, 'p=client&amp;k='));
+ok('onglet Clients dans la navigation', $has($r, 'p=clients'));
+
+// =========================================================================
 title('Réglages');
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
     'app_name' => 'Uptimer E2E renommée', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
@@ -661,6 +847,28 @@ foreach (['/src/Runner.php', '/views/dashboard.php', '/data/e2e.sqlite'] as $pat
         !str_contains($rr['body'], '<?php') && !str_contains($rr['body'], 'password_hash'),
         'HTTP ' . $rr['code']);
 }
+
+// =========================================================================
+title('Chaque écran rendu jusqu\'au bout');
+// =========================================================================
+// Un appel de méthode privée ou une clé manquante interrompt le rendu sans
+// laisser de message quand display_errors est coupé. Le seul témoin fiable est
+// la balise de fermeture : on la vérifie sur tous les écrans, dans les deux
+// niveaux de détail.
+$incomplete = [];
+foreach (['today', 'dashboard', 'monitors', 'incidents', 'events', 'report', 'settings',
+          'import', 'clients'] as $p) {
+    foreach (['simple', 'expert'] as $mode) {
+        $rr = $req('/index.php?p=' . $p . '&ui=' . $mode);
+        if (!$complete($rr) || !$noPhpError($rr)) $incomplete[] = $p . '/' . $mode;
+    }
+}
+$oneId = (int)$val('SELECT id FROM monitors ORDER BY id LIMIT 1');
+foreach (['simple', 'expert'] as $mode) {
+    $rr = $req('/index.php?p=monitor&id=' . $oneId . '&ui=' . $mode);
+    if (!$complete($rr) || !$noPhpError($rr)) $incomplete[] = 'monitor/' . $mode;
+}
+ok('aucun écran interrompu en cours de rendu', $incomplete === [], implode(' ', $incomplete));
 
 // =========================================================================
 title('Déconnexion');

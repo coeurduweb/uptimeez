@@ -398,7 +398,7 @@ ok('parcours exhaustif des liens de l\'interface', $bad === 0, $visited . ' page
 $bad = 0;
 foreach (['en', 'fr', 'ar', 'zh', 'ru', 'ur', 'xx'] as $lg) {
     foreach (['simple', 'expert', 'nawak'] as $md) {
-        foreach (['today', 'dashboard', 'monitors', 'settings', 'report', 'incidents'] as $p) {
+        foreach (['today', 'dashboard', 'monitors', 'settings', 'report', 'incidents', 'clients'] as $p) {
             $r = $req("/index.php?p=$p&lang=$lg&ui=$md");
             if (!$survives($r)) { $bad++; echo "      $p/$lg/$md → HTTP {$r['code']}\n"; }
         }
@@ -426,6 +426,18 @@ foreach (['', 'jeton-chaos', 'faux', '../config.php', '<script>', str_repeat('x'
     if (!$survives($r, $tk)) { $bad++; echo "      status token=$tk → HTTP {$r['code']}\n"; }
 }
 ok('page d\'état publique : jetons faux et vrais', $bad === 0);
+
+// L'espace client est l'autre porte ouverte du produit : elle prend un jeton
+// dans l'URL, donc elle prendra tout ce qu'un navigateur peut y mettre.
+$bad = 0;
+foreach (['', 'k=', 'k=faux', 'k=' . str_repeat('a', 32), 'k=' . str_repeat('a', 5000),
+          'k[]=1', 'k[]=a&k[]=b', 'k=%00', 'k=' . rawurlencode("' OR 1=1 --"),
+          'k=' . rawurlencode('../../config.php'), 'k=' . rawurlencode('<script>alert(1)</script>'),
+          'k=1&client_id=1&id=1&site=99999', 'k=aa&lang=zz&ui=nawak'] as $qs) {
+    $r = $req('/index.php?p=client&' . $qs);
+    if (!$survives($r, $qs)) { $bad++; echo "      p=client&$qs → HTTP {$r['code']}\n"; }
+}
+ok('espace client : jetons absurdes et paramètres en trop', $bad === 0);
 
 $bad = 0;
 foreach (['', 'k=', 'k=faux', 'k=' . str_repeat('a', 500), 'k[]=1', 'k=x&m=' . str_repeat('m', 3000)] as $qs) {

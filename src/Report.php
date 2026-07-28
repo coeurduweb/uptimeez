@@ -78,10 +78,15 @@ final class Report
         return [$from, $to];
     }
 
-    /** Destinataires d'un site : les siens, sinon ceux des alertes. */
+    /**
+     * Destinataires d'un site : les siens, sinon ceux du client, sinon ceux des
+     * alertes. Cette cascade évite de ressaisir la même adresse sur les huit
+     * sites d'un même client.
+     */
     public static function recipients(array $site): array
     {
         $raw = trim((string)($site['report_to'] ?? ''));
+        if ($raw === '') $raw = Client::reportRecipients($site);
         if ($raw === '') $raw = trim((string)Config::get('report.fallback_to', ''));
         $out = [];
         foreach (preg_split('~[,;\s]+~', $raw) ?: [] as $mail) {

@@ -44,6 +44,35 @@ if ($page === 'status') {
     exit;
 }
 
+// --- Espace client (sans session, lecture seule) -------------------------
+// Le jeton du lien décide de tout ce qui sera affiché. Aucun identifiant fourni
+// par le visiteur n'entre dans une requête : il n'y a donc pas de paramètre à
+// manipuler pour voir les sites d'un autre client.
+if ($page === 'client') {
+    I18n::init();
+    Db::migrate();
+    $client = Uptimer\Client::byToken((string)($_GET['k'] ?? ''));
+    if ($client === null) {
+        http_response_code(404);
+        // Même réponse pour un jeton inconnu, mal formé ou désactivé : rien ne
+        // permet de distinguer « ce lien n'existe pas » de « ce lien est coupé ».
+        exit('Lien invalide ou expiré.');
+    }
+    // Le jeton voyage dans l'URL : on empêche l'indexation et la fuite par
+    // référent vers les sites que la page met en lien.
+    header('X-Robots-Tag: noindex, nofollow, noarchive');
+    header('Referrer-Policy: no-referrer');
+    header('Cache-Control: private, no-store');
+    Uptimer\Client::touch((int)$client['id']);
+    $clientOverview = Uptimer\Client::overview((int)$client['id']);
+    // Le compteur de pannes du titre est celui de ce client, pas le global.
+    $clientSummary = ['down' => $clientOverview['down'], 'degraded' => $clientOverview['degraded'],
+                      'total' => $clientOverview['sites']];
+    $view = 'client';
+    require __DIR__ . '/views/layout.php';
+    exit;
+}
+
 // --- Authentification ----------------------------------------------------
 Auth::start();
 I18n::init();   // après la session : le choix de langue y est mémorisé
@@ -91,7 +120,8 @@ if ($page === 'incidents' && ($_GET['export'] ?? '') === 'csv') {
 }
 
 // --- Rendu ---------------------------------------------------------------
-$allowed = ['today', 'dashboard', 'monitor', 'monitors', 'incidents', 'import', 'settings', 'events', 'report'];
+$allowed = ['today', 'dashboard', 'monitor', 'monitors', 'incidents', 'import', 'settings', 'events',
+            'report', 'clients'];
 $view = in_array($page, $allowed, true) ? $page : 'today';
 require __DIR__ . '/views/layout.php';
 
@@ -359,6 +389,44 @@ function handle_post(): ?array
             $sid = (int)($_POST['site_id'] ?? 0);
             $r   = Uptimer\Report::sendFor($sid);
             return [$r['ok'] ? 'ok' : 'bad', $r['info']];
+
+        // ---- Clients de l'agence -----------------------------------------
+        case 'client_create':
+            $cid = Uptimer\Client::create((string)($_POST['client_name'] ?? ''),
+                                          (string)($_POST['client_email'] ?? ''),
+                                          (string)($_POST['client_notes'] ?? ''));
+            return ['ok', t('Client créé. Son lien est prêt à être envoyé.')];
+
+        case 'client_save':
+            $cid = (int)($_POST['client_id'] ?? 0);
+            if (!Db::one('SELECT id FROM clients WHERE id = ?', [$cid])) return ['bad', t('Client inconnu')];
+            Db::update('clients', [
+                'name'          => str_cut(trim((string)($_POST['client_name'] ?? '')), 190) ?: t('Client sans nom'),
+                'contact_email' => str_cut(trim((string)($_POST['client_email'] ?? '')), 255) ?: null,
+                'notes'         => str_cut(trim((string)($_POST['client_notes'] ?? '')), 2000) ?: null,
+                'enabled'       => isset($_POST['client_enabled']) ? 1 : 0,
+            ], 'id = :__i', ['__i' => $cid]);
+            $n = Uptimer\Client::setSites($cid, (array)($_POST['sites'] ?? []));
+            return ['ok', tn($n, 'Client enregistré : un site rattaché.',
+                                'Client enregistré : {n} sites rattachés.')];
+
+        case 'client_rotate':
+            $cid = (int)($_POST['client_id'] ?? 0);
+            if (!Db::one('SELECT id FROM clients WHERE id = ?', [$cid])) return ['bad', t('Client inconnu')];
+            Uptimer\Client::rotate($cid);
+            return ['ok', t('Nouveau lien généré. L\'ancien ne fonctionne plus.')];
+
+        case 'client_delete':
+            $cid = (int)($_POST['client_id'] ?? 0);
+            if (!Db::one('SELECT id FROM clients WHERE id = ?', [$cid])) return ['bad', t('Client inconnu')];
+            Uptimer\Client::delete($cid);
+            return ['ok', t('Client supprimé. Ses sites sont conservés, simplement détachés.')];
+
+        case 'client_from_groups':
+            $r = Uptimer\Client::fromGroups();
+            return [$r['created'] || $r['linked'] ? 'ok' : 'warn',
+                    t('{c} client(s) créé(s), {l} site(s) rattaché(s) depuis les groupes existants.',
+                      ['c' => $r['created'], 'l' => $r['linked']])];
 
         case 'test_notify':
             $ch  = (string)($_POST['channel'] ?? '');

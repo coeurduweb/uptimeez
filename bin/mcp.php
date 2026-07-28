@@ -306,6 +306,52 @@ function mcp_tools(): array
             },
         ],
 
+        'list_clients' => [
+            'title' => 'Clients and their read-only spaces',
+            'desc'  => 'Agency view: every client, how many sites they own, the worst state across '
+                     . 'those sites, their average 30-day uptime, and whether their read-only link is '
+                     . 'open and being consulted. Use it for "which client should I call first?" or '
+                     . '"who has not looked at their space in a month?". The link itself is not '
+                     . 'returned: it opens a page without authentication, so it does not belong in a '
+                     . 'transcript.',
+            'schema' => ['type' => 'object', 'properties' => [
+                'with_sites' => ['type' => 'boolean',
+                    'description' => 'Also list each client\'s sites with their state (default false)'],
+            ], 'additionalProperties' => false],
+            'write' => false,
+            'run' => function (array $a): array {
+                $withSites = (bool)($a['with_sites'] ?? false);
+                $out = [];
+                foreach (\Uptimer\Client::all() as $c) {
+                    $ov  = $c['overview'];
+                    $row = [
+                        'id' => (int)$c['id'],
+                        'name' => $c['name'],
+                        'contact' => $c['contact_email'] ?: null,
+                        'access_open' => (int)$c['enabled'] === 1,
+                        'sites' => $ov['sites'],
+                        'down' => $ov['down'],
+                        'degraded' => $ov['degraded'],
+                        'worst_state' => $ov['worst'],
+                        'uptime_30d' => $ov['uptime'] !== null ? round($ov['uptime'], 3) : null,
+                        'space_views' => (int)$c['views'],
+                        'space_last_seen' => $c['last_seen_at'],
+                    ];
+                    if ($withSites) {
+                        $row['site_list'] = array_map(fn(array $s): array => [
+                            'name' => $s['name'], 'domain' => $s['domain'],
+                            'state' => $s['status'] ?? 'unknown',
+                            'uptime_30d' => $s['uptime_30d'] !== null ? round((float)$s['uptime_30d'], 3) : null,
+                        ], \Uptimer\Client::sites((int)$c['id']));
+                    }
+                    $out[] = $row;
+                }
+                $orphans = \Uptimer\Client::orphanSites();
+                return ['count' => count($out), 'clients' => $out,
+                        'sites_without_client' => count($orphans)];
+            },
+        ],
+
         'incidents' => [
             'title' => 'Incident history',
             'desc'  => 'Outages over a period, with start, end, duration and cause. Use it for "how much '

@@ -17,7 +17,8 @@
 | Know whether a site runs a vulnerable version | **[Security watch](security-watch.md)** : version inventory, published advisories, what leaves your server |
 | Receive alerts where I actually look | **[Alerts](alerts.md)**. Discord, Slack, e-mail, webhooks, quiet hours |
 | Show something to a client | **[Reports and status pages](reports.md)** |
-| Ask it questions from Claude or another agent | **[MCP server](mcp.md)**: setup, the twelve tools, why it is read-only by default |
+| Give each client access to their own sites only | **[Agency mode](agency-mode.md)** : one read-only link per client, revocable |
+| Ask it questions from Claude or another agent | **[MCP server](mcp.md)**: setup, the fourteen tools, why it is read-only by default |
 | Run it day to day | **[Operations](operations.md)** : cron, CLI, backups, upgrades, translations, troubleshooting |
 
 **In a hurry?** Three commands and you are monitoring:
@@ -63,6 +64,7 @@ A few words are used consistently across the interface and this documentation.
 | **Main monitor** | The site's reference monitor : usually the homepage. Its state is the site's state. |
 | **Proof string** | A piece of text that can only come from the database. Its presence proves the web server *and* the database are answering. |
 | **Reference (baseline)** | The learned fingerprint of a healthy page's resources: stylesheet weight, rule count, class coverage, media queries. |
+| **Client** | Someone whose sites you look after. Gets a link to a read-only space. |
 | **Component** | A piece of software spotted on a site: the core, a plugin, a theme, with its version when readable. |
 | **Pass** | One run of the collector (`cron.php`). Each pass checks only the monitors that are due. |
 | **Incident** | An uninterrupted period during which a monitor was down. Opens on failure, closes on recovery. |

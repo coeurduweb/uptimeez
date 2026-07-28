@@ -18,7 +18,8 @@ confiance à Uptimer.
 | Savoir si un site tourne sur une version vulnérable | **[Veille de sécurité](veille-securite.md)** : inventaire des versions, avis publiés, ce qui sort de chez vous |
 | Recevoir les alertes là où je regarde | **[Alertes](alertes.md)**. Discord, Slack, e-mail, webhooks, heures calmes |
 | Montrer quelque chose à un client | **[Rapports et page d'état](rapports.md)** |
-| L'interroger depuis Claude ou un autre agent | **[Serveur MCP](mcp.md)** : mise en place, les douze outils, pourquoi la lecture seule par défaut |
+| Donner à chaque client un accès à ses seuls sites | **[Mode agence](mode-agence.md)** : un lien par client, en lecture seule, révocable |
+| L'interroger depuis Claude ou un autre agent | **[Serveur MCP](mcp.md)** : mise en place, les quatorze outils, pourquoi la lecture seule par défaut |
 | L'exploiter au quotidien | **[Exploitation](exploitation.md)** : cron, ligne de commande, sauvegardes, traductions, dépannage |
 
 **Pressé ?** Trois commandes et vous surveillez :
@@ -64,6 +65,7 @@ Quelques mots reviennent partout, dans l'interface comme dans cette documentatio
 | **Sonde principale** | La sonde de référence du site : en général l'accueil. Son état est celui du site. |
 | **Chaîne de preuve** | Un texte qui ne peut venir que de la base. Sa présence prouve que le serveur web *et* la base répondent. |
 | **Référence** | L'empreinte apprise des ressources d'une page saine : poids du CSS, nombre de règles, couverture des classes, media queries. |
+| **Client** | Une personne pour qui vous surveillez des sites. Reçoit un lien vers un espace en lecture seule. |
 | **Composant** | Un logiciel repéré sur un site : le cœur, une extension, un thème, avec sa version quand elle est lisible. |
 | **Passe** | Une exécution du collecteur (`cron.php`). Chaque passe ne vérifie que les sondes dues. |
 | **Incident** | Une période ininterrompue pendant laquelle une sonde était hors service. Ouvert à la panne, clos au rétablissement. |

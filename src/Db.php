@@ -138,6 +138,8 @@ final class Db
             cms {$str(60)} DEFAULT NULL,
             cms_detail {$txt},
             group_name {$str(120)} DEFAULT NULL,
+            /* Client propriétaire, quand l'agence a créé des accès clients. */
+            client_id {$int} DEFAULT NULL,
             expect_string {$str(255)} DEFAULT NULL,
             notes {$txt},
 
@@ -149,6 +151,22 @@ final class Db
             report_sent_at {$ts} DEFAULT NULL,
 
             created_at {$ts} NOT NULL
+        ){$eng}";
+
+        /* Clients de l'agence. Un client regroupe des sites et possède un jeton
+           qui ouvre un espace en lecture seule : il voit l'état de ses sites,
+           rien d'autre, et il ne peut rien modifier. Le jeton se change sans
+           toucher aux données, ce qui permet de couper un accès en un clic. */
+        $tables['clients'] = "CREATE TABLE IF NOT EXISTS clients (
+            id {$pk},
+            name {$str(190)} NOT NULL,
+            token {$str(64)} NOT NULL,
+            contact_email {$str(255)} DEFAULT NULL,
+            notes {$txt},
+            enabled {$bool} NOT NULL DEFAULT 1,
+            created_at {$ts} NOT NULL,
+            last_seen_at {$ts} DEFAULT NULL,
+            views {$int} NOT NULL DEFAULT 0
         ){$eng}";
 
         /* Inventaire logiciel : ce que chaque site exécute, et ce que les avis
@@ -366,6 +384,10 @@ final class Db
             'CREATE INDEX IF NOT EXISTS idx_comp_scan ON components (checked_at)',
             'CREATE INDEX IF NOT EXISTS idx_comp_vuln ON components (vuln_count)',
             'CREATE INDEX IF NOT EXISTS idx_events_ts ON events (ts)',
+            // Le jeton client est cherché à chaque ouverture de l'espace : il
+            // doit être unique et indexé.
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_token ON clients (token)',
+            'CREATE INDEX IF NOT EXISTS idx_sites_client ON sites (client_id)',
         ];
         foreach ($idx as $sql) {
             try { $pdo->exec($sql); } catch (PDOException) { /* MySQL < 8 : index déjà là */ }

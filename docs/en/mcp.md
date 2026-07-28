@@ -72,7 +72,7 @@ Calls `report`. Plain text, diagnosis, remedy, timeline, availability figures, r
 
 ## The tools
 
-Eight read-only tools, exposed by default:
+Ten read-only tools, exposed by default:
 
 | Tool | Purpose |
 |---|---|
@@ -83,6 +83,8 @@ Eight read-only tools, exposed by default:
 | `incidents` | Outage history over a period, with total downtime |
 | `report` | Ready-to-send report for one monitor |
 | `response_time_series` | Time series to tell a spike from a trend |
+| `security_advisories` | The portfolio's software inventory and the published advisories that cover it, worst severity first |
+| `list_clients` | Clients, their sites, their state, and whether they still open their space. The space link is never returned: it opens a page without authentication, so it does not belong in a conversation |
 | `security_target_check` | Whether an address would be refused before any request |
 
 Four writing tools, only with `--write`:

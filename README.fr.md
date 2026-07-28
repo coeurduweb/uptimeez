@@ -195,6 +195,36 @@ Cette chaîne est **déduite automatiquement**, dans cet ordre de préférence :
 d'erreur. Si elle disparaît alors que la page
 répond encore 200, la couche données est tombée et vous le savez en une vérification.
 
+### Un lien par client, et rien de ce qui appartient aux autres
+
+Vous surveillez trente sites qui appartiennent à douze personnes. Chacune veut savoir si le sien va bien. Aucune
+n'a à voir les vingt-neuf autres.
+
+Tous les autres outils répondent à ça par des comptes utilisateurs, des rôles et des permissions. Uptimer vous
+donne un client, une liste de cases à cocher, et un lien.
+
+![Écran des clients](docs/img/clients.png)
+
+Le lien ouvre une page sans compte ni mot de passe : une bande qui dit **tout fonctionne** ou **un de vos sites ne
+répond pas**, un bloc par site avec sa courbe des 24 heures et sa disponibilité sur 30 jours, et les interruptions
+récentes avec leur durée. Aucun bouton, aucun réglage, aucun jargon, et c'est lisible sur le téléphone où le
+client ouvrira vraiment le lien.
+
+![Espace client](docs/img/client-space.png)
+
+Ce lien vaut mot de passe, il est donc traité comme tel : jeton aléatoire de 128 bits, page en `noindex` et
+`no-referrer`, cache interdit, un clic pour changer le lien s'il a circulé trop loin, un interrupteur pour fermer
+l'accès sans rien perdre de l'historique. Un lien inconnu, un lien mal formé et un lien fermé donnent **la même
+réponse** : tâtonner n'apprend rien.
+
+Le cloisonnement n'est pas une affaire d'affichage : chaque lecture filtre sur le client, et aucun identifiant
+venu de l'URL n'entre dans ces requêtes. Ajouter `&client_id=7` au lien de quelqu'un ne change rien. C'est
+exactement ce que vérifient les suites de tests, jetons hostiles compris.
+
+Vos sites sont déjà groupés depuis l'import ? Un bouton transforme ces groupes en clients.
+
+→ **[Mode agence](docs/fr/mode-agence.md)**
+
 ### Les versions vulnérables, avant que quoi que ce soit ne casse
 
 Uptimer lit déjà le HTML de chaque page qu'il vérifie, et ce HTML dit presque toujours quelle version tourne : la
@@ -265,6 +295,8 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Battement dead-man (cron, sauvegardes) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
 | Rapport client imprimable | ✅ intégré | ⚠️ formules payantes | ❌ | ✅ | ❌ | ⚠️ | ✅ |
 | Rapport mensuel envoyé à chaque client | ✅ | ❌ | ❌ | ⚠️ interne seulement | ❌ | ❌ | ⚠️ interne seulement |
+| Accès client en lecture seule, sans compte à créer | ✅ un lien | ⚠️ page d'état seulement | ❌ | ⚠️ comptes utilisateurs | ⚠️ page d'état seulement | ❌ | ⚠️ comptes utilisateurs |
+| Le client ne voit que ses sites | ✅ par construction | ❌ | ❌ | ⚠️ configuration de rôles | ❌ | ⚠️ à construire | ⚠️ configuration de rôles |
 | Page d'état publique | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 | Interrupteur interface simple / complète | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Langues de l'interface | **10 + RTL** | 1 | 1 | plusieurs | nombreuses (communauté) | plusieurs | plusieurs |
@@ -345,7 +377,7 @@ Vous pouvez alors demander simplement :
 > *« Ajoute ces douze domaines, mais montre d'abord ce que tu créerais. »*
 > *« La refonte de la recette Leboncoin est volontaire : réapprends sa référence et revérifie. »*
 
-**Huit outils en lecture seule** sont exposés par défaut :
+**Dix outils en lecture seule** sont exposés par défaut :
 
 | Outil | Répond à |
 |---|---|
@@ -356,6 +388,8 @@ Vous pouvez alors demander simplement :
 | `incidents` | Les interruptions d'une période, avec l'indisponibilité cumulée, pour répondre sur un SLA |
 | `report` | Le rapport prêt à coller dans un ticket ou un e-mail client |
 | `response_time_series` | La courbe, pour distinguer un pic d'une tendance |
+| `security_advisories` | Quels sites tournent sur une version couverte par un avis publié, le plus grave d'abord |
+| `list_clients` | Chaque client, ses sites, leur état, et s'il consulte encore son espace |
 | `security_target_check` | Cette adresse serait-elle refusée avant toute requête ? |
 
 **Quatre de plus avec `--write`** : `check_now`, `apply_fix`, `set_enabled`, `add_sites`. La lecture seule est le
@@ -451,7 +485,6 @@ uptimer/
 Le [backlog](BACKLOG.md) contient la recherche concurrentielle et les user stories derrière chaque décision.
 À suivre :
 
-- Mode agence multi-client, avec un accès en lecture seule à donner au client
 - Core Web Vitals sur les pages qui comptent
 - Import depuis les principaux outils concurrents, pour que migrer prenne cinq minutes
 - Résumé quotidien au lieu d'une alerte par évènement, pour ceux qui préfèrent un seul e-mail

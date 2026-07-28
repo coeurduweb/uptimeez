@@ -74,7 +74,7 @@ e-mail.
 
 ## Les outils
 
-Huit outils en lecture seule, exposés par défaut :
+Dix outils en lecture seule, exposés par défaut :
 
 | Outil | Rôle |
 |---|---|
@@ -85,6 +85,8 @@ Huit outils en lecture seule, exposés par défaut :
 | `incidents` | L'historique des interruptions d'une période, avec l'indisponibilité cumulée |
 | `report` | Le rapport prêt à envoyer pour une sonde |
 | `response_time_series` | La série temporelle, pour distinguer un pic d'une tendance |
+| `security_advisories` | L'inventaire logiciel du parc et les avis publiés qui le concernent, le plus grave d'abord |
+| `list_clients` | Les clients, leurs sites, leur état, et s'ils consultent encore leur espace. Le lien de l'espace n'est jamais renvoyé : il ouvre une page sans authentification, il n'a rien à faire dans une conversation |
 | `security_target_check` | Si une adresse serait refusée avant toute requête |
 
 Quatre outils d'écriture, seulement avec `--write` :
