@@ -6,7 +6,7 @@ Cinq minutes, et un parc est correctement surveillé.
 
 ---
 
-## 1. Ajoutez vos sites — collez, ne remplissez pas de formulaire
+## 1. Ajoutez vos sites : collez, ne remplissez pas de formulaire
 
 **+ Ajouter** accepte ce que vous avez sous la main.
 
@@ -39,11 +39,11 @@ quarante sondes fausses en un clic.
 
 À la passe suivante, pour chaque site, Uptimer :
 
-1. **identifie la technologie** — WordPress, PrestaShop, Shopify, Drupal, Joomla, Wix, Astro, Next.js, Laravel… ;
+1. **identifie la technologie**. WordPress, PrestaShop, Shopify, Drupal, Joomla, Wix, Astro, Next.js, Laravel… ;
 2. **choisit des pages représentatives** depuis `robots.txt` → sitemap → liens internes : une par famille (contact,
    tarifs, contenu), panier et connexion volontairement écartés ;
 3. **déduit la chaîne de preuve** du contenu du site, jamais d'une page d'erreur ;
-4. **règle la cadence** selon l'importance de chaque page — les tarifs plus souvent que les mentions légales ;
+4. **règle la cadence** selon l'importance de chaque page : les tarifs plus souvent que les mentions légales ;
 5. **ajoute les sondes techniques du CMS** là où elles veulent dire quelque chose (sur WordPress, l'API REST, qui
    traverse réellement la base) ;
 6. **prend une première mesure**, pour qu'aucune carte n'affiche « jamais vérifié ».
@@ -59,25 +59,25 @@ Complet.
 
 De haut en bas, et on s'arrête dès que c'est vert.
 
-**Le bandeau** — une phrase : combien de sites à remettre en ligne, combien de points à surveiller, l'uptime
+**Le bandeau**, une phrase : combien de sites à remettre en ligne, combien de points à surveiller, l'uptime
 moyen, le temps de réponse, quand la dernière passe a tourné. Si la tâche planifiée n'a jamais tourné, c'est dit
 ici, avec le lien pour la configurer. C'est l'erreur d'installation la plus fréquente.
 
-**À traiter maintenant** — une carte par site, les plus urgents d'abord. Chaque carte porte :
+**À traiter maintenant** : une carte par site, les plus urgents d'abord. Chaque carte porte :
 
 - la **cause** en clair (« La mise en page est cassée », pas `CSS_BROKEN`) ;
 - **qui et depuis quand**, avec le nombre d'échecs consécutifs ;
-- **pourquoi c'est un problème** — la phrase que vous pouvez transmettre à un client ;
+- **pourquoi c'est un problème** : la phrase que vous pouvez transmettre à un client ;
 - **la preuve** (mode Complet) : le relevé technique brut ;
 - **quoi faire**, et les boutons qui le font : revérifier, ouvrir le site, réapprendre la référence, relever le
   seuil de lenteur, adopter l'URL actuelle, copier le rapport, mettre en pause une heure, prendre en compte.
 
 Rien ici ne quitte la page. Chaque action affiche une notification avec **Annuler**.
 
-**À prévoir** — rien n'est encore cassé, mais ça va l'être : un certificat qui expire, un domaine à renouveler, un
+**À prévoir**, rien n'est encore cassé, mais ça va l'être : un certificat qui expire, un domaine à renouveler, un
 site qui a ralenti de plus de 50 % en trois jours, une sonde jamais mesurée, une préparation encore en attente.
 
-**Tout va bien** — le reste, replié sur une ligne, avec une courbe des 24 heures par site.
+**Tout va bien** : le reste, replié sur une ligne, avec une courbe des 24 heures par site.
 
 ---
 
@@ -108,10 +108,10 @@ canal que vous n'avez pas.
 
 Pendant que vous y êtes, trois réglages qui valent trente secondes :
 
-- **Heures calmes** — par exemple `23:00-07:00`. Les alertes « à surveiller » sont retenues ; les vraies pannes
+- **Heures calmes**, par exemple `23:00-07:00`. Les alertes « à surveiller » sont retenues ; les vraies pannes
   passent toujours.
-- **Prévenir avant l'expiration du certificat** — 14 jours est un bon défaut.
-- **Prévenir au rétablissement** — pour savoir que c'est fini sans avoir à regarder.
+- **Prévenir avant l'expiration du certificat** : 14 jours est un bon défaut.
+- **Prévenir au rétablissement** : pour savoir que c'est fini sans avoir à regarder.
 
 ---
 
@@ -127,8 +127,8 @@ filtrez par groupe si vous séparez les clients des projets internes.
 
 ## Et ensuite
 
-- **[Sondes](sondes.md)** — une page par option, et quand ça valait la peine d'y toucher.
-- **[Détection](detection.md)** — ce que « mise en page cassée » veut dire vraiment, et pourquoi ça n'alerte pas à
+- **[Sondes](sondes.md)** : une page par option, et quand ça valait la peine d'y toucher.
+- **[Détection](detection.md)** : ce que « mise en page cassée » veut dire vraiment, et pourquoi ça n'alerte pas à
   tort.
-- **[Alertes](alertes.md)** — routage, regroupement, et comment garder des alertes qui valent la peine d'être lues.
-- **[Rapports](rapports.md)** — le rapport client et la page d'état publique.
+- **[Alertes](alertes.md)** : routage, regroupement, et comment garder des alertes qui valent la peine d'être lues.
+- **[Rapports](rapports.md)** : le rapport client et la page d'état publique.

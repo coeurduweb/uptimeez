@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — point d'entrée web (routeur simple, sans réécriture d'URL requise).
+ * Uptimer : point d'entrée web (routeur simple, sans réécriture d'URL requise).
  */
 declare(strict_types=1);
 
@@ -333,7 +333,7 @@ function handle_post(): ?array
             $ch  = (string)($_POST['channel'] ?? '');
             $res = Notifier::test($ch);
             return [$res['ok'] ? 'ok' : 'bad',
-                    'Test ' . $ch . ' : ' . ($res['ok'] ? 'envoyé' : 'échec') . ' — ' . str_cut((string)$res['info'], 200)];
+                    'Test ' . $ch . ' : ' . ($res['ok'] ? 'envoyé' : 'échec') . ' : ' . str_cut((string)$res['info'], 200)];
 
         case 'ack_incident':
             Db::update('incidents', ['ack_at' => now()], 'id = :__i', ['__i' => (int)($_POST['id'] ?? 0)]);

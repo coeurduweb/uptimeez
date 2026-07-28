@@ -24,8 +24,8 @@ final class Notifier
     public static function sendIncident(array $mon, array $incident, bool $isNew): void
     {
         $sev   = $incident['severity'] === 'degraded' ? 'degraded' : 'down';
-        $title = ($sev === 'down' ? '🔴 HORS SERVICE' : '🟠 DÉGRADÉ') . ' — ' . $mon['name'];
-        if (!$isNew) $title = '🔁 Toujours ' . ($sev === 'down' ? 'hors service' : 'dégradé') . ' — ' . $mon['name'];
+        $title = ($sev === 'down' ? '🔴 HORS SERVICE' : '🟠 DÉGRADÉ') . ' : ' . $mon['name'];
+        if (!$isNew) $title = '🔁 Toujours ' . ($sev === 'down' ? 'hors service' : 'dégradé') . ' : ' . $mon['name'];
 
         $lines = [
             ['Cause', self::reasonLabel($incident['reason_code']) ],
@@ -66,7 +66,7 @@ final class Notifier
             $since = min($since, strtotime((string)$it['incident']['started_at']));
         }
         $n     = count($sites);
-        $title = '🔴 PANNE GROUPÉE — ' . $n . ' site' . ($n > 1 ? 's' : '') . ' injoignable' . ($n > 1 ? 's' : '');
+        $title = '🔴 PANNE GROUPÉE : ' . $n . ' site' . ($n > 1 ? 's' : '') . ' injoignable' . ($n > 1 ? 's' : '');
 
         $names = array_values($sites);
         $liste = implode(', ', array_slice($names, 0, 12))
@@ -74,7 +74,7 @@ final class Notifier
 
         $lines = [
             [$isIp ? 'Serveur concerné' : 'Domaine concerné', $scope],
-            ['Sites touchés', $n . ' — ' . $liste],
+            ['Sites touchés', $n . ' : ' . $liste],
             ['Sondes en échec', (string)count($items)],
             ['Causes relevées', implode(' · ', array_keys($causes))],
             ['Début', self::when(date('Y-m-d H:i:s', $since))],
@@ -110,7 +110,7 @@ final class Notifier
     {
         if (!Config::get('notify.notify_recovery', true)) return;
         $dur   = (int)($incident['duration_sec'] ?? 0);
-        $title = '🟢 RÉTABLI — ' . $mon['name'];
+        $title = '🟢 RÉTABLI : ' . $mon['name'];
         $lines = [
             ['Indisponibilité', human_duration($dur)],
             ['Cause initiale', self::reasonLabel($incident['reason_code'] ?? null)],
@@ -124,7 +124,7 @@ final class Notifier
     {
         $icons = ['watch_hit' => '👀', 'content_changed' => '📝', 'domain_soon' => '📆',
                   'css_changed' => '🎨', 'watch_change' => '👀'];
-        $title = ($icons[$kind] ?? 'ℹ️') . ' ' . self::eventLabel($kind) . ' — ' . $mon['name'];
+        $title = ($icons[$kind] ?? 'ℹ️') . ' ' . self::eventLabel($kind) . ' : ' . $mon['name'];
         self::dispatch($mon, 'info', $title, [['Détail', $message], ['URL', $mon['url']]], 'info');
     }
 

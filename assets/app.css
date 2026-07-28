@@ -1,8 +1,8 @@
 /* ============================================================================
-   Uptimer — feuille de style unique, sans dépendance externe.
+   Uptimer : feuille de style unique, sans dépendance externe.
 
    Parti pris : tableau de bord dense mais lisible. La hiérarchie passe par la
-   taille, l'espace et le contraste — jamais par la couleur seule. Le rouge et
+   taille, l'espace et le contraste : jamais par la couleur seule. Le rouge et
    l'orange sont réservés aux états qui demandent une action.
    ========================================================================== */
 
@@ -521,7 +521,7 @@ html[data-theme="light"] .console { background: #131a26; }
 }
 
 /* ============================================================================
-   Écran « Aujourd'hui » — la liste de tâches. Chaque bloc porte sa cause, sa
+   Écran « Aujourd'hui » : la liste de tâches. Chaque bloc porte sa cause, sa
    conduite à tenir et ses actions ; rien ne renvoie vers un écran de réglages.
    ========================================================================== */
 .task {

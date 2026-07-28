@@ -52,7 +52,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
       <div class="field" style="flex:1 1 200px">
         <label for="grp"><?= te('Groupe') ?></label>
         <input id="grp" type="text" name="group" placeholder="<?= te('Clients, Interne, Préprod…') ?>">
-        <span class="hint"><?= te('Facultatif — sert à filtrer le tableau de bord.') ?></span>
+        <span class="hint"><?= te('Facultatif : sert à filtrer le tableau de bord.') ?></span>
       </div>
       <div class="field" style="flex:1 1 200px">
         <label for="pages"><?= te('Pages suivies par site') ?></label>
@@ -103,7 +103,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
 
     <div class="row mt">
       <button class="btn btn-primary"><?= Ui::icon('eye', 15) ?> <?= te('Voir ce qui sera créé') ?></button>
-      <span class="muted small"><?= te('Rien n\'est créé à cette étape : vous validez ensuite l\'aperçu. {app} accepte aussi un e-mail ou un tableau collé tel quel — elle y récupère les adresses.') ?></span>
+      <span class="muted small"><?= te('Rien n\'est créé à cette étape : vous validez ensuite l\'aperçu. {app} accepte aussi un e-mail ou un tableau collé tel quel, elle y récupère les adresses.') ?></span>
     </div>
   </div>
 </form>
@@ -114,7 +114,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
 ?>
 <div class="panel" id="preview" style="border-color:color-mix(in srgb,var(--accent) 40%,var(--border))">
   <div class="panel-head">
-    <h2><?= Ui::icon('eye', 15) ?> <?= te('Aperçu') ?> — <?= tne($toCreate, 'une sonde principale à créer', '{n} sondes principales à créer') ?></h2>
+    <h2><?= Ui::icon('eye', 15) ?> <?= te('Aperçu') ?> : <?= tne($toCreate, 'une sonde principale à créer', '{n} sondes principales à créer') ?></h2>
     <span class="muted small">
       <?= count($preview['rows']) ?> <?= te('adresse(s) reconnue(s)') ?><?php
       if ($preview['existing']) echo ' · ' . (int)$preview['existing'] . t('déjà surveillée(s)');
@@ -196,7 +196,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
     <p><?= te('La chaîne de contrôle est le cœur de la détection « serveur web + base de données OK » : un site peut renvoyer un code 200 impeccable et n\'afficher qu\'une page d\'erreur.') ?></p>
     <p><?= te('Par ordre de préférence, {app} retient :') ?></p>
     <ol style="padding-left:20px">
-      <li><?= te('la mention de copyright du pied de page, issue des réglages du site — donc de la base ;') ?></li>
+      <li><?= te('la mention de copyright du pied de page, issue des réglages du site, donc de la base ;') ?></li>
       <li><?= te('le nom du site déclaré en Open Graph ;') ?></li>
       <li><?= te('le nom du site déduit du titre de la page ;') ?></li>
       <li><?= te('la première entrée du menu de navigation ;') ?></li>

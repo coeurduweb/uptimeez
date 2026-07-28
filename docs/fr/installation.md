@@ -14,7 +14,7 @@ savez envoyer des fichiers par FTP et ajouter une tâche cron, vous savez l'inst
 | **PHP** | 8.1 ou plus récent, en ligne de commande *et* en web |
 | **Extensions** | `curl`, `json`, `mbstring`, et `pdo_sqlite` (par défaut) ou `pdo_mysql` |
 | **Droits d'écriture** | le dossier `data/`, et la racine une fois (pour créer `config.php`) |
-| **Cron** | une ligne par minute — ou n'importe quel planificateur capable d'appeler une URL |
+| **Cron** | une ligne par minute : ou n'importe quel planificateur capable d'appeler une URL |
 | **HTTPS sortant** | le collecteur doit pouvoir joindre les sites surveillés |
 
 Rien d'autre. L'installeur vérifie tout cela et vous dit ce qui manque avant d'écrire quoi que ce soit.
@@ -38,7 +38,7 @@ Puis ouvrez `install.php` dans un navigateur :
 1. Il vérifie l'environnement et affiche une liste de contrôle verte/rouge.
 2. Vous choisissez un mot de passe (8 caractères minimum), stocké haché avec `password_hash()`.
 3. Il écrit `config.php` et crée la base.
-4. Il refuse de tourner une seconde fois — réinstaller suppose de supprimer `config.php` par FTP ou SSH d'abord.
+4. Il refuse de tourner une seconde fois : réinstaller suppose de supprimer `config.php` par FTP ou SSH d'abord.
 
 Enfin, ajoutez la tâche cron (voir plus bas) et ouvrez les réglages pour configurer un canal d'alerte.
 
@@ -111,7 +111,7 @@ Modifiez `config.php` :
 Le schéma est créé et mis à jour automatiquement au chargement suivant. Aucune migration à lancer, aucun changement
 destructif : les colonnes s'ajoutent, elles ne se suppriment jamais.
 
-Pour transporter l'historique existant, exportez les tables SQLite et importez-les — le schéma est identique à part
+Pour transporter l'historique existant, exportez les tables SQLite et importez-les : le schéma est identique à part
 les types de colonnes.
 
 ---

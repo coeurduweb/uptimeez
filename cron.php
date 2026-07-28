@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — passe de surveillance. À exécuter chaque minute :
+ * Uptimer : passe de surveillance. À exécuter chaque minute :
  *   * * * * * /usr/bin/php /home/user/uptimer/cron.php >/dev/null 2>&1
  *
  * Ou par URL si crontab n'est pas accessible (clé à définir dans les réglages) :
@@ -58,7 +58,7 @@ try {
 
     // --- 1. Surveillance ------------------------------------------------
     $stats = Runner::runDue(120, $budget * 0.8);
-    $out(sprintf('[%s] %d sonde(s) en %.1fs — %d HS, %d dégradée(s), %d OK',
+    $out(sprintf('[%s] %d sonde(s) en %.1fs : %d HS, %d dégradée(s), %d OK',
         date('H:i:s'), $stats['ran'], $stats['seconds'], $stats['down'], $stats['degraded'], $stats['up']));
 
     // Sondes réglées sous la minute : le cron ne peut pas tourner plus souvent,
@@ -120,7 +120,7 @@ try {
     Db::setSetting('cron_last_ok', now());
 } catch (Throwable $e) {
     $out('ERREUR : ' . $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')');
-    try { Db::setSetting('cron_last_error', date('Y-m-d H:i:s') . ' — ' . $e->getMessage()); } catch (Throwable) {}
+    try { Db::setSetting('cron_last_error', date('Y-m-d H:i:s') . ' : ' . $e->getMessage()); } catch (Throwable) {}
     if ($isCli) exit(1);
 } finally {
     flock($lock, LOCK_UN);

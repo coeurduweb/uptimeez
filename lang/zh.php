@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — Chinese (Mandarin) catalogue
+ * Uptimer, Chinese (Mandarin) catalogue
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
- * I18n substitutes — so renaming the product never invalidates a catalogue.
+ * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
  * What is left: php bin/i18n-audit.php --manquants=zh
  */
@@ -161,8 +161,12 @@ return [
     'la tâche planifiée n\'a jamais tourné' => '计划任务从未运行',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => '显示的站点是真实的，所有测量数据均为虚构。故障都发生在并不存在的预发布子域名上。',
     'pris en compte' => '已确认',
+    'période :' => '时间段',
+    'réglages' => '设置',
     'réponse {ms}' => '响应 {ms}',
+    'sonde' => '监测项',
     'tableau de bord' => '仪表板',
+    'temps de réponse' => '响应时间',
     'tout va bien' => '一切正常',
     'un point à surveiller' => '1 项需要关注',
     'un site sans rien à signaler' => '1 个站点无异常',

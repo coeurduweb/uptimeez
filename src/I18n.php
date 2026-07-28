@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — traduction de l'interface.
+ * Uptimer : traduction de l'interface.
  *
  * Choix d'architecture : la clé de traduction est la phrase française du code
  * source (msgid), comme le fait gettext. Deux avantages concrets :
@@ -38,7 +38,7 @@ final class I18n
     /**
      * Nom du produit. Il n'apparaît JAMAIS dans une clé de traduction : les
      * phrases écrivent « {app} », substitué ici. Un renommage du produit ne
-     * périme donc aucun catalogue — la leçon de deux renommages successifs.
+     * périme donc aucun catalogue : la leçon de deux renommages successifs.
      */
     public const APP = 'Uptimer';
 
@@ -80,7 +80,7 @@ final class I18n
         return self::$lang;
     }
 
-    /** « ltr » ou « rtl » — l'arabe et l'ourdou s'écrivent de droite à gauche. */
+    /** « ltr » ou « rtl » : l'arabe et l'ourdou s'écrivent de droite à gauche. */
     public static function dir(?string $lang = null): string
     {
         return self::LANGS[$lang ?? self::lang()][2] ?? 'ltr';

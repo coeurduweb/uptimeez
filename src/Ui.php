@@ -18,7 +18,7 @@ final class Ui
         'unknown'  => 'Pas encore vérifié',
     ];
 
-    /** Jeu d'icônes unique, trait 1.8, 24x24 — jamais d'emoji dans l'interface. */
+    /** Jeu d'icônes unique, trait 1.8, 24x24 : jamais d'emoji dans l'interface. */
     private const ICONS = [
         'pulse'     => '<path d="M2 12h4l3 8 4-16 3 8h6"/>',
         'check'     => '<path d="M20 6 9 17l-5-5"/>',
@@ -73,7 +73,7 @@ final class Ui
      * « simple » ne montre que ce sur quoi on agit ; « expert » ouvre les
      * réglages fins, les mesures détaillées et les écrans d'analyse.
      *
-     * Par défaut : simple. C'est le pari du produit — on ne fait pas payer à
+     * Par défaut : simple. C'est le pari du produit : on ne fait pas payer à
      * tout le monde la complexité dont une minorité a besoin.
      */
     public const MODES = ['simple', 'expert'];

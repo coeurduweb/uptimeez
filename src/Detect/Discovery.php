@@ -268,7 +268,7 @@ final class Discovery
 
     /**
      * Découpe un candidat sur ses séparateurs et propose d'abord le segment le
-     * plus identifiant : « © 2026 Agence Bellevue — tous droits réservés »
+     * plus identifiant : « © 2026 Agence Bellevue, tous droits réservés »
      * donne « Agence Bellevue » avant la phrase entière.
      */
     private static function segments(string $raw): array

@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — installeur. Vérifie l'environnement, crée la base et le mot de passe.
+ * Uptimer : installeur. Vérifie l'environnement, crée la base et le mot de passe.
  * Supprimez ce fichier après l'installation si vous le souhaitez.
  */
 declare(strict_types=1);
@@ -106,10 +106,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12h4l3 8 4-16 3 8h6"/></svg>
     <h1>Installation de Uptimer</h1>
   </div>
-  <p class="center muted small">Surveillance de sites — fonctionne sur un hébergement mutualisé, sans Docker.</p>
+  <p class="center muted small">Surveillance de sites : fonctionne sur un hébergement mutualisé, sans Docker.</p>
 
   <?php if ($alreadyInstalled): ?>
-    <div class="alert alert-warn mt">Uptimer est déjà installé — le formulaire est désactivé.
+    <div class="alert alert-warn mt">Uptimer est déjà installé : le formulaire est désactivé.
       <a href="index.php">Accéder à l'application</a>. Pour repartir de zéro, supprimez
       <span class="mono">config.php</span> par FTP ou SSH. Vous pouvez aussi supprimer
       <span class="mono">install.php</span> : il n'est plus nécessaire.</div>

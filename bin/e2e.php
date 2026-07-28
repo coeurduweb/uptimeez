@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — test de bout en bout de l'interface.
+ * Uptimer : test de bout en bout de l'interface.
  *
  * Démarre une instance isolée de Uptimer et un faux site à surveiller, puis
  * déroule le parcours complet d'un utilisateur en HTTP réel : installation,
@@ -66,7 +66,7 @@ $page = function (string $t, string $head = ''): string {
         $b .= '<div class="' . $c . '">bloc</div>';
     }
     return "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\">"
-        . "<title>$t — Agence Bellevue</title><meta property=\"og:site_name\" content=\"Agence Bellevue\">$head"
+        . "<title>$t : Agence Bellevue</title><meta property=\"og:site_name\" content=\"Agence Bellevue\">$head"
         . '</head><body><nav class="nav-main"><a href="/contact.html">Contact</a></nav>'
         . "<h1 class=\"hero-title\">$t</h1>$b"
         . '<footer class="footer-main">© 2026 Agence Bellevue — tous droits réservés</footer></body></html>';
@@ -149,7 +149,7 @@ $wait = function (int $port): bool {
 };
 if (!$wait($appPort) || !$wait($sitePort)) exit("Les serveurs de test n'ont pas démarré.\n");
 
-echo "Test de bout en bout — application $APP · faux site $SITE\n";
+echo "Test de bout en bout : application $APP · faux site $SITE\n";
 
 // =========================================================================
 // Client HTTP avec session
@@ -524,7 +524,7 @@ $before = (int)$val('SELECT COUNT(*) FROM monitors');
 $r = $req('/index.php?p=import', ['csrf' => $tok, 'action' => 'preview',
     'list' => "Bonjour, merci de surveiller aperçu-un-uptimer.fr et https://apercu-deux-uptimer.fr/contact. Logo : x.png",
     'interval_sec' => 300, 'pages' => 3]);
-ok('aperçu affiché', $r['code'] === 200 && $has($r, 'Aperçu —') && $noPhpError($r));
+ok('aperçu affiché', $r['code'] === 200 && $has($r, 'Aperçu :') && $noPhpError($r));
 ok('rien n\'a été créé à cette étape', (int)$val('SELECT COUNT(*) FROM monitors') === $before,
     $before . ' → ' . $val('SELECT COUNT(*) FROM monitors'));
 ok('adresses extraites d\'un texte libre', $has($r, 'apercu-deux-uptimer.fr'));
@@ -612,7 +612,7 @@ if ($REAL) {
 
 // =========================================================================
 echo "\n" . str_repeat('═', 68) . "\n";
-printf("%d contrôle(s) réussi(s), %d échec(s) — %.1f s\n", $pass, $fail, microtime(true) - $t0);
+printf("%d contrôle(s) réussi(s), %d échec(s) : %.1f s\n", $pass, $fail, microtime(true) - $t0);
 if ($fail > 0) {
     echo "⚠️  Le parcours utilisateur présente des anomalies.\n";
     exit(1);

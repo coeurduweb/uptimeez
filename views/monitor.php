@@ -3,7 +3,7 @@
  * Fiche d'une sonde.
  *
  * Lecture en trois temps : on voit d'abord l'état et la cause, puis les chiffres
- * et la courbe, puis le détail — replié dans des accordéons pour que la page
+ * et la courbe, puis le détail, replié dans des accordéons pour que la page
  * reste courte tant qu'on n'a rien à y chercher.
  */
 use Uptimer\Auth;
@@ -130,7 +130,7 @@ foreach (($cm['assets'] ?? []) as $a) if (!empty($a['issue'])) $failedRes++;
     <div class="stat-hint"><?= tne((int)$w30['incidents'], '1 incident', '{n} incidents') ?></div>
   </div>
   <div class="stat">
-    <div class="stat-label"><?= te('Chargement') ?><?= hint('Temps total de la requête, DNS et TLS compris — ce que vit réellement un visiteur, pas seulement le temps serveur.') ?></div>
+    <div class="stat-label"><?= te('Chargement') ?><?= hint('Temps total de la requête, DNS et TLS compris : ce que vit réellement un visiteur, pas seulement le temps serveur.') ?></div>
     <div class="stat-value"><?= Ui::ms($win['avg_ms']) ?></div>
     <div class="stat-hint"><?= te('p95 {p95} · pire {worst}',
         ['p95' => Ui::ms($win['p95_ms']), 'worst' => Ui::ms($win['worst_ms'])]) ?></div>
@@ -298,7 +298,7 @@ echo Ui::accBody();
                              : Ui::badge(t('aucun signal reçu'), 'warn'));
   echo Ui::accBody();
 ?>
-  <p class="small soft prose" style="margin-top:0"><?= te('Cette sonde n\'interroge rien : elle attend que le script surveillé se signale. Le silence déclenche l\'alerte — c\'est ainsi qu\'on surveille un cron, une sauvegarde ou un import nocturne, ce qu\'aucune requête HTTP ne peut voir.') ?></p>
+  <p class="small soft prose" style="margin-top:0"><?= te('Cette sonde n\'interroge rien : elle attend que le script surveillé se signale. Le silence déclenche l\'alerte. C\'est ainsi qu\'on surveille un cron, une sauvegarde ou un import nocturne, ce qu\'aucune requête HTTP ne peut voir.') ?></p>
   <div class="field">
     <label for="beatline"><?= te('Ligne à ajouter à la fin du script surveillé') ?></label>
     <input id="beatline" type="text" readonly onclick="this.select()" value="<?= e(Heartbeat::snippet($mon)) ?>">

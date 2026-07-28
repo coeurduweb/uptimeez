@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — audit de sécurité, en trois profondeurs.
+ * Uptimer : audit de sécurité, en trois profondeurs.
  *
- *   niveau 1 — léger        : configuration, secrets, en-têtes, surface exposée
- *   niveau 2 — profond      : OWASP Top 10 en tests actifs sur une instance réelle
- *   niveau 3 — très profond : SSRF, XXE, bombes, ReDoS, temps constant, identifiants SQL
+ *   niveau 1 : léger        : configuration, secrets, en-têtes, surface exposée
+ *   niveau 2, profond      : OWASP Top 10 en tests actifs sur une instance réelle
+ *   niveau 3, très profond : SSRF, XXE, bombes, ReDoS, temps constant, identifiants SQL
  *
  * Chaque contrôle porte la référence OWASP correspondante, pour qu'un rapport
  * puisse être relu par quelqu'un qui ne connaît pas ce code.
@@ -61,10 +61,10 @@ $appSrc = '';
 foreach ($srcFiles as $f) if (!str_contains($f, '/bin/')) $appSrc .= file_get_contents($f) . "\n";
 
 // =========================================================================
-// NIVEAU 1 — LÉGER : ce qui se voit sans lancer l'application
+// NIVEAU 1. LÉGER : ce qui se voit sans lancer l'application
 // =========================================================================
 if ($lvl === 0 || $lvl === 1) {
-banner('NIVEAU 1 — Audit léger : configuration, secrets, surface');
+banner('NIVEAU 1 : Audit léger : configuration, secrets, surface');
 
 title('A02 Défaillances cryptographiques');
 ok('A02', 'mot de passe haché par password_hash()',
@@ -108,7 +108,7 @@ ok('A05', 'en-tête noindex sur toutes les pages',
 ok('A05', 'réinstallation refusée quand déjà installé',
    str_contains((string)file_get_contents($ROOT . '/install.php'), '403'));
 
-title('A03 Injection — revue statique');
+title('A03 Injection : revue statique');
 // Toute requête doit passer par des marqueurs ; on cherche l'interpolation directe.
 // Le risque n'est pas qu'une entrée HTTP côtoie le mot « from » dans un nom de
 // champ : c'est qu'elle soit concaténée ou interpolée DANS la requête. On ne
@@ -147,7 +147,7 @@ ok('A03', 'échappement HTML systématique disponible',
 ok('A03', 'export tableur neutralisé contre les formules',
    str_contains($appSrc, 'function csv_cell') && str_contains((string)file_get_contents($ROOT . '/index.php'), 'csv_cell('));
 
-title('A04 Conception — garde-fous présents');
+title('A04 Conception : garde-fous présents');
 ok('A04', 'jeton CSRF vérifié sur les écritures',
    str_contains($appSrc, 'checkCsrf(') && substr_count($appSrc, 'checkCsrf(') >= 3);
 ok('A04', 'limitation des tentatives de connexion',
@@ -159,7 +159,7 @@ ok('A10', 'protocoles curl restreints à HTTP/HTTPS',
 ok('A10', 'schéma d\'URL validé à la saisie',
    str_contains($appSrc, 'preg_match(\'~^https?://~i\''));
 
-title('A06 Composants — surface de dépendances');
+title('A06 Composants : surface de dépendances');
 ok('A06', 'aucune dépendance à installer',
    !is_file($ROOT . '/composer.json') && !is_file($ROOT . '/package.json'));
 ok('A06', 'aucun code tiers embarqué (vendor, node_modules)',
@@ -304,10 +304,10 @@ if ($lvl === 0 || $lvl === 2 || $lvl === 3) {
 }
 
 // =========================================================================
-// NIVEAU 2 — PROFOND : OWASP Top 10 en tests actifs
+// NIVEAU 2. PROFOND : OWASP Top 10 en tests actifs
 // =========================================================================
 if ($lvl === 0 || $lvl === 2) {
-banner('NIVEAU 2 — Audit profond : OWASP Top 10, tests actifs');
+banner('NIVEAU 2 : Audit profond : OWASP Top 10, tests actifs');
 
 $PASS = 'motdepasse-securite';
 $req('/install.php', ['password' => $PASS, 'password2' => $PASS]);   // déjà installé : refusé
@@ -434,7 +434,7 @@ $r = $req('/index.php?p=monitors');
 ok('A03', 'nom contenant du SQL stocké sans dommage',
    $r['code'] === 200 && !preg_match('~SQLSTATE|no such column~i', $r['body']));
 
-title('A03 XSS — réfléchie, stockée, par attribut');
+title('A03 XSS : réfléchie, stockée, par attribut');
 $xss = [
     '<script>alert(1)</script>',
     '"><script>alert(1)</script>',
@@ -453,7 +453,7 @@ foreach ($xss as $p) {
         $r = $req($base . rawurlencode($p));
         // « onerror=alert(1) » réapparaît en texte dans une page correctement
         // échappée : ce n'est pas une faille. Ce qui compte, c'est qu'une BALISE
-        // sorte non échappée — donc un « < » suivi du nom de la balise.
+        // sorte non échappée : donc un « < » suivi du nom de la balise.
         foreach (['<script', '<svg', '<img', '<iframe'] as $tag) {
             if (!str_contains($p, $tag)) continue;
             if (preg_match('~' . preg_quote($tag, '~') . '[\s/>]~i', $r['body'])
@@ -580,17 +580,17 @@ ok('A05', 'le mot de passe n\'a pas été changé par cette tentative',
 }
 
 // =========================================================================
-// NIVEAU 3 — TRÈS PROFOND : ce qui vise le collecteur lui-même
+// NIVEAU 3. TRÈS PROFOND : ce qui vise le collecteur lui-même
 // =========================================================================
 if ($lvl === 0 || $lvl === 3) {
-banner('NIVEAU 3 — Audit très profond : SSRF, XXE, bombes, ReDoS, temps');
+banner('NIVEAU 3 : Audit très profond : SSRF, XXE, bombes, ReDoS, temps');
 
 $PASS = 'motdepasse-securite';
 $req('/index.php?p=login', ['password' => $PASS]);
 $r = $req('/index.php?p=today');
 $csrf = preg_match('~csrf:\s*"([a-f0-9]+)"~', $r['body'], $m) ? $m[1] : '';
 
-title('A10 SSRF — l\'outil va chercher des URL, c\'est sa raison d\'être');
+title('A10 SSRF : l\'outil va chercher des URL, c\'est sa raison d\'être');
 // Un schéma local ne doit même pas être créable.
 // L'écran d'import réaffiche les lignes qu'il écarte : leur présence dans la
 // page ne prouve rien. La bonne question est : une sonde a-t-elle été créée, et
@@ -651,7 +651,7 @@ $req('/cron.php?key=cle-cron-secrete');
 $loopTime = microtime(true) - $t;
 ok('A10', 'boucle de redirection bornée', $loopTime < 25, round($loopTime, 1) . ' s');
 
-title('A03 XXE — le sitemap est du XML fourni par un tiers');
+title('A03 XXE : le sitemap est du XML fourni par un tiers');
 ok('A03', 'aucun parseur XML sur du contenu distant',
    !preg_match('~(simplexml_load|DOMDocument|xml_parse|LIBXML_NOENT)~', $appSrc),
    'sitemap analysé par expressions régulières');
@@ -665,7 +665,7 @@ foreach (['monitors', 'today', 'dashboard'] as $p) {
 }
 ok('A03', 'entité externe du sitemap non résolue', !$leak);
 
-title('DoS — bornes de mémoire et de temps sur du contenu hostile');
+title('DoS : bornes de mémoire et de temps sur du contenu hostile');
 // 40 Mo de HTML : la mémoire du collecteur doit rester bornée.
 $req('/index.php?p=import', ['csrf' => $csrf, 'action' => 'import',
     'list' => $EVIL . '/huge.php', 'run_setup' => '0', 'add_pages' => '0']);
@@ -740,7 +740,7 @@ $r = $req('/index.php?p=monitors', ['csrf' => $csrf, 'action' => 'bulk',
 ok('A03', 'action de masse : identifiants hostiles ignorés',
    $r['code'] < 500 && !preg_match('~SQLSTATE|no such~i', $r['body']), 'HTTP ' . $r['code']);
 
-title('Export tableur — injection de formule');
+title('Export tableur : injection de formule');
 $req('/index.php?p=import', ['csrf' => $csrf, 'action' => 'import',
     'list' => $EVIL . "/ | =cmd|'/C calc'!A0 | preuve", 'run_setup' => '0', 'add_pages' => '0']);
 $req('/cron.php?key=cle-cron-secrete');
@@ -753,7 +753,7 @@ ok('A03', 'export CSV bien produit', str_contains($csv, 'Sonde') || str_contains
 
 // =========================================================================
 echo "\n" . str_repeat('═', 68) . "\n";
-printf("%d contrôle(s) réussi(s), %d échec(s), %d remarque(s) — %.1f s\n",
+printf("%d contrôle(s) réussi(s), %d échec(s), %d remarque(s) : %.1f s\n",
        $pass, $fail, $warn, microtime(true) - $t0);
 echo $fail === 0
     ? "✅ Aucune faille détectée aux niveaux demandés.\n"

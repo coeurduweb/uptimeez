@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — réception d'un battement.
+ * Uptimer : réception d'un battement.
  *
  * À appeler par le script à surveiller (cron, sauvegarde, import nocturne) :
  *   curl -fsS "https://uptimer.exemple.fr/beat.php?k=LACLE" > /dev/null

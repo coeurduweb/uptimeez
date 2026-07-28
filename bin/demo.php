@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — jeu de démonstration.
+ * Uptimer : jeu de démonstration.
  *
  * Monte un parc d'agence fictif (9 sites, 30 jours d'historique) sur un faux
  * site local, pour visiter l'interface avant de brancher de vrais domaines.
@@ -65,7 +65,7 @@ file_put_contents("$fixtures/style.css", implode("\n", $css));
 $page = function (string $t, string $links, string $extraHead = '') use ($classes): string {
     $b = '';
     foreach ($classes as $i => $c) $b .= '<div class="' . $c . '">Bloc ' . $i . '</div>';
-    return "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>$t — Agence Bellevue</title>"
+    return "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>$t. Agence Bellevue</title>"
         . "<meta property=\"og:site_name\" content=\"Agence Bellevue\">$extraHead$links</head><body>"
         . '<header class="site-header"><nav class="nav-main"><a class="nav-link" href="/contact.html">Contact</a></nav></header>'
         . "<main class=\"hero\"><h1 class=\"hero-title\">$t</h1><a class=\"btn btn-primary\" href=\"/contact.html\">Demander un devis</a></main>"
@@ -79,7 +79,7 @@ foreach (['ok' => 'Accueil', 'contact' => 'Contact', 'services' => 'Nos services
 file_put_contents("$fixtures/css404.html", $page('Accueil', '<link rel="stylesheet" href="/wp-content/cache/min/1/absent.css">'));
 file_put_contents("$fixtures/noindex.html", $page('Préproduction', $L, '<meta name="robots" content="noindex, nofollow">'));
 file_put_contents("$fixtures/dberror.php", "<?php http_response_code(200); ?><!doctype html><html><head><title>Erreur</title></head><body><h1>Error establishing a database connection</h1></body></html>");
-file_put_contents("$fixtures/slow.php", "<?php usleep(2600000); ?><!doctype html><html><body>Lent mais vivant — Agence Bellevue</body></html>");
+file_put_contents("$fixtures/slow.php", "<?php usleep(2600000); ?><!doctype html><html><body>Lent mais vivant. Agence Bellevue</body></html>");
 file_put_contents("$fixtures/health.php", "<?php header('Content-Type: application/json'); echo json_encode(['status'=>'ok','db'=>true]);");
 file_put_contents("$fixtures/robots.txt", "User-agent: *\nAllow: /\nSitemap: $B/sitemap.xml\n");
 $sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'];
@@ -244,7 +244,7 @@ if ($probe) {
     echo "faux site non démarré : état simulé (les courbes et l'historique restent réels)\n";
     $states = [
         'Recette Leboncoin' => ['down', 'CSS_BROKEN',   'Mise en page cassée : feuille de style en échec : …/cache/min/1/absent.css → HTTP 404 [cache WP]'],
-        'Préprod BlaBlaCar' => ['down', 'DB_DOWN',      'Laravel : erreur de requête — « SQLSTATE[HY000] [2002] Connection refused »'],
+        'Préprod BlaBlaCar' => ['down', 'DB_DOWN',      'Laravel : erreur de requête : « SQLSTATE[HY000] [2002] Connection refused »'],
         'Bêta Deezer'       => ['degraded', 'SLOW',     'Temps de réponse élevé : 2,60 s'],
         'Recette La Poste'  => ['degraded', 'NOINDEX',  'Page en noindex : balise meta robots : noindex, nofollow'],
     ];
@@ -252,9 +252,9 @@ if ($probe) {
     // page » montre à quoi ressemble un vrai diagnostic.
     $cssBroken = jenc([
         'messages' => [
-            'Feuille de style en échec : …/min/1/absent.css → HTTP 404 — le fichier n\'existe plus sur le '
+            'Feuille de style en échec : …/min/1/absent.css → HTTP 404 : le fichier n\'existe plus sur le '
                 . 'serveur [cache WP (purge en cours ou fichier jamais régénéré)]',
-            'Script essentiel en échec : …/js/frontend.min.js → HTTP 404 — le fichier n\'existe plus sur le serveur',
+            'Script essentiel en échec : …/js/frontend.min.js → HTTP 404 : le fichier n\'existe plus sur le serveur',
             'Poids CSS en chute de 71 % (38.4 Ko au lieu de 132.6 Ko attendus).',
             'Les classes de la page ne sont plus couvertes par le CSS : 31 % contre 96 % en référence '
                 . '(ex. hero-title, card-grid, nav-main, btn-primary).',
@@ -275,12 +275,12 @@ if ($probe) {
             'assets' => [
                 ['url' => 'https://camping-des-pins.fr/wp-content/cache/min/1/absent.css', 'kind' => 'css',
                  'status' => 404, 'bytes' => 0, 'issue' => 'HTTP_404',
-                 'note' => 'HTTP 404 — le fichier n\'existe plus sur le serveur', 'soft' => false],
+                 'note' => 'HTTP 404 : le fichier n\'existe plus sur le serveur', 'soft' => false],
                 ['url' => 'https://camping-des-pins.fr/wp-content/uploads/elementor/css/post-142.css', 'kind' => 'css',
                  'status' => 200, 'bytes' => 0, 'issue' => 'EMPTY', 'note' => 'fichier vide (0 octet)', 'soft' => false],
                 ['url' => 'https://camping-des-pins.fr/wp-content/plugins/elementor/assets/js/frontend.min.js',
                  'kind' => 'js', 'status' => 404, 'bytes' => 0, 'issue' => 'HTTP_404',
-                 'note' => 'HTTP 404 — le fichier n\'existe plus sur le serveur', 'soft' => false],
+                 'note' => 'HTTP 404 : le fichier n\'existe plus sur le serveur', 'soft' => false],
                 ['url' => 'https://camping-des-pins.fr/wp-content/themes/astra/assets/css/main.min.css',
                  'kind' => 'css', 'status' => 200, 'bytes' => 28714, 'issue' => null, 'note' => null, 'soft' => false],
                 ['url' => 'https://camping-des-pins.fr/wp-includes/css/dist/block-library/style.min.css',

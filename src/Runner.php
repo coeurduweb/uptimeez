@@ -268,7 +268,7 @@ final class Runner
                 'HTTP_404' => 'Page introuvable (404)',
                 'HTTP_403' => 'Accès interdit (403)',
                 'HTTP_401' => 'Authentification requise (401)',
-                'HTTP_429' => 'Trop de requêtes (429) — quota serveur atteint',
+                'HTTP_429' => 'Trop de requêtes (429) : quota serveur atteint',
                 'HTTP_4XX' => 'Erreur client ' . $c,
                 'HTTP_3XX' => 'Redirection inattendue (' . $c . ') vers ' . str_cut($res->finalUrl, 80),
                 default    => 'Code HTTP inattendu : ' . $c . ' (attendu : ' . $expect . ')',
@@ -281,7 +281,7 @@ final class Runner
             $db = Database::audit($res, $mon);
             if ($db['state'] !== 'ok') {
                 $details['db'] = $db;
-                $note('down', $db['reason'], $db['message'] . ($db['evidence'] ? ' — « ' . $db['evidence'] . ' »' : ''));
+                $note('down', $db['reason'], $db['message'] . ($db['evidence'] ? ' : « ' . $db['evidence'] . ' »' : ''));
             }
         }
 
@@ -494,7 +494,7 @@ final class Runner
             'status_code'   => $res->status ?: null,
             'message'       => $verdict['message'],
             // Attention : une réponse en 0 ms (serveur local, cache) est une
-            // mesure valide — la convertir en NULL la ferait disparaître des stats.
+            // mesure valide : la convertir en NULL la ferait disparaître des stats.
             'dns_ms'        => $res->status > 0 || $res->dnsMs > 0 ? $res->dnsMs : null,
             'connect_ms'    => $res->status > 0 || $res->connectMs > 0 ? $res->connectMs : null,
             'tls_ms'        => $res->tlsMs > 0 ? $res->tlsMs : null,

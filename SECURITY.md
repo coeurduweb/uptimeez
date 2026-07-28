@@ -5,7 +5,7 @@
 Please **do not open a public issue** for a security problem. Use GitHub's private reporting
 (*Security → Report a vulnerability*) on this repository, or write to the address in the commit history.
 
-Include: what you did, what happened, and what you expected. A proof of concept is welcome but not required —
+Include: what you did, what happened, and what you expected. A proof of concept is welcome but not required , 
 a clear description is enough to get started.
 
 You will get a first answer within a few days. Fixes for anything exploitable are released as soon as they are
@@ -33,7 +33,7 @@ installation and nothing leaves your machine.
 
 ## Known and accepted design decisions
 
-These are deliberate, documented, and not vulnerabilities — but you should know about them.
+These are deliberate, documented, and not vulnerabilities : but you should know about them.
 
 **The collector fetches the URLs you give it.** That is the product. Non-HTTP schemes are rejected at input, and
 curl is restricted to HTTP/HTTPS on requests *and* redirects, so a monitored site cannot make the collector read

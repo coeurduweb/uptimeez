@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — English catalogue (default language).
+ * Uptimer, English catalogue (default language).
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
- * I18n substitutes — so renaming the product never invalidates a catalogue.
+ * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
  * What is left: php bin/i18n-audit.php --manquants=en
  */
@@ -68,7 +68,7 @@ return [
     'Appliquer' => 'Apply',
     'Au-delà de ce temps de réponse, la sonde passe en « à surveiller ». Laissez l\'ajustement automatique : il se cale sur le p95 réel du site, ce qu\'un chiffre rond ne sait pas faire.' => 'Beyond this response time the monitor turns to “needs watching”. Leave automatic tuning on: it settles on the site\'s real p95, which a round number never does.',
     'Au-delà, la sonde passe en « à surveiller » sans être déclarée hors service.' => 'Beyond that, the monitor becomes “needs watching” without being declared down.',
-    'Au-delà, seules les statistiques journalières sont conservées — elles alimentent les vues 6 mois et 1 an.' => 'Beyond that, only daily statistics are kept — they feed the 6-month and 1-year views.',
+    'Au-delà, seules les statistiques journalières sont conservées : elles alimentent les vues 6 mois et 1 an.' => 'Beyond that, only daily statistics are kept: they feed the 6-month and 1-year views.',
     'Aucun destinataire configuré' => 'No recipient configured',
     'Aucun incident enregistré pour cette sonde.' => 'No incident recorded for this monitor.',
     'Aucun incident sur la période' => 'No incident in this period',
@@ -97,7 +97,7 @@ return [
     'Bavard sur un site qui publie souvent : à réserver aux sites figés.' => 'Noisy on a site that publishes often: keep it for static sites.',
     'Bonne nouvelle, il n\'y a rien à traiter dans cette catégorie.' => 'Good news, there is nothing to handle in this category.',
     'Boucle de redirection' => 'Redirect loop',
-    'Boutique Dupont — Accueil' => 'Dupont Store — Home',
+    'Boutique Dupont, accueil' => 'Dupont Store. Home',
     'C\'est ce nom qui apparaîtra dans les alertes.' => 'This is the name that will appear in alerts.',
     'C\'est la bonne nouvelle du jour.' => 'That is today\'s good news.',
     'CSS dégradé' => 'Degraded CSS',
@@ -120,7 +120,7 @@ return [
     'Certificat refusé : autorité de certification non reconnue ou chaîne incomplète' => 'Certificate rejected: unrecognised certificate authority or incomplete chain',
     'Certificat, domaine et serveur' => 'Certificate, domain and server',
     'Ces réglages restent modifiables : toute valeur saisie à la main prend le pas sur la décision automatique.' => 'These settings stay editable: any value you enter by hand overrides the automatic decision.',
-    'Cette sonde n\'interroge rien : elle attend que le script surveillé se signale. Le silence déclenche l\'alerte — c\'est ainsi qu\'on surveille un cron, une sauvegarde ou un import nocturne, ce qu\'aucune requête HTTP ne peut voir.' => 'This monitor queries nothing: it waits for the monitored script to report in. Silence raises the alert — that is how you watch a cron job, a backup or a nightly import, which no HTTP request can see.',
+    'Cette sonde n\'interroge rien : elle attend que le script surveillé se signale. Le silence déclenche l\'alerte. C\'est ainsi qu\'on surveille un cron, une sauvegarde ou un import nocturne, ce qu\'aucune requête HTTP ne peut voir.' => 'This monitor queries nothing: it waits for the monitored script to report in. Silence raises the alert: that is how you watch a cron job, a backup or a nightly import, which no HTTP request can see.',
     'Cette sonde ne teste pas une page : elle attend qu\'un script du site se signale. Le silence veut dire que le cron, la sauvegarde ou l\'import surveillé ne s\'est pas exécuté.' => 'This monitor does not test a page: it waits for a script on the site to report in. Silence means the monitored cron, backup or import did not run.',
     'Champ JSON attendu' => 'Expected JSON field',
     'Changer l\'intervalle' => 'Change the interval',
@@ -193,7 +193,7 @@ return [
     'Disponibilité sur 24 heures' => 'Availability over 24 hours',
     'Disque plein sur le serveur' => 'Disk full on the server',
     'Doctrine : erreur base de données' => 'Doctrine: database error',
-    'Document produit le {date} par {app} — surveillance continue.' => 'Document produced on {date} by {app} — continuous monitoring.',
+    'Document produit le {date} par {app}, surveillance continue.' => 'Document produced on {date} by {app}: continuous monitoring.',
     'Domaine bientôt expiré' => 'Domain expiring soon',
     'Dossier data/ accessible en écriture' => 'data/ folder writable',
     'Durée' => 'Duration',
@@ -237,7 +237,7 @@ return [
     'Exemples de lignes acceptées' => 'Examples of accepted lines',
     'Export CSV' => 'CSV export',
     'Expéditeur' => 'Sender',
-    'Facultatif — sert à filtrer le tableau de bord.' => 'Optional — used to filter the dashboard.',
+    'Facultatif : sert à filtrer le tableau de bord.' => 'Optional: used to filter the dashboard.',
     'Fenêtre de maintenance' => 'Maintenance window',
     'Fenêtre de maintenance :' => 'Maintenance window:',
     'Feuilles de style' => 'Stylesheets',
@@ -313,7 +313,7 @@ return [
     'Le détail de la dernière vérification est indiqué ci-dessous.' => 'The details of the last check are shown below.',
     'Le mot de passe doit faire au moins 8 caractères.' => 'The password must be at least 8 characters long.',
     'Le nom de domaine ne se résout plus' => 'The domain name no longer resolves',
-    'Le renouvellement automatique devrait s\'en occuper — vérifiez qu\'il fonctionne.' => 'Automatic renewal should handle it — check that it works.',
+    'Le renouvellement automatique devrait s\'en occuper, vérifiez qu\'il fonctionne.' => 'Automatic renewal should handle it: check that it works.',
     'Le serveur bloque la requête. Souvent un pare-feu applicatif ou une protection anti-bot qui n\'aime pas le robot de surveillance.' => 'The server blocks the request. Usually an application firewall or bot protection that dislikes the monitoring robot.',
     'Le serveur limite le débit et refuse temporairement les demandes.' => 'The server is rate-limiting and temporarily refusing requests.',
     'Le serveur ne répond pas dans le délai imparti' => 'The server does not answer in time',
@@ -399,7 +399,7 @@ return [
     'Ping réseau' => 'Network ping',
     'Plage pendant laquelle on ne veut pas être dérangé : sauvegarde nocturne, déploiement hebdomadaire. Les mesures continuent, seules les alertes se taisent.' => 'A window when you do not want to be disturbed: nightly backup, weekly deployment. Measurements keep running, only alerts go quiet.',
     'Plus aucune media query : la mise en page responsive est perdue.' => 'No media query left: the responsive layout is lost.',
-    'Plus la fréquence est courte, plus la détection est rapide — et plus le serveur est sollicité.' => 'The shorter the interval, the faster the detection — and the heavier the load on the server.',
+    'Plus la fréquence est courte, plus la détection est rapide, et plus le serveur est sollicité.' => 'The shorter the interval, the faster the detection: and the heavier the load on the server.',
     'Poids CSS' => 'CSS weight',
     'Politique d\'envoi' => 'Delivery policy',
     'Port' => 'Port',
@@ -449,7 +449,7 @@ return [
     'Revérifier {name}' => 'Check {name} again',
     'Rien dans ce filtre' => 'Nothing matches this filter',
     'Rien n\'est cassé pour l\'instant, mais le compte à rebours est lancé.' => 'Nothing is broken yet, but the countdown has started.',
-    'Rien n\'est créé à cette étape : vous validez ensuite l\'aperçu. {app} accepte aussi un e-mail ou un tableau collé tel quel — elle y récupère les adresses.' => 'Nothing is created at this step: you confirm the preview afterwards. {app} also accepts an e-mail or a spreadsheet pasted as is — it picks the addresses out of it.',
+    'Rien n\'est créé à cette étape : vous validez ensuite l\'aperçu. {app} accepte aussi un e-mail ou un tableau collé tel quel, elle y récupère les adresses.' => 'Nothing is created at this step: you confirm the preview afterwards. {app} also accepts an e-mail or a spreadsheet pasted as is: it picks the addresses out of it.',
     'Rien n\'est encore cassé. Ces points le seront si personne n\'intervient : certificat qui expire, nom de domaine à renouveler, site qui ralentit.' => 'Nothing is broken yet. These will break if nobody steps in: expiring certificate, domain to renew, site slowing down.',
     'Rien n\'est surveillé automatiquement pour l\'instant.' => 'Nothing is being monitored automatically yet.',
     'Rien à faire, tout tourne' => 'Nothing to do, everything is running',
@@ -522,7 +522,7 @@ return [
     'Temps de réponse et pannes' => 'Response time and outages',
     'Temps de réponse moyen : {avg} · p95 {p95}' => 'Average response time: {avg} · p95 {p95}',
     'Temps de réponse élevé' => 'High response time',
-    'Temps total de la requête, DNS et TLS compris — ce que vit réellement un visiteur, pas seulement le temps serveur.' => 'Total request time, DNS and TLS included — what a visitor actually experiences, not just server time.',
+    'Temps total de la requête, DNS et TLS compris : ce que vit réellement un visiteur, pas seulement le temps serveur.' => 'Total request time, DNS and TLS included: what a visitor actually experiences, not just server time.',
     'Tester' => 'Test',
     'Tester les canaux et la détection' => 'Test the channels and the detection',
     'Testez vos canaux depuis les {link}.' => 'Test your channels from the {link}.',
@@ -556,7 +556,7 @@ return [
     'Un site en attente de préparation automatique' => 'One site awaiting automatic setup',
     'Un site est déclaré hors service seulement après ce nombre d\'échecs consécutifs. C\'est ce qui évite d\'alerter sur un hoquet réseau de deux secondes.' => 'A site is declared down only after this many consecutive failures. That is what keeps a two-second network hiccup from raising an alert.',
     'Un site par carte, dans l\'ordre d\'urgence. Chaque carte dit ce qui casse, pourquoi c\'est un problème et quoi faire. Les boutons agissent sans quitter la page.' => 'One card per site, most urgent first. Each card says what is broken, why it matters and what to do. The buttons act without leaving the page.',
-    'Un texte qui ne peut venir que de la base de données du site — le copyright du pied de page, par exemple. S\'il disparaît alors que la page répond 200, c\'est la base qui a lâché. Laissez vide : {app} le déduit.' => 'A piece of text that can only come from the site\'s database — the footer copyright, for instance. If it vanishes while the page still answers 200, the database has failed. Leave empty: {app} infers it.',
+    'Un texte qui ne peut venir que de la base de données du site, par exemple le copyright du pied de page. S\'il disparaît alors que la page répond 200, c\'est la base qui a lâché. Laissez vide : {app} le déduit.' => 'A piece of text that can only come from the site\'s database, for instance the footer copyright. If it vanishes while the page still answers 200, the database has failed. Leave empty: {app} infers it.',
     'Un texte qui vient du contenu du site. S\'il disparaît alors que la page répond, c\'est le serveur web ou la base de données qui a lâché. Plusieurs variantes acceptées avec' => 'A piece of text coming from the site\'s content. If it disappears while the page still answers, the web server or the database has failed. Several variants accepted with',
     'Un élément par ligne. Vous pouvez ajouter un nom et une chaîne de contrôle en séparant par' => 'One entry per line. You can add a name and a proof string, separated by',
     'Une adresse de votre domaine hébergé passe mieux les filtres.' => 'An address on your hosted domain gets through filters better.',
@@ -610,7 +610,7 @@ return [
     'ajusté automatiquement' => 'tuned automatically',
     'alerte(s)' => 'alert(s)',
     'apparaît (mise en ligne confirmée)' => 'appears (publication confirmed)',
-    'aucun canal actif — personne ne sera prévenu' => 'no active channel — nobody will be notified',
+    'aucun canal actif, personne ne sera prévenu' => 'no active channel: nobody will be notified',
     'aucun incident enregistré' => 'no incident recorded',
     'aucun signal reçu' => 'no signal received',
     'aucune' => 'none',
@@ -656,7 +656,7 @@ return [
     'la base répondent.' => 'and the database are answering.',
     'la configurer' => 'set it up',
     'la dernière mesure, en détail' => 'the latest measurement, in detail',
-    'la mention de copyright du pied de page, issue des réglages du site — donc de la base ;' => 'the copyright line in the footer, taken from the site settings — hence from the database;',
+    'la mention de copyright du pied de page, issue des réglages du site, donc de la base ;' => 'the copyright line in the footer, taken from the site settings: hence from the database;',
     'la première entrée du menu de navigation ;' => 'the first entry of the navigation menu;',
     'la tâche planifiée n\'a jamais tourné' => 'the scheduled task has never run',
     'laisser vide pour ne pas changer' => 'leave empty to keep it unchanged',

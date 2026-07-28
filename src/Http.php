@@ -15,7 +15,7 @@ final class Http
      * raison d'être, et surveiller un intranet est un usage légitime. Le
      * garde-fou est donc facultatif (`security.block_private_ranges`, désactivé
      * par défaut) : activé, il refuse la boucle locale, les plages privées et
-     * les adresses de métadonnées d'hébergeur — la cible classique d'une SSRF.
+     * les adresses de métadonnées d'hébergeur, la cible classique d'une SSRF.
      *
      * @return string|null motif du refus, ou null si la cible est autorisée
      */

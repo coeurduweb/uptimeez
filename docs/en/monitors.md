@@ -3,7 +3,7 @@
 [← Getting started](getting-started.md) · [Documentation](README.md) · [Detection →](detection.md)
 
 A monitor is one thing being checked. A site groups several of them, and the site's state is the state of its
-worst monitor — except that a paused monitor never drags a healthy site down.
+worst monitor : except that a paused monitor never drags a healthy site down.
 
 ---
 
@@ -26,7 +26,7 @@ heartbeat monitor, copy the line it gives you, and put it at the end of the scri
 curl -fsS --max-time 10 "https://yourdomain.com/uptimer/beat.php?k=TOKEN" > /dev/null
 ```
 
-Add `&m=some+text` to attach a word to the signal — a file count, a duration, a row total. If the signal does not
+Add `&m=some+text` to attach a word to the signal : a file count, a duration, a row total. If the signal does not
 arrive within the interval plus the grace period, an incident opens. The next signal closes it and sends the
 recovery notice.
 
@@ -50,7 +50,7 @@ wins, permanently.
 | Group | empty | You want to filter the wall by client |
 | Monitor enabled | on | Unchecking keeps the monitor and its history but stops checking it |
 
-### The proof string — the most valuable field on this page
+### The proof string : the most valuable field on this page
 
 | Field | Default | Notes |
 |---|---|---|
@@ -69,13 +69,13 @@ found, the monitor appears in *Coming up* asking you to set it by hand.
 
 | Switch | Default | Notes |
 |---|---|---|
-| Check page resources | on | CSS, scripts and fonts — this is what detects a broken layout. [How it works](detection.md) |
+| Check page resources | on | CSS, scripts and fonts : this is what detects a broken layout. [How it works](detection.md) |
 | Detect a database outage | on | ~45 error signatures, plus the proof string |
 | Monitor the TLS certificate | on | Validity, chain, domain match, expiry |
 | Warn before certificate expiry | 14 days | Let's Encrypt renews itself; this catches the times it does not |
 | Alert on a forgotten `noindex` | on for production | The silent SEO killer after a release |
 | Monitor a content update | off | Tell me when a text appears (publication confirmed) or disappears |
-| Report any content change | off | Fingerprint of the visible text. Noisy on a site that publishes often — keep it for static sites |
+| Report any content change | off | Fingerprint of the visible text. Noisy on a site that publishes often : keep it for static sites |
 | Freeze the current CSS reference | off | Turn on once the design is settled: the reference stops evolving on its own |
 
 ### Thresholds
@@ -104,7 +104,7 @@ found, the monitor appears in *Coming up* asking you to set it by hand.
 ## Working on many monitors at once
 
 The **Monitors** list is built for portfolios: filter by name, domain or technology; sort by state, slowness or
-last check; then select rows and apply a bulk action — pause, resume, change the interval, run auto-detection
+last check; then select rows and apply a bulk action : pause, resume, change the interval, run auto-detection
 again, delete.
 
 The filter is accent- and case-insensitive in every language: `casse` finds `cassé`, `munchen` finds `München`.
@@ -118,5 +118,5 @@ The filter is accent- and case-insensitive in every language: `casse` finds `cas
 **Delete** removes the monitor, its measurements, its incidents and its events, permanently. The confirmation
 dialogue names the monitor so you cannot delete the wrong one by muscle memory.
 
-There is no undo for a deletion — that is why the button lives inside a folded accordion labelled *cannot be
+There is no undo for a deletion : that is why the button lives inside a folded accordion labelled *cannot be
 undone*, and why pausing is suggested right next to it.

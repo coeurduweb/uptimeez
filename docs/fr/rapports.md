@@ -17,18 +17,18 @@ puis imprimez ou enregistrez en PDF.
 Il contient :
 
 - **La disponibilité** sur la période, et l'indisponibilité cumulée en heures et minutes lisibles ;
-- **La bande journalière** — un carré par jour : vert pour une journée complète en ligne, orange pour un incident
+- **La bande journalière**, un carré par jour : vert pour une journée complète en ligne, orange pour un incident
   bref, rouge pour une interruption de plus de quinze minutes. Un client comprend cela en une seconde ;
-- **Le temps de réponse** — moyenne et p95, avec la courbe ;
+- **Le temps de réponse** : moyenne et p95, avec la courbe ;
 - **Le détail par page**, pour que « le site » ne soit pas une boîte noire ;
-- **Le tableau des interruptions** — début, fin, durée, cause ;
+- **Le tableau des interruptions** : début, fin, durée, cause ;
 - Un pied de page indiquant que le document a été produit automatiquement, sans intervention humaine.
 
 La feuille de style d'impression retire la navigation, les boutons et les notifications : ce qui sort de
 l'imprimante est un document, pas une capture d'écran d'application.
 
 **Périodes :** 24 h, 7, 30, 90, 120, 180 et 365 jours. Au-delà de 40 jours, la courbe est reconstruite depuis les
-agrégats journaliers, conservés indéfiniment — un rapport à un an reste donc juste même si les mesures brutes ont
+agrégats journaliers, conservés indéfiniment : un rapport à un an reste donc juste même si les mesures brutes ont
 été purgées.
 
 ---
@@ -57,7 +57,7 @@ gauche.
 Sur chaque carte de tâche : **Copier le rapport**. Il place dans le presse-papiers un résumé en texte brut :
 
 ```
-# Camping des Pins — Hors service
+# Camping des Pins : Hors service
 
 URL surveillée : https://camping-des-pins.fr/
 Constat le 28/07/2026 19:12 (fuseau Europe/Paris)
@@ -86,10 +86,10 @@ Vérifications en échec : 8
 24 heures : 97,58 % (35 min hors service)
 Temps de réponse moyen : 334 ms · p95 512 ms
 
-— Rapport produit par Uptimer
+Rapport produit par Uptimer
 ```
 
-Aucun HTML, aucun balisage à nettoyer. Ça part dans un ticket, un e-mail ou un message Slack tel quel — avec la
+Aucun HTML, aucun balisage à nettoyer. Ça part dans un ticket, un e-mail ou un message Slack tel quel : avec la
 preuve déjà dedans, ce qui fait qu'un développeur agit au lieu de poser des questions.
 
 ---
@@ -99,5 +99,5 @@ preuve déjà dedans, ce qui fait qu'un développeur agit au lieu de poser des q
 **Incidents → Export CSV** vous donne les incidents de la période sous forme de tableur : sonde, début, fin, durée,
 cause, nombre de vérifications en échec, alertes envoyées.
 
-C'est votre justificatif de SLA. Si un contrat parle de 99,5 %, c'est le fichier qui prouve que vous l'avez tenu —
+C'est votre justificatif de SLA. Si un contrat parle de 99,5 %, c'est le fichier qui prouve que vous l'avez tenu , 
 ou celui qui vous dit quel hébergeur quitter.

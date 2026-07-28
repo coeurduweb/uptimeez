@@ -60,7 +60,7 @@ Rien d'autre. Il n'y a pas de « rappel que tout va bien », pas de volume quoti
 
 ---
 
-## Pannes groupées — le tueur de bruit
+## Pannes groupées : le tueur de bruit
 
 Quand trois sondes ou plus tombent sur la **même adresse IP** au cours d'une même passe, Uptimer envoie **une**
 alerte qui nomme le serveur et liste les sites touchés, au lieu d'une alerte par site.
@@ -87,7 +87,7 @@ aide à échouer.
 
 Par sonde, en mode Complet. Formats : `lun-ven 22:00-23:30`, `mar 02:00-04:00`, `sam 01:00-05:00`.
 
-Dans la fenêtre, les mesures continuent — l'historique reste complet et honnête — mais les alertes se taisent. Pour
+Dans la fenêtre, les mesures continuent : l'historique reste complet et honnête, mais les alertes se taisent. Pour
 une sauvegarde nocturne qui sature le serveur, ou un déploiement hebdomadaire.
 
 ---
@@ -101,7 +101,7 @@ une sauvegarde nocturne qui sature le serveur, ou un déploiement hebdomadaire.
 | Prévenir sur « à surveiller » | activé | Désactivez pour n'être alerté que sur les vraies pannes |
 
 Et la **prise en compte** : le bouton *Pris en compte* d'une carte de tâche stoppe les rappels sans clore
-l'incident. Il dit « je l'ai vu, je m'en occupe » — l'historique reste juste, votre téléphone se calme.
+l'incident. Il dit « je l'ai vu, je m'en occupe » : l'historique reste juste, votre téléphone se calme.
 
 ---
 
@@ -113,7 +113,7 @@ Une configuration qui marche bien pour un parc d'agence :
 - **Heures calmes `23:00-07:00`**, pour qu'une lenteur nocturne attende le matin.
 - **Rappel toutes les 60 minutes** sur les incidents ouverts.
 - **Avis de rétablissement activés**, pour que personne ne poursuive un problème résolu.
-- **Discord pour l'équipe, e-mail pour l'astreinte** — à définir par sonde en mode Complet, champ
+- **Discord pour l'équipe, e-mail pour l'astreinte** : à définir par sonde en mode Complet, champ
   `canaux d'alerte`.
 - **Modifications de contenu désactivées**, sauf sur les sites qui ne publient jamais, où un changement veut dire
   que quelqu'un est entré.

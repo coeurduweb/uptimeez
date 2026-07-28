@@ -16,18 +16,18 @@ save as PDF.
 It contains:
 
 - **Availability** over the period, and the cumulative downtime in plain hours and minutes;
-- **The day strip** — one square per day: green for a full day up, orange for a brief incident, red for an outage
+- **The day strip**, one square per day: green for a full day up, orange for a brief incident, red for an outage
   longer than fifteen minutes. A client understands this in one second;
-- **Response time** — average and p95, with the curve;
+- **Response time** : average and p95, with the curve;
 - **Per-page detail**, so "the site" is not a black box;
-- **The incident table** — start, end, duration, cause;
+- **The incident table** : start, end, duration, cause;
 - A footer stating the document was produced automatically, with no human intervention.
 
 The print stylesheet strips the navigation, the buttons and the toasts: what comes out of the printer is a
 document, not a screenshot of an application.
 
 **Ranges:** 24 h, 7, 30, 90, 120, 180 and 365 days. Beyond 40 days the curve is rebuilt from daily aggregates,
-which are kept indefinitely — so a one-year report stays accurate even though the raw measurements have been
+which are kept indefinitely : so a one-year report stays accurate even though the raw measurements have been
 purged.
 
 ---
@@ -55,7 +55,7 @@ visitor's language: a client in Madrid gets Spanish, one in Cairo gets Arabic la
 On every task card: **Copy the report**. It puts a plain-text summary on the clipboard:
 
 ```
-# Camping des Pins — Down
+# Camping des Pins : Down
 
 Monitored URL: https://camping-des-pins.fr/
 Observed on 28/07/2026 19:12 (timezone Europe/Paris)
@@ -84,10 +84,10 @@ Failed checks: 8
 24 hours: 97.58 % (35 min down)
 Average response time: 334 ms · p95 512 ms
 
-— Report produced by Uptimer
+Report produced by Uptimer
 ```
 
-No HTML, no markup to clean up. It goes into a ticket, an e-mail or a Slack message as it is — with the evidence
+No HTML, no markup to clean up. It goes into a ticket, an e-mail or a Slack message as it is : with the evidence
 already in it, which is what gets a developer to act instead of asking questions.
 
 ---
@@ -97,5 +97,5 @@ already in it, which is what gets a developer to act instead of asking questions
 **Incidents → CSV export** gives you the incidents for the period as a spreadsheet: monitor, start, end, duration,
 cause, number of failed checks, alerts sent.
 
-That is your SLA evidence. If a contract says 99.5 %, this is the file that proves you met it — or the file that
+That is your SLA evidence. If a contract says 99.5 %, this is the file that proves you met it : or the file that
 tells you which host to leave.

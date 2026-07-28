@@ -3,7 +3,7 @@
  * Formulaire de sonde, partagé entre création et édition.
  *
  * Principe : l'essentiel visible, le reste replié. Chaque champ a un libellé
- * visible et une explication en clair — jamais de réglage sans mode d'emploi.
+ * visible et une explication en clair : jamais de réglage sans mode d'emploi.
  * Attend $mon (tableau, éventuellement vide pour une création).
  */
 use Uptimer\Config;
@@ -37,7 +37,7 @@ $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
       <div class="field">
         <label for="<?= $uid ?>-name"><?= te('Nom de la sonde') ?><span class="req" aria-hidden="true">*</span></label>
         <input id="<?= $uid ?>-name" type="text" name="name" value="<?= e($v('name')) ?>"
-               placeholder="<?= te('Boutique Dupont — Accueil') ?>" required maxlength="180">
+               placeholder="<?= te('Boutique Dupont, accueil') ?>" required maxlength="180">
         <span class="hint"><?= te('C\'est ce nom qui apparaîtra dans les alertes.') ?></span>
       </div>
       <div class="field">
@@ -59,10 +59,10 @@ $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
             <option value="<?= $cur ?>" selected><?= te('Toutes les {interval}', ['interval' => human_duration($cur)]) ?></option>
           <?php endif; ?>
         </select>
-        <span class="hint"><?= te('Plus la fréquence est courte, plus la détection est rapide — et plus le serveur est sollicité.') ?></span>
+        <span class="hint"><?= te('Plus la fréquence est courte, plus la détection est rapide, et plus le serveur est sollicité.') ?></span>
       </div>
       <div class="field">
-        <label for="<?= $uid ?>-expect"><?= te('Chaîne de contrôle') ?></label><?= hint('Un texte qui ne peut venir que de la base de données du site — le copyright du pied de page, par exemple. S\'il disparaît alors que la page répond 200, c\'est la base qui a lâché. Laissez vide : {app} le déduit.') ?>
+        <label for="<?= $uid ?>-expect"><?= te('Chaîne de contrôle') ?></label><?= hint('Un texte qui ne peut venir que de la base de données du site, par exemple le copyright du pied de page. S\'il disparaît alors que la page répond 200, c\'est la base qui a lâché. Laissez vide : {app} le déduit.') ?>
         <input id="<?= $uid ?>-expect" type="text" name="expect_string" value="<?= e($v('expect_string')) ?>"
                placeholder="<?= te('Laisser vide : {app} la déduit du contenu') ?>">
         <span class="hint"><?= te('Un texte qui vient du contenu du site. S\'il disparaît alors que la page répond, c\'est le serveur web ou la base de données qui a lâché. Plusieurs variantes acceptées avec') ?>

@@ -9,7 +9,7 @@ un verdict avant d'agir dessus, et il faut savoir pourquoi une fausse alerte est
 
 ## Les 23 causes
 
-Chaque verdict se résout en une cause, et chaque cause porte un titre, une explication et un remède — dans votre
+Chaque verdict se résout en une cause, et chaque cause porte un titre, une explication et un remède, dans votre
 langue.
 
 | Code | Cause |
@@ -48,13 +48,13 @@ et police, les récupère aussi (six ressources par passe au maximum, pour reste
 ### 1. Disponibilité
 
 Chaque ressource est demandée. Un `404`, un `403` ou un timeout sur une feuille de style est décisif : le navigateur
-aurait affiché la page sans style. C'est la panne classique d'après déploiement — un chemin de cache qui n'existe
+aurait affiché la page sans style. C'est la panne classique d'après déploiement : un chemin de cache qui n'existe
 plus, une empreinte de build qui a changé, un fichier non envoyé.
 
 ### 2. Type MIME et `nosniff`
 
 Un serveur qui renvoie `text/html` pour un fichier `.css` renvoie en général une page d'erreur ou une trace PHP.
-Avec `X-Content-Type-Options: nosniff` — que la plupart des serveurs durcis envoient désormais — le navigateur
+Avec `X-Content-Type-Options: nosniff`, que la plupart des serveurs durcis envoient désormais, le navigateur
 refuse le fichier purement et simplement. Uptimer le signale comme bloqué, parce que c'est ce qui se passe en vrai.
 
 ### 3. Contenu mixte
@@ -78,7 +78,7 @@ l'empreinte à jour.
 
 Uptimer se souvient de ce à quoi ressemble un état sain : poids total des feuilles de style et nombre de règles CSS.
 Une chute au-delà du pourcentage toléré (35 % par défaut) signifie que le CSS a été remplacé par quelque chose de
-beaucoup plus petit — un build tronqué, un cache en cours de purge, un minifieur trop zélé.
+beaucoup plus petit : un build tronqué, un cache en cours de purge, un minifieur trop zélé.
 
 ### 7. Couverture des classes
 
@@ -96,7 +96,7 @@ l'air correct alors que chaque visiteur sur téléphone voit une page cassée.
 
 Les constructeurs de pages modernes masquent des blocs (`opacity: 0`) et les révèlent avec un script. Si ce script
 échoue, la page répond `200`, le CSS est bon, et le contenu est *invisible*. Uptimer compte les blocs restés en
-attente de révélation et le signale — une panne qui paraît parfaite sous tous les autres angles.
+attente de révélation et le signale : une panne qui paraît parfaite sous tous les autres angles.
 
 ### Ce que vous en obtenez
 
@@ -119,7 +119,7 @@ Ce bloc se colle tel quel dans un ticket, et c'est pour cette raison qu'un déve
   convergents**.
 - Les ressources tierces sont pondérées différemment des vôtres : un CDN de polices lent dégrade, il ne casse pas.
 - Une refonte volontaire est à un bouton de devenir la nouvelle norme (*Réapprendre la référence*).
-- Quand l'analyse n'a pas eu lieu sur une passe, le verdict précédent est repris plutôt que remis à zéro — pas de
+- Quand l'analyse n'a pas eu lieu sur une passe, le verdict précédent est repris plutôt que remis à zéro : pas de
   battement entre « cassé » et « conforme ».
 
 ---
@@ -134,7 +134,7 @@ connection »), Laravel, Doctrine, PDO, Symfony et MySQL brut (« Too many conne
 plein, SQLite verrouillée, connexion Redis en échec.
 
 **2. La chaîne de preuve.** Un texte qui ne peut venir que de la base. S'il disparaît alors que la page répond
-encore `200`, la couche données est tombée. C'est ce qui attrape la panne polie — le CMS qui sert une coquille en
+encore `200`, la couche données est tombée. C'est ce qui attrape la panne polie : le CMS qui sert une coquille en
 cache avec un contenu vide.
 
 **3. Une sonde CMS qui touche vraiment la base.** Sur WordPress, `/wp-json/` traverse la base, contrairement à une
@@ -146,15 +146,15 @@ page d'accueil entièrement mise en cache. Uptimer ajoute cette sonde automatiqu
 
 Une seule lecture TLS ne peut pas répondre aux deux questions qui vous intéressent. Uptimer en fait deux.
 
-**Passe permissive** — se connecte en acceptant tout, lit le certificat et en extrait les faits : sujet, émetteur,
+**Passe permissive**, se connecte en acceptant tout, lit le certificat et en extrait les faits : sujet, émetteur,
 expiration, noms alternatifs. Cela fonctionne même sur un certificat expiré ou auto-signé, c'est-à-dire exactement
 quand vous avez besoin des détails.
 
-**Passe stricte** — se connecte comme un navigateur, en vérifiant le pair et le nom d'hôte. Son seul rôle est le
+**Passe stricte** : se connecte comme un navigateur, en vérifiant le pair et le nom d'hôte. Son seul rôle est le
 verdict : un visiteur verrait-il un écran d'avertissement ?
 
 Ensemble, elles distinguent « expire dans 3 jours » de « expiré hier », de « valide mais ne couvre pas ce domaine »,
-de « autorité inconnue » — quatre situations, quatre remèdes différents.
+de « autorité inconnue » : quatre situations, quatre remèdes différents.
 
 ---
 
@@ -178,8 +178,8 @@ main, l'ajustement automatique s'arrête pour cette sonde.
 ## Expiration du domaine
 
 Une requête RDAP par jour et par domaine enregistrable. RDAP est le successeur de WHOIS et renvoie du JSON
-structuré : il n'y a rien à gratter. Un domaine qui expire apparaît dans *À prévoir* 45 jours à l'avance — assez
-tôt pour compter, assez tard pour ne pas être du bruit.
+structuré : il n'y a rien à gratter. Un domaine qui expire apparaît dans *À prévoir* 45 jours à l'avance, assez
+tôt pour compter et assez tard pour ne pas être du bruit.
 
 ---
 

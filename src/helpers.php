@@ -212,7 +212,7 @@ function fold(string $s): string
     if (class_exists('\Normalizer')) {
         $d = \Normalizer::normalize($s, \Normalizer::FORM_D);
         if ($d !== false) {
-            // Retire les marques combinantes (U+0300–U+036F) laissées par la décomposition.
+            // Retire les marques combinantes (U+0300-U+036F) laissées par la décomposition.
             $s = (string)preg_replace('~\p{Mn}+~u', '', $d);
         }
     }
@@ -265,7 +265,7 @@ function strtrr_utf8(string $s, array $map): string
  *
  * Un nom de sonde ou un message d'erreur commençant par « = », « + », « - »,
  * « @ » ou une tabulation est interprété comme une formule par Excel et
- * LibreOffice — c'est-à-dire comme du code, chez le client à qui on envoie le
+ * LibreOffice : c'est-à-dire comme du code, chez le client à qui on envoie le
  * fichier. On préfixe d'une apostrophe, qui force le mode texte et n'apparaît
  * pas à l'écran.
  */

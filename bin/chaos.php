@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — béta-test destructif (« l'utilisateur qui fait n'importe quoi »).
+ * Uptimer : béta-test destructif (« l'utilisateur qui fait n'importe quoi »).
  *
  * On joue le rôle de quelqu'un qui écrit mal, clique partout, ne lit aucune
  * consigne, envoie des formulaires vides ou monstrueux, et essaie de casser
- * l'outil — volontairement ou non. Le contrat vérifié ici n'est pas « ça
+ * l'outil : volontairement ou non. Le contrat vérifié ici n'est pas « ça
  * marche » mais : **l'outil ne se casse jamais**.
  *
  * Quatre règles, appliquées à chaque requête :
@@ -112,7 +112,7 @@ $wait = function (int $port): bool {
 };
 if (!$wait($appPort) || !$wait($sitePort)) exit("Les serveurs de test n'ont pas démarré.\n");
 
-echo "Béta-test destructif — instance $APP\n";
+echo "Béta-test destructif : instance $APP\n";
 
 // =========================================================================
 // Client HTTP + contrôleur de dégâts
@@ -224,7 +224,7 @@ foreach ($pages as $p) {
 ok('toutes les pages, y compris inventées', $bad === 0, count($pages) . ' page(s)');
 
 // La liste contenait « logout » : un utilisateur qui clique partout finit par
-// se déconnecter. C'est le bon comportement — on se reconnecte pour la suite.
+// se déconnecter. C'est le bon comportement : on se reconnecte pour la suite.
 $req('/index.php?p=login', ['password' => $PASS]);
 $csrf = $csrfOf();
 ok('reconnexion après une déconnexion accidentelle', $csrf !== '');
@@ -502,7 +502,7 @@ ok('le collecteur tourne encore', $out !== null && !preg_match('~Fatal|Parse err
 
 // =========================================================================
 echo "\n" . str_repeat('═', 68) . "\n";
-printf("%d contrôle(s) réussi(s), %d échec(s) — %d requêtes hostiles en %.1f s\n",
+printf("%d contrôle(s) réussi(s), %d échec(s) : %d requêtes hostiles en %.1f s\n",
        $pass, $fail, $hits, microtime(true) - $t0);
 if ($problems) {
     $agg = array_count_values($problems);

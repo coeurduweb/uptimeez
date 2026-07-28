@@ -146,7 +146,7 @@ $uiMode  = Ui::mode();
            visible sur les captures d'écran, c'est le but. */ ?>
   <div class="demo-flag" role="note">
     <?= Ui::icon('info', 16) ?>
-    <span><strong><?= te('Mode démonstration') ?></strong> —
+    <span><strong><?= te('Mode démonstration') ?></strong> :
       <?= te('les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.') ?></span>
     <code class="mono"><?= te('php bin/demo.php --purge') ?></code>
   </div>

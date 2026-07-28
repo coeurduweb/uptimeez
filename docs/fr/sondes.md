@@ -3,7 +3,7 @@
 [← Prise en main](prise-en-main.md) · [Documentation](README.md) · [Détection →](detection.md)
 
 Une sonde est une chose vérifiée. Un site en regroupe plusieurs, et l'état du site est celui de sa sonde la plus
-préoccupante — sauf qu'une sonde en pause ne dégrade jamais un site qui va bien.
+préoccupante : sauf qu'une sonde en pause ne dégrade jamais un site qui va bien.
 
 ---
 
@@ -51,7 +51,7 @@ gagne toujours, définitivement.
 | Groupe | vide | Vous voulez filtrer le mur par client |
 | Sonde active | activée | Décocher garde la sonde et son historique mais arrête les vérifications |
 
-### La chaîne de preuve — le champ le plus utile de la page
+### La chaîne de preuve : le champ le plus utile de la page
 
 | Champ | Défaut | Notes |
 |---|---|---|
@@ -71,13 +71,13 @@ renseigniez à la main.
 
 | Interrupteur | Défaut | Notes |
 |---|---|---|
-| Contrôler les ressources de la page | activé | CSS, scripts et polices — c'est ce qui détecte une mise en page cassée. [Comment ça marche](detection.md) |
+| Contrôler les ressources de la page | activé | CSS, scripts et polices : c'est ce qui détecte une mise en page cassée. [Comment ça marche](detection.md) |
 | Détecter une base de données hors service | activé | ~45 signatures d'erreur, plus la chaîne de preuve |
 | Surveiller le certificat TLS | activé | Validité, chaîne, correspondance du domaine, expiration |
 | Prévenir avant l'expiration | 14 jours | Let's Encrypt se renouvelle seul ; ceci attrape les fois où il ne le fait pas |
 | Alerter sur un `noindex` oublié | activé en production | Le tueur silencieux du SEO après une mise en ligne |
 | Surveiller une mise à jour de contenu | désactivé | Me prévenir quand un texte apparaît (mise en ligne confirmée) ou disparaît |
-| Signaler toute modification de contenu | désactivé | Empreinte du texte visible. Bavard sur un site qui publie souvent — à réserver aux sites figés |
+| Signaler toute modification de contenu | désactivé | Empreinte du texte visible. Bavard sur un site qui publie souvent : à réserver aux sites figés |
 | Figer la référence CSS actuelle | désactivé | À activer quand le design est stabilisé : la référence n'évoluera plus toute seule |
 
 ### Seuils
@@ -106,7 +106,7 @@ renseigniez à la main.
 ## Travailler sur beaucoup de sondes à la fois
 
 La liste **Sondes** est faite pour les parcs : filtrez par nom, domaine ou technologie ; triez par état, lenteur ou
-dernière vérification ; puis sélectionnez des lignes et appliquez une action de masse — mettre en pause, réactiver,
+dernière vérification ; puis sélectionnez des lignes et appliquez une action de masse : mettre en pause, réactiver,
 changer l'intervalle, relancer la détection automatique, supprimer.
 
 Le filtre est insensible aux accents et à la casse dans toutes les langues : `casse` trouve `cassé`, `munchen`
@@ -121,5 +121,5 @@ trouve `München`.
 **Supprimer** retire la sonde, ses mesures, ses incidents et ses évènements, définitivement. La confirmation nomme
 la sonde, pour qu'on ne supprime pas la mauvaise par automatisme.
 
-Une suppression ne s'annule pas — c'est pourquoi le bouton vit dans un accordéon replié intitulé *action
+Une suppression ne s'annule pas : c'est pourquoi le bouton vit dans un accordéon replié intitulé *action
 irréversible*, et pourquoi la mise en pause est proposée juste à côté.

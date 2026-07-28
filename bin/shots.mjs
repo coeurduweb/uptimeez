@@ -1,5 +1,5 @@
 /**
- * Uptimer — captures d'écran pour la documentation.
+ * Uptimer : captures d'écran pour la documentation.
  *
  * Produit les images du README (deux thèmes, plusieurs langues, mobile) et la
  * séquence d'images qui sert à monter l'animation de démonstration.

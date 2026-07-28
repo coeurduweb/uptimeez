@@ -10,7 +10,7 @@ use Uptimer\Notify\Notifier;
  *
  * Le principe est inversé : ce n'est pas Uptimer qui interroge le site, c'est le
  * site qui doit se signaler. On surveille ainsi ce qu'aucune requête HTTP ne peut
- * voir — un cron WordPress qui ne tourne plus, une sauvegarde qui ne s'exécute
+ * voir : un cron WordPress qui ne tourne plus, une sauvegarde qui ne s'exécute
  * plus, un import nocturne silencieux. L'alerte part quand le signal n'arrive pas.
  *
  * Côté client, une ligne suffit à la fin du script à surveiller :

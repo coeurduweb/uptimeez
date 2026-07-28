@@ -10,8 +10,8 @@ use Uptimer\Detect\Discovery;
 /**
  * Import de masse : on colle une liste de domaines ou d'URLs, rien d'autre.
  *
- * L'import est instantané (aucun appel réseau) ; l'enrichissement — détection du
- * CMS, choix des pages, déduction de la chaîne de preuve — est fait ensuite,
+ * L'import est instantané (aucun appel réseau) ; l'enrichissement : détection du
+ * CMS, choix des pages, déduction de la chaîne de preuve, est fait ensuite,
  * sonde par sonde, par la file de préparation (UI en direct ou cron).
  * C'est ce découpage qui permet d'avaler 200 domaines sans timeout sur mutualisé.
  */
@@ -260,7 +260,7 @@ final class Importer
                 'setup_note'  => 'Page injoignable à la préparation : ' . Http::errorLabel($res->errorCode),
             ], 'id = :__i', ['__i' => $monitorId]);
             return ['ok' => false, 'cms' => null, 'expect' => null, 'pages' => 0,
-                    'message' => 'Injoignable (' . Http::errorLabel($res->errorCode) . ') — la sonde reste active'];
+                    'message' => 'Injoignable (' . Http::errorLabel($res->errorCode) . ') : la sonde reste active'];
         }
 
         // Si l'URL redirige vers une autre (http→https, www), on adopte la cible.

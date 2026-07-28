@@ -12,7 +12,7 @@ namespace Uptimer;
  *
  *   1. Qu'est-ce qui demande une action MAINTENANT ?
  *   2. Qu'est-ce qui va casser bientôt, et que je peux éviter ?
- *   3. Le reste va bien — une ligne suffit.
+ *   3. Le reste va bien : une ligne suffit.
  *
  * Chaque élément retourné porte sa cause, son impact, la conduite à tenir et la
  * liste des actions réalisables sur place. Rien ne renvoie vers un écran de
@@ -137,7 +137,7 @@ final class Triage
                                           'Certificat SSL de {name} : {n} jours restants', ['name' => $name]),
                     'why'   => $d <= 7
                         ? t('Passé cette date, tous les navigateurs afficheront un avertissement plein écran.')
-                        : t('Le renouvellement automatique devrait s\'en occuper — vérifiez qu\'il fonctionne.'),
+                        : t('Le renouvellement automatique devrait s\'en occuper, vérifiez qu\'il fonctionne.'),
                 ];
             }
             if (!empty($m['domain_expires_at'])) {
@@ -269,7 +269,7 @@ final class Triage
         $css  = jdec($m['css_detail'] ?? null);
 
         $L = [];
-        $L[] = '# ' . ($m['site_name'] ?: $m['name']) . ' — ' . Ui::statusLabel((string)$m['status']);
+        $L[] = '# ' . ($m['site_name'] ?: $m['name']) . ' : ' . Ui::statusLabel((string)$m['status']);
         $L[] = '';
         $L[] = t('URL surveillée : {url}', ['url' => $m['url']]);
         $L[] = t('Constat le {date} (fuseau {tz})',
@@ -307,7 +307,7 @@ final class Triage
         $L[] = t('Temps de réponse moyen : {avg} · p95 {p95}', [
             'avg' => Ui::ms($w24['avg_ms']), 'p95' => Ui::ms($w24['p95_ms'])]);
         $L[] = '';
-        $L[] = '— ' . t('Rapport produit par {app}');
+        $L[] = t('Rapport produit par {app}');
         return implode("\n", $L);
     }
 

@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — Urdu catalogue (right-to-left)
+ * Uptimer, Urdu catalogue (right-to-left)
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
- * I18n substitutes — so renaming the product never invalidates a catalogue.
+ * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
  * What is left: php bin/i18n-audit.php --manquants=ur
  */
@@ -161,8 +161,12 @@ return [
     'la tâche planifiée n\'a jamais tourné' => 'شیڈول شدہ کام کبھی نہیں چلا',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'دکھائی گئی سائٹس اصلی ہیں، تمام پیمائشیں فرضی ہیں۔ خرابیاں ایسے اسٹیجنگ سب ڈومینز پر ہیں جو موجود نہیں۔',
     'pris en compte' => 'تسلیم شدہ',
+    'période :' => 'مدت',
+    'réglages' => 'ترتیبات',
     'réponse {ms}' => 'جواب {ms}',
+    'sonde' => 'مانیٹر',
     'tableau de bord' => 'ڈیش بورڈ',
+    'temps de réponse' => 'جواب کا وقت',
     'tout va bien' => 'سب ٹھیک ہے',
     'un point à surveiller' => '1 نکتہ نگرانی میں',
     'un site sans rien à signaler' => '1 سائٹ میں کچھ قابل ذکر نہیں',

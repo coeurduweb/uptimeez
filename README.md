@@ -6,7 +6,7 @@
 
 **Self-hosted website monitoring for people who run other people's websites.**
 It catches broken layouts, dead databases hiding behind an HTTP 200, expiring certificates and silent cron
-jobs — then hands you a to-do list with the fix one click away.
+jobs, then hands you a to-do list with the fix one click away.
 
 Zero dependencies · No Docker · Runs on plain shared hosting · SQLite or MySQL · 10 languages
 
@@ -15,6 +15,7 @@ Zero dependencies · No Docker · Runs on plain shared hosting · SQLite or MySQ
 [What it detects](#what-it-actually-detects) ·
 [Comparison](#how-it-compares) ·
 [Install in 60 seconds](#install-in-60-seconds) ·
+[Ask it questions from Claude](#talk-to-it-from-an-agent-mcp) ·
 [Documentation](docs/en/README.md) ·
 [Version française](README.fr.md)
 
@@ -37,9 +38,9 @@ Uptimer was built around three findings from running an agency portfolio on the 
 
 | What goes wrong with the others | What Uptimer does instead |
 |---|---|
-| **Setup is a tax.** Twenty screens and forty fields before you have monitored anything at all. | You paste a list of domains. It detects the CMS, picks the pages worth following, infers the string that proves the database answers, tunes thresholds from measured p95 — and shows a **preview before creating anything**. |
+| **Setup is a tax.** Twenty screens and forty fields before you have monitored anything at all. | You paste a list of domains. It detects the CMS, picks the pages worth following, infers the string that proves the database answers, tunes thresholds from measured p95, then shows a **preview before creating anything**. |
 | **Alerts become noise.** One server goes down, forty e-mails arrive. After a week nobody reads them. | Failures sharing an IP become **one grouped alert**. Thresholds tune themselves, so a naturally slow site never cries wolf. Quiet hours, maintenance windows, acknowledgement, retries before alerting. |
-| **Dashboards show states, not actions.** Green and red dots; you still have to work out what to do. | The home screen is a **to-do list**: cause, why it matters, what to do, the evidence — and the buttons that do it without leaving the page. Every action is undoable. |
+| **Dashboards show states, not actions.** Green and red dots; you still have to work out what to do. | The home screen is a **to-do list**: cause, why it matters, what to do, the evidence, and the buttons that do it without leaving the page. Every action is undoable. |
 
 > The others show you **states**. Uptimer gives you **a list of things to do**, and guesses everything else.
 
@@ -59,7 +60,7 @@ that apply it in place.
 </td>
 <td width="50%" valign="top">
 
-**The wall view**, for the screen in the office. Green, orange, red. Sites in trouble float to the top — never
+**The wall view**, for the screen in the office. Green, orange, red. Sites in trouble float to the top, never
 below the fold.
 
 <img src="docs/img/wall.png" alt="Uptimer wall view: colour-coded cards for every monitored site with uptime, response time and a 24-hour sparkline">
@@ -69,7 +70,7 @@ below the fold.
 <tr>
 <td width="50%" valign="top">
 
-**Broken layout, explained.** Not "CSS looks odd" — the exact file, the exact cause, and the message the
+**Broken layout, explained.** Not "CSS looks odd": the exact file, the exact cause, and the message the
 browser console would have printed.
 
 <img src="docs/img/css-broken.png" alt="Page resources panel showing the failing stylesheet, its HTTP status, the cause, and reconstructed browser console errors">
@@ -77,8 +78,8 @@ browser console would have printed.
 </td>
 <td width="50%" valign="top">
 
-**Nothing hidden, nothing imposed.** One switch moves the whole interface between *Simple* — only what you can
-act on — and *Full* — every setting, every measurement.
+**Nothing hidden, nothing imposed.** One switch moves the whole interface between *Simple*, which shows only
+what you can act on, and *Full*, which opens every setting and every measurement.
 
 <img src="docs/img/detail-simple.png" alt="Monitor detail page in simple mode, showing only actionable information">
 
@@ -105,7 +106,7 @@ as PDF.
 </table>
 
 <details>
-<summary><b>More screenshots</b> — dark theme, mobile, other languages, import preview, settings</summary>
+<summary><b>More screenshots</b>: dark theme, mobile, other languages, import preview, settings</summary>
 <br>
 
 | Dark theme | On a phone |
@@ -116,7 +117,7 @@ as PDF.
 |---|---|
 | <img src="docs/img/today-en.png" alt="Uptimer interface in English"> | <img src="docs/img/today-ar.png" alt="Uptimer interface in Arabic, laid out right to left"> |
 
-**Import: a preview before anything exists.** Paste domains, a spreadsheet, or a client e-mail — Uptimer pulls
+**Import: a preview before anything exists.** Paste domains, a spreadsheet, or a client e-mail. Uptimer pulls
 the addresses out of it and shows exactly what it is about to do.
 
 <img src="docs/img/import-preview.png" alt="Import preview table listing each site, its check rate, tracked pages and inferred proof string before creation">
@@ -130,10 +131,10 @@ the addresses out of it and shows exactly what it is about to do.
 ---
 
 > **About the screenshots.** They come from the bundled demo dataset
-> (`php bin/demo.php`). The site names are real and recognisable on purpose — a screenshot should mean something
-> at a glance. **Every measurement is fictional**, the interface says so permanently in demo mode, and the four
-> failures are deliberately placed on staging subdomains that do not exist (`staging.`, `preprod.`, `beta.`,
-> `recette.`). Nothing here says anything about the reliability of any real service.
+> (`php bin/demo.php`). The site names are real and recognisable on purpose, because a screenshot should mean
+> something at a glance. **Every measurement is fictional**, the interface says so permanently in demo mode, and
+> the four failures sit on staging subdomains that do not exist (`staging.`, `preprod.`, `beta.`, `recette.`).
+> Nothing here says anything about the reliability of any real service.
 
 ---
 
@@ -141,7 +142,7 @@ the addresses out of it and shows exactly what it is about to do.
 
 Most monitors check a status code and a keyword. Here is what Uptimer watches, and why each one matters.
 
-### 🎨 Broken layout — the one nobody else does out of the box
+### Broken layout, the one nobody else does out of the box
 
 A deployment goes wrong, the minified stylesheet 404s, and your client's site looks like a 1994 text file.
 Status code: `200`. Response time: excellent. Every uptime monitor on the market reports that the site is fine.
@@ -152,42 +153,42 @@ Uptimer crosses **nine independent signals** on every HTML page it checks:
 |---|---|
 | Availability of every stylesheet, script and font | The classic post-deployment 404 |
 | MIME type + `nosniff` | Server returns HTML or a PHP trace instead of CSS |
-| Mixed content | An HTTP asset on an HTTPS page — silently blocked by the browser |
+| Mixed content | An HTTP asset on an HTTPS page, silently blocked by the browser |
 | CSP `style-src` | A policy change that blocks your own stylesheet |
 | SRI `integrity` | A stale hash: the browser refuses a perfectly valid file |
 | Volume vs learned baseline | Half the CSS gone without a single 404 |
 | Class coverage | Classes in the HTML with no matching CSS rule (tolerant of Tailwind escapes) |
 | Media queries | The responsive layout has disappeared |
-| Content awaiting animation | Blocks hidden by a reveal script that never loaded — an *invisible* page |
+| Content awaiting animation | Blocks hidden by a reveal script that never loaded, an *invisible* page |
 
 Then it does something no other tool does: it **reconstructs the messages the browser console would have
-printed** — `net::ERR_ABORTED`, `Refused to apply style from …`, `Mixed Content: …`, `Failed to find a valid
-digest …` — so the ticket you hand a developer already contains the evidence.
+printed**: `net::ERR_ABORTED`, `Refused to apply style from …`, `Mixed Content: …`, `Failed to find a valid
+digest …`. The ticket you hand a developer already contains the evidence.
 
-The baseline is *learned* from healthy states, so an intentional redesign does not page you at 3 a.m. — and
-when the design does change on purpose, one button relearns it.
+The baseline is *learned* from healthy states, so an intentional redesign does not page you at 3 a.m., and when
+the design does change on purpose, one button relearns it.
 
-### 🗄️ Database down behind a perfect 200
+### Database down behind a perfect 200
 
-WordPress, Laravel, Doctrine, PDO and Symfony each have a house style for database failures — and all of them
+WordPress, Laravel, Doctrine, PDO and Symfony each have a house style for database failures, and all of them
 happily return `200 OK`. Uptimer carries **≈45 error signatures**, cross-checks a CMS probe that really
 traverses the database (the WordPress REST API, not the cached homepage), and watches the **proof string**: a
 piece of text that can only come from the database, such as the footer copyright.
 
-That string is **derived automatically** — footer copyright → `og:site_name` → page title → first nav item →
-H1 — and never taken from an error page. If it vanishes while the page still answers 200, the data layer is
+That string is **derived automatically**, in this order of preference: footer copyright, `og:site_name`, page
+title, first nav item, H1. It is never taken from an error page. If it vanishes while the page still answers 200, the data layer is
 gone and you know within one check.
 
-### 🔒 Certificates, domains, and everything else
+### Certificates, domains, and everything else
 
 | | |
 |---|---|
-| **TLS certificate** | Two-pass inspection: a permissive read for the facts, a strict browser-like validation for the verdict. Expiry, chain, authority, domain match — with warning before expiry. |
+| **TLS certificate** | Two-pass inspection: a permissive read for the facts, a strict browser-like validation for the verdict. Expiry, chain, authority, domain match, with warning before expiry. |
 | **Domain expiry** | Daily RDAP check. An expired domain kills the site *and* the e-mail, and can be bought by someone else. |
 | **Forgotten `noindex`** | The silent SEO killer after a release. Nobody notices for weeks. |
 | **Content changes** | A fingerprint of the visible text: catches a publication going live, and a defaced page. |
 | **JSON APIs** | Field path, expected value, custom headers, request body, any method. |
-| **Silent cron jobs** | A dead-man heartbeat: your backup script calls Uptimer when it finishes. **Silence raises the alert** — the one failure no HTTP request can ever see. |
+| **Silent cron jobs** | A dead-man heartbeat: your backup script calls Uptimer when it finishes. **Silence raises the alert**, the one failure no HTTP request can ever see. |
 | **Response time** | DNS, connect, TLS, first byte, total. Threshold tuned from the site's own measured p95, not a round number. |
 | **Grouped outages** | Ten sites failing on one IP is *one* incident, not ten alerts. |
 
@@ -196,7 +197,7 @@ gone and you know within one check.
 ## How it compares
 
 Feature comparison against the tools people actually evaluate. This reflects **out-of-the-box behaviour on
-standard plans, as of July 2026** — no scripting, no plug-ins, no add-ons. Found a mistake? Open a pull
+standard plans, as of July 2026**: no scripting, no plug-ins, no add-ons. Found a mistake? Open a pull
 request; the table lives in this file.
 
 | | **Uptimer** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
@@ -218,8 +219,8 @@ request; the table lives in this file.
 | Public status page | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 | Simple / Full interface switch | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Interface languages | **10 + RTL** | 1 | 1 | several | many (community) | several | several |
-| Runs on plain shared hosting | ✅ PHP only | — SaaS | — SaaS | — SaaS | ❌ Node/Docker | ❌ server | — SaaS |
-| Dependencies to install | **none** | — | Node + browsers | — | Node or Docker | server + DB + agent | agent |
+| Runs on plain shared hosting | ✅ PHP only | SaaS | SaaS | SaaS | ❌ Node/Docker | ❌ server | SaaS |
+| Dependencies to install | **none** | n/a | Node + browsers | n/a | Node or Docker | server + DB + agent | agent |
 | Your data stays on your server | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
 | Cost for 40 sites | **free** | paid tier | paid tier | paid tier | free | free | paid tier |
 
@@ -244,7 +245,7 @@ cd uptimer
 # 2. Open install.php in a browser and choose a password.
 #    On shared hosting: upload by FTP, then visit https://yourdomain.com/uptimer/install.php
 
-# 3. One cron entry, every minute — whatever your check intervals are
+# 3. One cron entry, every minute, whatever your check intervals are
 * * * * * /usr/bin/php /path/to/uptimer/cron.php >/dev/null 2>&1
 ```
 
@@ -252,8 +253,8 @@ Uptimer picks the monitors that are due itself, so a single per-minute pass cove
 seconds to a day. No crontab access? The settings screen hands you a URL to call from any external scheduler.
 
 **Want to look around first? There is a demo mode.** It builds a 13-site portfolio on recognisable domains,
-30 days of history, and the four flagship failures — broken layout, dead database, slowdown, forgotten
-`noindex`:
+30 days of history, and the four flagship failures: broken layout, dead database, slowdown, forgotten
+`noindex`.
 
 ```bash
 php bin/demo.php                  # password: demo1234
@@ -264,8 +265,52 @@ php bin/demo.php --purge          # removes it, leaves no trace
 Demo mode is not a different build: it is the real application on invented data. A permanent banner says so on
 every screen, and it refuses to run over an existing installation.
 
-📘 **[Full documentation](docs/en/README.md)** — installation, o2switch and cPanel specifics, monitor types,
-alert channels, the detection engine explained, the CLI, translations, and troubleshooting.
+**[Full documentation](docs/en/README.md)**: installation, o2switch and cPanel specifics, monitor types, alert
+channels, the detection engine explained, the CLI, translations, and troubleshooting.
+
+---
+
+## Talk to it from an agent (MCP)
+
+Uptimer ships an **MCP server**, so Claude Code, Claude Desktop or any MCP client can ask it questions and act
+on the answers. It is written in PHP like everything else: the MCP server is not the one piece that suddenly
+demands Node.
+
+```json
+{
+  "mcpServers": {
+    "uptimer": {
+      "command": "php",
+      "args": ["/path/to/uptimer/bin/mcp.php"],
+      "env": { "UPTIMER_CONFIG": "/path/to/uptimer/config.php" }
+    }
+  }
+}
+```
+
+Then you can simply ask:
+
+> *"What is broken on the client portfolio this morning?"*
+> *"Why is the Deezer beta slow? Show me the trend over 30 days."*
+> *"Add these twelve domains, but show me what you would create first."*
+> *"The Leboncoin staging redesign is intentional, relearn its reference and check it again."*
+
+**Eight read-only tools** are exposed by default:
+
+| Tool | Answers |
+|---|---|
+| `status` | Is everything fine? Counts, uptime, response time, when the collector last ran |
+| `tasks` | The to-do list: cause, why it matters, what to do, the evidence, the available fixes |
+| `list_monitors` | Every monitor, searchable, accent-insensitive in any language |
+| `monitor_detail` | One site in depth, including the page-resource audit and the automatic decisions |
+| `incidents` | Outages over a period, with total downtime, for an SLA answer |
+| `report` | The ready-to-send report for a ticket or a client e-mail |
+| `response_time_series` | The curve, to tell a spike from a trend |
+| `security_target_check` | Would this address be refused before any request? |
+
+**Four more with `--write`**: `check_now`, `apply_fix`, `set_enabled`, `add_sites`. Read-only is the default on
+purpose, because an agent that is exploring should not be able to pause a monitor by accident. `add_sites`
+defaults to `dry_run`, so the agent shows you the preview before anything exists.
 
 ---
 
@@ -275,43 +320,34 @@ A monitoring tool that lies to you is worse than no monitoring tool. So the dete
 real failures, and the interface is tested in a real browser.
 
 ```
-php bin/selftest.php      278 checks   detection logic, offline, no network needed
+php bin/selftest.php      305 checks   detection logic, offline, no network needed
 php bin/bench.php          44 checks   real failures reproduced end to end (incl. badssl.com)
 php bin/e2e.php           116 checks   full user journey over real HTTP, isolated instance
 node bin/e2e-browser.mjs   57 checks   real Chromium: rendering, keyboard, mobile, contrast
 php bin/chaos.php          33 checks   825 hostile requests from a user doing everything wrong
 php bin/security.php       86 checks   OWASP Top 10, three depths, against a hostile local site
-php bin/deadcode.php        —          unused methods, functions, classes, CSS, msgids, files
-php bin/i18n-audit.php      —          translation coverage, per language
+php bin/mcp.php            n/a         MCP server for agents (27 of the checks above exercise it)
+php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, msgids, files
+php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**614 checks, all green — plus zero dead code and a complete default catalogue.**
+**641 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Two suites deserve a word.
 
 **`bin/chaos.php`** plays a user who types badly, clicks everywhere, ignores every instruction, submits empty
 and monstrous forms, and actively tries to break things: SQL injection, XSS, path traversal, 5 KB inputs, arrays
 where strings are expected, exotic HTTP verbs. The contract it verifies is not "it works" but **"it never
-breaks"** — no 500, no PHP notice leaking onto the page, nothing the user typed reflected into the HTML, and a
+breaks"**: no 500, no PHP notice leaking onto the page, nothing the user typed reflected into the HTML, and a
 consistent database afterwards.
 
 **`bin/security.php`** audits at three depths, every check labelled with its OWASP reference:
 
 | Depth | What it does |
 |---|---|
-| **1 — light** | Configuration, secrets, cookie flags, exposed surface, dependency surface, static injection review |
-| **2 — deep** | OWASP Top 10 as *active* tests on a live isolated instance: unauthenticated access to every screen and API action, forced browsing to source files, path traversal, CSRF on every write, 11 SQL-injection payloads across 5 parameters, reflected / stored / attribute XSS, response-header injection, session fixation, brute-force lockout, logout invalidation |
-| **3 — very deep** | What targets the collector itself: SSRF (a monitored site that redirects to `file://`), XXE through a hostile sitemap, a 40 MB response, pathological content against the regexes, constant-time token comparison, indistinguishable heartbeat responses, spreadsheet formula injection, dynamic SQL identifiers |
-
-**Five real defects were found by these suites and fixed**, three of them security issues:
-
-| Found by | Defect |
-|---|---|
-| security, level 2 | **Session fixation** — the session id was not renewed on login (OWASP A07) |
-| security, level 1 | **Spreadsheet formula injection** — a monitor named `=cmd\|…` executed when a client opened the CSV export |
-| security, level 3 | **Unrestricted curl protocols** — a monitored site redirecting to `file://` would have been followed |
-| chaos | Two crashes on malformed input |
-| i18n unit tests | A cached number format that stopped following the language |
+| **1, light** | Configuration, secrets, cookie flags, exposed surface, dependency surface, static injection review |
+| **2, deep** | OWASP Top 10 as *active* tests on a live isolated instance: unauthenticated access to every screen and API action, forced browsing to source files, path traversal, CSRF on every write, 11 SQL-injection payloads across 5 parameters, reflected / stored / attribute XSS, response-header injection, session fixation, brute-force lockout, logout invalidation |
+| **3, very deep** | What targets the collector itself: SSRF (a monitored site that redirects to `file://`), XXE through a hostile sitemap, a 40 MB response, pathological content against the regexes, constant-time token comparison, indistinguishable heartbeat responses, spreadsheet formula injection, dynamic SQL identifiers |
 
 That is the point of having them.
 
@@ -335,7 +371,7 @@ uptimer/
 │   ├── Heartbeat.php         the dead-man switch
 │   └── I18n.php              10 languages, RTL, plural rules
 ├── lang/                     one catalogue per language
-├── views/                    templates — no framework, no build
+├── views/                    templates, no framework, no build
 ├── assets/                   one CSS file, one JS file, no dependency
 └── bin/                      the five test suites, demo data, i18n audit
 ```
@@ -372,7 +408,7 @@ The [backlog](BACKLOG.md) holds the competitor research and the user stories beh
 
 ## Contributing
 
-Issues and pull requests welcome — particularly:
+Issues and pull requests welcome, particularly these:
 
 - **Translations.** Nine catalogues cover the operating interface; longer help texts fall back to English.
   `php bin/i18n-audit.php --manquants=xx` lists exactly what a language is missing.
@@ -388,7 +424,7 @@ MIT. Use it, sell services around it, fork it.
 
 <div align="center">
 <br>
-<b>Uptimer</b> — because "the site is up" was never the question.
+<b>Uptimer</b>. Because "the site is up" was never the question.
 <br><br>
 <sub>uptime monitoring · website monitoring · self-hosted monitoring · PHP monitoring tool · shared hosting
 monitoring · broken CSS detection · database down detection · SSL certificate monitoring · cron job monitoring

@@ -357,7 +357,7 @@ final class Db
      *
      * C'est le chemin de mise à jour : on relit la définition qui vient d'être
      * exécutée et on ajoute ce qui manque. Aucune colonne n'est jamais
-     * supprimée ni modifiée — seulement ajoutée.
+     * supprimée ni modifiée : seulement ajoutée.
      */
     private static function syncColumns(string $table, string $createSql): void
     {

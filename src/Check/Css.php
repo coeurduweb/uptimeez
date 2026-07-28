@@ -13,22 +13,22 @@ use Uptimer\Response;
  * ou vide, ou sans aucune interaction. Aucun signal isolé ne suffit, donc on en
  * croise neuf :
  *
- *  1. DISPONIBILITÉ  — chaque ressource de rendu référencée répond-elle 200 ?
- *  2. NATURE         — le corps renvoyé est-il bien du CSS / du JS, et non une
+ *  1. DISPONIBILITÉ : chaque ressource de rendu référencée répond-elle 200 ?
+ *  2. NATURE : le corps renvoyé est-il bien du CSS / du JS, et non une
  *                      page d'erreur HTML, une trace PHP, un fichier vide ?
- *  3. MIME / BLOCAGE — Content-Type incorrect + nosniff = ressource rejetée par
+ *  3. MIME / BLOCAGE. Content-Type incorrect + nosniff = ressource rejetée par
  *                      le navigateur ; contenu mixte http→https = bloqué ; CSP.
- *  4. INTÉGRITÉ SRI  — attribut integrity qui ne correspond plus au fichier :
+ *  4. INTÉGRITÉ SRI : attribut integrity qui ne correspond plus au fichier :
  *                      le navigateur refuse la ressource sans rien afficher.
- *  5. VOLUMÉTRIE     — poids CSS, nombre de règles, media queries, comparés à
+ *  5. VOLUMÉTRIE : poids CSS, nombre de règles, media queries, comparés à
  *                      une empreinte de référence apprise.
- *  6. COUVERTURE     — les classes réellement utilisées dans le corps de la page
+ *  6. COUVERTURE : les classes réellement utilisées dans le corps de la page
  *                      trouvent-elles encore une règle ? C'est LE signal du cas
  *                      « les fichiers se chargent mais ce sont les mauvais ».
- *  7. MISE EN PAGE   — présence de flex/grid/max-width/media queries.
- *  8. SCRIPTS        — un JS de thème mort casse les menus, les onglets, les
+ *  7. MISE EN PAGE : présence de flex/grid/max-width/media queries.
+ *  8. SCRIPTS : un JS de thème mort casse les menus, les onglets, les
  *                      carrousels ; c'est la première source d'erreurs console.
- *  9. CONTENU MASQUÉ — blocs en attente d'animation (elementor-invisible, AOS,
+ *  9. CONTENU MASQUÉ : blocs en attente d'animation (elementor-invisible, AOS,
  *                      WOW) alors que la ressource qui les révèle a disparu.
  *
  * Le rapport reconstitue aussi les messages que le navigateur écrirait dans sa
@@ -148,7 +148,7 @@ final class Css
             $imports['i' . count($imports)] = [$iu, $fetchOpt];
         }
 
-        // Attention : ['kind' => …] doit être écrasé et non fusionné — l'opérateur +
+        // Attention : ['kind' => …] doit être écrasé et non fusionné, l'opérateur +
         // conserve la clé existante, ce qui ferait passer une feuille pour un script.
         $index = [];
         foreach ($refs as $i => $ref)    $index['s' . $i] = array_merge($ref, ['kind' => 'css']);
@@ -179,7 +179,7 @@ final class Css
                 $cons  = ['err', 'GET ' . $url . ' net::ERR_FAILED (' . strtolower($note) . ')'];
             } elseif ($res->status >= 400 || $res->status === 0) {
                 $issue = 'HTTP_' . $res->status;
-                $note  = 'HTTP ' . $res->status . ' — le fichier n\'existe plus sur le serveur';
+                $note  = 'HTTP ' . $res->status . ' : le fichier n\'existe plus sur le serveur';
                 $cons  = ['err', 'GET ' . $url . ' net::ERR_ABORTED ' . $res->status
                         . ' (' . ($res->status === 404 ? 'Not Found' : 'Error') . ')'];
             } elseif ($bytes === 0) {

@@ -14,7 +14,7 @@ upload files by FTP and add a cron entry, you can run it.
 | **PHP** | 8.1 or newer, CLI *and* web |
 | **Extensions** | `curl`, `json`, `mbstring`, and `pdo_sqlite` (default) or `pdo_mysql` |
 | **Write access** | the `data/` folder, and the root folder once (to create `config.php`) |
-| **Cron** | one entry per minute — or any external scheduler able to call a URL |
+| **Cron** | one entry per minute : or any external scheduler able to call a URL |
 | **Outgoing HTTPS** | the collector needs to reach the sites you monitor |
 
 Nothing else. The installer checks all of it and tells you what is missing before writing anything.
@@ -37,7 +37,7 @@ Then open `install.php` in a browser:
 1. It verifies the environment and shows a green/red checklist.
 2. You choose a password (8 characters minimum). It is stored hashed with `password_hash()`.
 3. It writes `config.php` and creates the database.
-4. It refuses to run a second time — reinstalling means deleting `config.php` by FTP or SSH first.
+4. It refuses to run a second time : reinstalling means deleting `config.php` by FTP or SSH first.
 
 Finally, add the cron entry (see below) and open the settings screen to configure one alert channel.
 
@@ -56,7 +56,7 @@ This is the primary target, not an afterthought.
    * * * * * /usr/local/bin/php /home/YOURACCOUNT/public_html/uptimer/cron.php >/dev/null 2>&1
    ```
 
-   The exact line, with the right PHP path for your account, is displayed in **Settings → Scheduled task** —
+   The exact line, with the right PHP path for your account, is displayed in **Settings → Scheduled task** , 
    copy it from there rather than guessing.
 
 **o2switch specifics.** The PHP binary is usually `/usr/local/bin/php`. LiteSpeed ignores some `.htaccess`
@@ -80,7 +80,7 @@ Uptimer is password-protected and sends `noindex, nofollow` on every page. For a
 
 - Put it on a subdomain you do not advertise, or in a folder with a non-obvious name.
 - Add HTTP authentication on top (cPanel → *Directory Privacy*) if you like.
-- Keep `config.php` out of version control — it holds your password hash and your webhook URLs.
+- Keep `config.php` out of version control : it holds your password hash and your webhook URLs.
 - The bundled `data/.htaccess` denies web access to the database. If your server ignores `.htaccess`
   (nginx, for instance), move `data/` outside the web root and point `db.sqlite` at the new path.
 
@@ -109,7 +109,7 @@ Edit `config.php`:
 The schema is created and upgraded automatically on the next page load. There is no migration to run and no
 destructive change: new columns are added, existing ones are never dropped.
 
-To move existing history across, export the SQLite tables and import them — the schema is identical apart from
+To move existing history across, export the SQLite tables and import them : the schema is identical apart from
 column types.
 
 ---

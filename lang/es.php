@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — Spanish catalogue
+ * Uptimer, Spanish catalogue
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
- * I18n substitutes — so renaming the product never invalidates a catalogue.
+ * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
  * What is left: php bin/i18n-audit.php --manquants=es
  */
@@ -161,8 +161,12 @@ return [
     'la tâche planifiée n\'a jamais tourné' => 'la tarea programada nunca se ha ejecutado',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'los sitios mostrados son reales, todas las medidas son ficticias. Los fallos afectan a subdominios de preproducción que no existen.',
     'pris en compte' => 'reconocido',
+    'période :' => 'Periodo',
+    'réglages' => 'Ajustes',
     'réponse {ms}' => 'respuesta {ms}',
+    'sonde' => 'Sonda',
     'tableau de bord' => 'panel',
+    'temps de réponse' => 'Tiempo de respuesta',
     'tout va bien' => 'todo bien',
     'un point à surveiller' => 'un punto a vigilar',
     'un site sans rien à signaler' => 'un sitio sin nada que señalar',

@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — audit de traduction.
+ * Uptimer : audit de traduction.
  *
  * Trois questions, trois réponses :
  *   1. quelles phrases le code demande-t-il à traduire ?      (msgid extraits)

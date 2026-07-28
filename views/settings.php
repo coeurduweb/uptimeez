@@ -60,7 +60,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
   <?php if ($lastStats): ?>
     <p class="small muted"><?= te('Dernière passe : {n} sondes en {sec} s', [
         'n' => (int)($lastStats['ran'] ?? 0), 'sec' => (string)($lastStats['seconds'] ?? '?')]) ?>
-      — <?= te('{down} hors service, {degraded} à surveiller.', [
+      · <?= te('{down} hors service, {degraded} à surveiller.', [
         'down' => (int)($lastStats['down'] ?? 0), 'degraded' => (int)($lastStats['degraded'] ?? 0)]) ?></p>
   <?php endif; ?>
   <form method="post" class="row">
@@ -77,7 +77,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
 
   <!-- ============================ ALERTES ============================ -->
   <?= Ui::accOpen('notify', 'bell', 'Alertes',
-        $activeCh ? implode(', ', $activeCh) : t('aucun canal actif — personne ne sera prévenu'),
+        $activeCh ? implode(', ', $activeCh) : t('aucun canal actif, personne ne sera prévenu'),
         !$activeCh, $activeCh ? 'none' : 'warn') ?>
   <?= Ui::accBody() ?>
     <div class="form-cols">
@@ -229,7 +229,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
         <span class="hint"><?= te('Baissez à 5 si l\'hébergeur bride les connexions sortantes.') ?></span></div>
       <div class="field"><label for="dk"><?= te('Conservation des mesures') ?></label><?= hint('Durée de conservation des mesures détaillées. Les statistiques journalières, elles, sont gardées indéfiniment : les vues 6 mois et 1 an restent justes.') ?>
         <div class="field-inline"><input id="dk" type="number" name="def_retention" min="7" value="<?= (int)Config::get('defaults.retention_days', 60) ?>"><span class="unit"><?= te('jours') ?></span></div>
-        <span class="hint"><?= te('Au-delà, seules les statistiques journalières sont conservées — elles alimentent les vues 6 mois et 1 an.') ?></span></div>
+        <span class="hint"><?= te('Au-delà, seules les statistiques journalières sont conservées : elles alimentent les vues 6 mois et 1 an.') ?></span></div>
     </div>
   <?= Ui::accClose() ?>
 
@@ -256,7 +256,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
           <?php if ($token !== ''): ?>
             <span class="hint"><?= te('Accessible ici :') ?>
               <a href="<?= e(u('status', ['token' => $token])) ?>" target="_blank"><?= te('page d\'état publique') ?></a>
-              — <?= te('à partager avec un client sans lui donner d\'accès.') ?></span>
+              · <?= te('à partager avec un client sans lui donner d\'accès.') ?></span>
           <?php else: ?>
             <span class="hint"><?= te('Renseignez une chaîne aléatoire pour publier un état public sans authentification.') ?></span>
           <?php endif; ?></div>

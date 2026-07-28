@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — banc d'essai de bout en bout.
+ * Uptimer : banc d'essai de bout en bout.
  *
  * Monte un faux site local qui reproduit chaque panne à détecter, lance de
  * vraies vérifications dessus, et vérifie les verdicts. Utile pour prouver que
@@ -69,7 +69,7 @@ $page = function (string $t, string $links, string $body = '', string $head = ''
     foreach ($classes as $i => $c) {
         $blocks .= '<div class="' . $c . '"><span class="' . $classes[($i + 3) % count($classes)] . '">Bloc ' . $i . '</span></div>';
     }
-    return "<!doctype html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\"><title>$t — Agence Bellevue</title>\n"
+    return "<!doctype html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\"><title>$t : Agence Bellevue</title>\n"
         . "<meta property=\"og:site_name\" content=\"Agence Bellevue\">\n$head\n$links\n</head><body>\n"
         . '<header class="site-header"><nav class="nav-main"><a class="nav-link" href="/services.html">Nos services</a>'
         . '<a class="nav-link" href="/contact.html">Contact</a></nav></header>'
@@ -99,7 +99,7 @@ file_put_contents("$tmp/dberror.php",   "<?php http_response_code(200); ?><!doct
 file_put_contents("$tmp/phpfatal.php",  "<?php http_response_code(200); ?><b>Fatal error</b>: Uncaught Error: Call to a member function prepare() on null in /wp-includes/db.php:1451");
 file_put_contents("$tmp/err500.php",    "<?php http_response_code(500); ?>Internal Server Error");
 file_put_contents("$tmp/err404.php",    "<?php http_response_code(404); ?>Not Found");
-file_put_contents("$tmp/slow.php",      "<?php usleep(2600000); ?><!doctype html><html><body>Lent mais vivant — Agence Bellevue</body></html>");
+file_put_contents("$tmp/slow.php",      "<?php usleep(2600000); ?><!doctype html><html><body>Lent mais vivant : Agence Bellevue</body></html>");
 file_put_contents("$tmp/health.php",    "<?php header('Content-Type: application/json'); echo json_encode(['status'=>'ok','db'=>true]);");
 file_put_contents("$tmp/health_bad.php","<?php header('Content-Type: application/json'); echo json_encode(['status'=>'degraded']);");
 file_put_contents("$tmp/robots.txt",    "User-agent: *\nAllow: /\nSitemap: $BASE/sitemap.xml\n");
@@ -124,7 +124,7 @@ echo '<!doctype html><html><head><title>404 Not Found</title></head><body><h1>No
 return true;
 PHP);
 
-echo "Banc d'essai Uptimer — faux site sur $BASE\n";
+echo "Banc d'essai Uptimer : faux site sur $BASE\n";
 // Commande passée en tableau : sans cela proc_open lance « sh -c », et l'arrêt
 // ne tuerait que le shell en laissant le serveur derrière lui.
 $cmd = [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', $tmp, $tmp . '/router.php'];
@@ -226,7 +226,7 @@ printf("   %d sondes vérifiées en %.1f s (%d HS, %d dégradées, %d OK)\n\n",
 foreach ($cases as [$name, $path, $want, $reason, $over]) {
     $m = Db::one('SELECT status, reason_code, last_message FROM monitors WHERE id = ?', [$ids[$name]]);
     ok(sprintf('%-11s %s', $name, $want), $m['status'] === $want && ($reason === null || $m['reason_code'] === $reason),
-        $m['status'] . ($m['reason_code'] ? ' / ' . $m['reason_code'] : '') . ' — ' . str_cut((string)$m['last_message'], 70));
+        $m['status'] . ($m['reason_code'] ? ' / ' . $m['reason_code'] : '') . ' : ' . str_cut((string)$m['last_message'], 70));
 }
 foreach ([['injoignable', ['CONNECT', 'TIMEOUT', 'CONNECT_RESET']], ['dns', ['DNS']]] as [$n, $codes]) {
     $m = Db::one('SELECT status, reason_code FROM monitors WHERE id = ?', [$ids[$n]]);
@@ -307,7 +307,7 @@ Runner::runOne($al);
 $last = Db::one('SELECT * FROM notifications ORDER BY id DESC LIMIT 1');
 ok('alerte émise à l\'ouverture de l\'incident',
     (int)Db::val('SELECT COUNT(*) FROM notifications') > $n0 && (int)($last['ok'] ?? 0) === 1,
-    ($last['channel'] ?? '?') . ' — ' . str_cut((string)($last['response'] ?? ''), 45));
+    ($last['channel'] ?? '?') . ' : ' . str_cut((string)($last['response'] ?? ''), 45));
 ok('relance effectuée avant de conclure',
     (int)Db::val('SELECT attempts FROM checks WHERE monitor_id = ? ORDER BY id DESC LIMIT 1', [$al]) >= 2,
     Db::val('SELECT attempts FROM checks WHERE monitor_id = ? ORDER BY id DESC LIMIT 1', [$al]) . ' tentative(s)');
@@ -349,7 +349,7 @@ foreach ($sslCases as [$host, $label, $want]) {
         break;
     }
     ok($label, in_array($r['code'], $want, true),
-        ($r['code'] ?? 'valide') . ($r['error'] ? ' — ' . str_cut((string)$r['error'], 45) : '')
+        ($r['code'] ?? 'valide') . ($r['error'] ? ' : ' . str_cut((string)$r['error'], 45) : '')
         . ($r['days_left'] !== null ? ' · ' . $r['days_left'] . ' j' : ''));
 }
 
@@ -407,7 +407,7 @@ ok('uptime et incidents calculés', $w24['incidents'] >= 1, 'incidents=' . $w24[
 
 // =========================================================================
 echo "\n" . str_repeat('═', 68) . "\n";
-printf("%d contrôle(s) réussi(s), %d échec(s) — %.1f s\n", $pass, $fail, microtime(true) - $t0);
+printf("%d contrôle(s) réussi(s), %d échec(s) : %.1f s\n", $pass, $fail, microtime(true) - $t0);
 if ($fail > 0) {
     echo "⚠️  Certaines détections ne fonctionnent pas sur cet hébergement.\n";
     exit(1);

@@ -1,6 +1,6 @@
 <?php
 /**
- * Écran d'accueil — « Aujourd'hui ».
+ * Écran d'accueil : « Aujourd'hui ».
  *
  * Une lecture de haut en bas, on s'arrête quand c'est vert :
  *   1. ce qui demande une action maintenant, avec la conduite à tenir et les boutons
@@ -53,7 +53,7 @@ $sparks   = $sparkIds ? Stats::sparkBatch(array_slice($sparkIds, 0, 40), 86400, 
       <?php if (!empty($c['last_run'])): ?>
         · <?= te('dernière passe {when}', ['when' => human_since((string)$c['last_run'])]) ?>
       <?php else: ?>
-        · <strong><?= te('la tâche planifiée n\'a jamais tourné') ?></strong> —
+        · <strong><?= te('la tâche planifiée n\'a jamais tourné') ?></strong> :
         <a href="<?= e(u('settings')) ?>#cron"><?= te('la configurer') ?></a>
       <?php endif; ?>
     </div>

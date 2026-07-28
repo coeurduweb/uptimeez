@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — recherche de code mort.
+ * Uptimer : recherche de code mort.
  *
  * Cinq familles, cinq questions :
  *   1. quelles méthodes publiques ne sont appelées nulle part ?
@@ -11,7 +11,7 @@
  *
  * L'analyse est volontairement conservatrice : une occurrence textuelle suffit
  * à considérer un symbole comme utilisé. Un faux positif est donc plus probable
- * qu'un faux négatif — c'est le bon sens du compromis pour un outil de revue.
+ * qu'un faux négatif : c'est le bon sens du compromis pour un outil de revue.
  *
  *   php bin/deadcode.php            # rapport complet
  *   php bin/deadcode.php --strict   # code de sortie 1 s'il reste du mort
@@ -122,7 +122,7 @@ foreach (array_keys($selectors) as $c) {
     // Une classe peut être écrite en PHP ('badge-' . $tone) : on accepte aussi
     // les préfixes, sinon toute classe construite dynamiquement paraîtrait morte.
     if (str_contains($markup, $c)) continue;
-    // Une classe construite par concaténation — 'dot dot-' . $state — n'apparaît
+    // Une classe construite par concaténation : 'dot dot-' . $state : n'apparaît
     // jamais en entier dans le source : on accepte son préfixe.
     $prefix = preg_replace('~-[a-z0-9]+$~', '-', $c);
     if ($prefix !== $c && str_contains($markup, $prefix)) continue;

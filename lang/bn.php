@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — Bengali catalogue
+ * Uptimer, Bengali catalogue
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
- * I18n substitutes — so renaming the product never invalidates a catalogue.
+ * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
  * What is left: php bin/i18n-audit.php --manquants=bn
  */
@@ -161,8 +161,12 @@ return [
     'la tâche planifiée n\'a jamais tourné' => 'শিডিউল করা কাজ কখনো চলেনি',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'দেখানো সাইটগুলো আসল, সব পরিমাপ কল্পিত। ত্রুটিগুলো এমন স্টেজিং সাব-ডোমেইনে যা আসলে নেই।',
     'pris en compte' => 'স্বীকৃত',
+    'période :' => 'সময়কাল',
+    'réglages' => 'সেটিংস',
     'réponse {ms}' => 'প্রতিক্রিয়া {ms}',
+    'sonde' => 'মনিটর',
     'tableau de bord' => 'ড্যাশবোর্ড',
+    'temps de réponse' => 'প্রতিক্রিয়া সময়',
     'tout va bien' => 'সব ঠিক আছে',
     'un point à surveiller' => '১টি বিষয় নজরে রাখুন',
     'un site sans rien à signaler' => '১টি সাইটে জানানোর কিছু নেই',

@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — Russian catalogue
+ * Uptimer, Russian catalogue
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
- * I18n substitutes — so renaming the product never invalidates a catalogue.
+ * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
  * What is left: php bin/i18n-audit.php --manquants=ru
  */
@@ -159,10 +159,14 @@ return [
     'hors service' => 'не работает',
     'la configurer' => 'настроить её',
     'la tâche planifiée n\'a jamais tourné' => 'запланированная задача ни разу не запускалась',
-    'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'показанные сайты настоящие, все измерения выдуманы. Сбои — на тестовых поддоменах, которых не существует.',
+    'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'показанные сайты настоящие, все измерения выдуманы. Сбои: на тестовых поддоменах, которых не существует.',
     'pris en compte' => 'принято',
+    'période :' => 'Период',
+    'réglages' => 'Настройки',
     'réponse {ms}' => 'отклик {ms}',
+    'sonde' => 'Проверка',
     'tableau de bord' => 'панель',
+    'temps de réponse' => 'Время отклика',
     'tout va bien' => 'всё в порядке',
     'un point à surveiller' => 'один момент под наблюдением',
     'un site sans rien à signaler' => 'один сайт без замечаний',

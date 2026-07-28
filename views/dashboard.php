@@ -3,7 +3,7 @@
  * Tableau de bord.
  *
  * Règle de lecture : ce qui demande une action est en haut et en rouge. Les
- * cartes ne portent que l'essentiel — le détail est sur la fiche de la sonde.
+ * cartes ne portent que l'essentiel : le détail est sur la fiche de la sonde.
  */
 use Uptimer\Db;
 use Uptimer\Stats;
@@ -88,7 +88,7 @@ $total = count($units);
 $band  = $bad > 0 ? 'band-bad' : ($warn > 0 ? 'band-warn' : ($all['up'] > 0 ? 'band-ok' : ''));
 ?>
 
-<!-- ================= SYNTHÈSE — toujours en tête de page ================= -->
+<!-- ================= SYNTHÈSE, toujours en tête de page ================= -->
 <section class="band <?= $band ?>" id="band">
   <div class="band-icon"><?= Ui::statusIcon($bad > 0 ? 'down' : ($warn > 0 ? 'degraded' : 'up')) ?></div>
   <div class="grow">
@@ -120,7 +120,7 @@ $band  = $bad > 0 ? 'band-bad' : ($warn > 0 ? 'band-warn' : ($all['up'] > 0 ? 'b
       <?php if (!empty($summary['last_run_at'])): ?>
         · <?= te('dernière passe {when}', ['when' => human_since((string)$summary['last_run_at'])]) ?>
       <?php else: ?>
-        · <strong><?= te('le cron n\'a jamais tourné') ?></strong> —
+        · <strong><?= te('le cron n\'a jamais tourné') ?></strong> :
         <a href="<?= e(u('settings')) ?>"><?= te('le configurer') ?></a>
       <?php endif; ?>
     </div>

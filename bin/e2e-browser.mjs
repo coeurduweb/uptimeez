@@ -1,5 +1,5 @@
 /**
- * Uptimer — tests de bout en bout dans un vrai navigateur.
+ * Uptimer : tests de bout en bout dans un vrai navigateur.
  *
  * Complète bin/e2e.php (qui teste le serveur) en vérifiant ce qui ne vit que
  * côté navigateur : accordéons, filtre instantané, barre d'enregistrement,
@@ -7,7 +7,7 @@
  *
  *   node bin/e2e-browser.mjs [url] [motdepasse]
  *
- * Prérequis : Playwright disponible (poste de développement uniquement — la
+ * Prérequis : Playwright disponible (poste de développement uniquement, la
  * production n'en a pas besoin). Ces tests ne modifient aucune donnée hormis
  * l'état des sondes affichées.
  */
@@ -22,7 +22,7 @@ for (const candidate of [process.env.PLAYWRIGHT_PATH, 'playwright-core', 'playwr
   try { chromium = require(candidate).chromium; if (chromium) break; } catch (e) { /* suivant */ }
 }
 if (!chromium) {
-  console.log('Playwright introuvable — tests navigateur ignorés.');
+  console.log('Playwright introuvable : tests navigateur ignorés.');
   console.log('Pour les activer : npm i -D playwright-core, ou PLAYWRIGHT_PATH=/chemin/vers/playwright-core');
   console.log('Le parcours serveur est déjà couvert par : php bin/e2e.php');
   process.exit(0);

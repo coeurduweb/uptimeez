@@ -59,7 +59,7 @@ Nothing else. There is no "reminder that everything is fine", no daily volume of
 
 ---
 
-## Grouped outages — the noise killer
+## Grouped outages : the noise killer
 
 When three or more monitors fail on the **same IP address** within one pass, Uptimer sends **one** alert naming
 the server and listing the affected sites, instead of one alert per site.
@@ -76,7 +76,7 @@ dependency or parent-child relationship.
 
 Format: `23:00-07:00`. It may cross midnight.
 
-During the window, **"needs watching" alerts are held and grouped**. A real outage always gets through — nobody
+During the window, **"needs watching" alerts are held and grouped**. A real outage always gets through : nobody
 should sleep through a site being down, and any tool that lets you configure that is helping you fail.
 
 ---
@@ -85,7 +85,7 @@ should sleep through a site being down, and any tool that lets you configure tha
 
 Per monitor, in Full mode. Formats: `mon-fri 22:00-23:30`, `tue 02:00-04:00`, `sat 01:00-05:00`.
 
-Inside the window, measurements continue — the history stays complete and honest — but alerts are silent. Use it
+Inside the window, measurements continue : the history stays complete and honest, but alerts are silent. Use it
 for a nightly backup that saturates the server, or a weekly deployment.
 
 ---
@@ -99,7 +99,7 @@ for a nightly backup that saturates the server, or a weekly deployment.
 | Notify on "needs watching" | on | Turn off to be alerted on real outages only |
 
 And **acknowledgement**: the *Acknowledged* button on a task card stops the reminders without closing the
-incident. It says "I have seen it, I am on it" — the history stays accurate, your phone stops buzzing.
+incident. It says "I have seen it, I am on it" : the history stays accurate, your phone stops buzzing.
 
 ---
 
@@ -111,7 +111,7 @@ A configuration that works well for an agency portfolio:
 - **Quiet hours `23:00-07:00`**, so overnight slowness waits for the morning.
 - **Reminder every 60 minutes** on open incidents.
 - **Recovery notices on**, so nobody chases a resolved problem.
-- **Discord for the team, e-mail for the on-call person** — set per monitor in Full mode with
+- **Discord for the team, e-mail for the on-call person** : set per monitor in Full mode with
   `notify_channels`.
 - **Content changes off** except on sites that never publish, where a change means someone got in.
 

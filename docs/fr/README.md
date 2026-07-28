@@ -11,13 +11,14 @@ confiance à Uptimer.
 
 | Je veux… | Lire |
 |---|---|
-| L'installer sur mon hébergement | **[Installation](installation.md)** — prérequis, mutualisé, cPanel/o2switch, MySQL |
-| Ajouter mes premiers sites et comprendre les écrans | **[Prise en main](prise-en-main.md)** — la visite en 5 minutes |
-| Savoir ce que fait chaque option | **[Sondes](sondes.md)** — types, cadences, chaîne de preuve, tous les réglages |
-| Comprendre *comment* il détecte | **[Détection](detection.md)** — les neuf signaux, les pannes de base, les certificats |
-| Recevoir les alertes là où je regarde | **[Alertes](alertes.md)** — Discord, Slack, e-mail, webhooks, heures calmes |
+| L'installer sur mon hébergement | **[Installation](installation.md)** : prérequis, mutualisé, cPanel/o2switch, MySQL |
+| Ajouter mes premiers sites et comprendre les écrans | **[Prise en main](prise-en-main.md)** : la visite en 5 minutes |
+| Savoir ce que fait chaque option | **[Sondes](sondes.md)** : types, cadences, chaîne de preuve, tous les réglages |
+| Comprendre *comment* il détecte | **[Détection](detection.md)** : les neuf signaux, les pannes de base, les certificats |
+| Recevoir les alertes là où je regarde | **[Alertes](alertes.md)**. Discord, Slack, e-mail, webhooks, heures calmes |
 | Montrer quelque chose à un client | **[Rapports et page d'état](rapports.md)** |
-| L'exploiter au quotidien | **[Exploitation](exploitation.md)** — cron, ligne de commande, sauvegardes, traductions, dépannage |
+| L'interroger depuis Claude ou un autre agent | **[Serveur MCP](mcp.md)** : mise en place, les douze outils, pourquoi la lecture seule par défaut |
+| L'exploiter au quotidien | **[Exploitation](exploitation.md)** : cron, ligne de commande, sauvegardes, traductions, dépannage |
 
 **Pressé ?** Trois commandes et vous surveillez :
 
@@ -41,7 +42,7 @@ entrée dit ce qui est cassé, pourquoi c'est un problème, quoi faire, et porte
 a décidé. Collez une liste de domaines : il identifie la technologie, choisit des pages représentatives dans le
 sitemap, déduit une chaîne de preuve du contenu du site, règle la cadence selon l'importance de la page, et cale le
 seuil de lenteur sur le p95 mesuré. Chaque décision est consignée dans un journal lisible, et chacune peut être
-reprise à la main — une valeur saisie gagne toujours.
+reprise à la main : une valeur saisie gagne toujours.
 
 **3. On ne vous réveillera que si c'est réel.** Une panne doit donc survivre aux relances avant de devenir un
 incident, dix sites sur une même IP produisent une alerte au lieu de dix, les alertes « à surveiller » respectent
@@ -59,7 +60,7 @@ Quelques mots reviennent partout, dans l'interface comme dans cette documentatio
 |---|---|
 | **Site** | Un domaine dont vous vous occupez. Regroupe une ou plusieurs sondes. |
 | **Sonde** | Une chose vérifiée : une page, une API, un fichier, un mot-clé, ou un battement. |
-| **Sonde principale** | La sonde de référence du site — en général l'accueil. Son état est celui du site. |
+| **Sonde principale** | La sonde de référence du site : en général l'accueil. Son état est celui du site. |
 | **Chaîne de preuve** | Un texte qui ne peut venir que de la base. Sa présence prouve que le serveur web *et* la base répondent. |
 | **Référence** | L'empreinte apprise des ressources d'une page saine : poids du CSS, nombre de règles, couverture des classes, media queries. |
 | **Passe** | Une exécution du collecteur (`cron.php`). Chaque passe ne vérifie que les sondes dues. |
@@ -73,7 +74,7 @@ Quelques mots reviennent partout, dans l'interface comme dans cette documentatio
 
 ```
 uptimer/
-├── config.php        votre configuration — à ne jamais versionner
+├── config.php        votre configuration : à ne jamais versionner
 ├── data/             la base SQLite, le verrou du cron, le faux site de démo
 ├── lang/             les catalogues de traduction, un par langue
 ├── src/              le moteur
@@ -90,7 +91,7 @@ jour.
 
 ## Aide et contributions
 
-- Quelque chose de mal détecté ? Ouvrez un ticket avec l'URL — les faux positifs sont traités comme des bugs.
+- Quelque chose de mal détecté ? Ouvrez un ticket avec l'URL : les faux positifs sont traités comme des bugs.
 - Un CMS dont la panne n'est pas reconnue ? Bon ticket aussi, et souvent cinq lignes à ajouter.
 - Une langue à compléter ? `php bin/i18n-audit.php --manquants=xx` liste exactement ce qui manque.
 

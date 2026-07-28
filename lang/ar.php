@@ -1,10 +1,10 @@
 <?php
 /**
- * Uptimer — Arabic catalogue (right-to-left)
+ * Uptimer, Arabic catalogue (right-to-left)
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
- * I18n substitutes — so renaming the product never invalidates a catalogue.
+ * I18n substitutes, so renaming the product never invalidates a catalogue.
  * A missing key falls back to English, then to the source text.
  * What is left: php bin/i18n-audit.php --manquants=ar
  */
@@ -161,8 +161,12 @@ return [
     'la tâche planifiée n\'a jamais tourné' => 'المهمة المجدولة لم تعمل قطّ',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'المواقع المعروضة حقيقية، وكل القياسات خيالية. الأعطال على نطاقات فرعية للاختبار غير موجودة.',
     'pris en compte' => 'تم الإقرار',
+    'période :' => 'الفترة',
+    'réglages' => 'الإعدادات',
     'réponse {ms}' => 'استجابة {ms}',
+    'sonde' => 'مِجَس',
     'tableau de bord' => 'لوحة المعلومات',
+    'temps de réponse' => 'زمن الاستجابة',
     'tout va bien' => 'كل شيء سليم',
     'un point à surveiller' => 'نقطة واحدة تحت المراقبة',
     'un site sans rien à signaler' => 'موقع واحد لا شيء يُذكر عنه',

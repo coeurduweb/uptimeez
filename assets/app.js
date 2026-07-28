@@ -1,4 +1,4 @@
-/* Uptimer — interactions. Aucune dépendance, aucun appel externe.
+/* Uptimer : interactions. Aucune dépendance, aucun appel externe.
    Tout fonctionne sans JavaScript ; le script ne fait qu'éviter des rechargements. */
 (function () {
   'use strict';
@@ -619,7 +619,7 @@
 })();
 
 /* ==========================================================================
-   Aides contextuelles « ? » — utilisables au doigt comme au clavier.
+   Aides contextuelles « ? » : utilisables au doigt comme au clavier.
    ========================================================================== */
 (function () {
   'use strict';

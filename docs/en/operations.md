@@ -28,7 +28,7 @@ What a pass does:
 **Useful flags:**
 
 ```bash
-php cron.php --once      # one pass, verbose output — what you run to debug
+php cron.php --once      # one pass, verbose output : what you run to debug
 php cron.php --setup     # only finish pending automatic setups
 php cron.php --maint     # only the daily maintenance
 ```
@@ -44,7 +44,7 @@ connections, lower *simultaneous requests* to 5 in the settings.
 ## Command line
 
 ```bash
-php bin/selftest.php          # 278 checks: detection logic, offline, no network
+php bin/selftest.php          # 305 checks: detection logic, offline, no network
 php bin/bench.php             # 44 checks: real failures reproduced end to end
 php bin/e2e.php               # 116 checks: full user journey, isolated instance
 node bin/e2e-browser.mjs      # 57 checks: real Chromium
@@ -55,7 +55,9 @@ php bin/security.php --niveau=1   # light only: configuration, secrets, surface
 php bin/security.php --niveau=2   # deep only: active OWASP tests
 php bin/security.php --niveau=3   # very deep only: SSRF, XXE, bombs, timing
 php bin/deadcode.php          # unused methods, functions, classes, CSS, msgids
-php bin/deadcode.php --strict # exit code 1 if anything is dead — for CI
+php bin/deadcode.php --strict # exit code 1 if anything is dead : for CI
+php bin/mcp.php               # MCP server for agents, read-only
+php bin/mcp.php --write       # also expose the four writing tools
 php bin/i18n-audit.php        # translation coverage
 php bin/demo.php              # install the demo portfolio
 php bin/demo.php --purge      # remove it
@@ -113,7 +115,7 @@ The language is chosen without ever asking: `?lang=xx` in the URL → the rememb
 the browser's `Accept-Language` → English.
 
 **How it is built.** Translation keys are the French source sentences, the way gettext uses msgids. A missing key
-falls back to English, then to the source text — never to a technical code like `nav.today.label`.
+falls back to English, then to the source text : never to a technical code like `nav.today.label`.
 
 ```bash
 php bin/i18n-audit.php                  # overall coverage
@@ -121,8 +123,8 @@ php bin/i18n-audit.php --manquants=es   # what Spanish is still missing
 php bin/i18n-audit.php --nus            # visible strings not yet translatable
 ```
 
-English and French are complete. The eight other catalogues cover the operating interface — navigation, states,
-actions, the 23 diagnoses — and longer help texts fall back to English. To complete one, run the audit for that
+English and French are complete. The eight other catalogues cover the operating interface : navigation, states,
+actions, the 23 diagnoses : and longer help texts fall back to English. To complete one, run the audit for that
 language and add the missing keys to `lang/xx.php`. Pull requests very welcome.
 
 **Plurals.** Two source forms, and languages needing more put the extra forms in the plural translation separated
@@ -144,7 +146,7 @@ The **Simple / Full** switch is stored per browser (cookie) with an instance-wid
 ```
 
 Simple is the default on purpose. It hides settings, not capabilities: everything keeps working, and a form field
-that is hidden is still submitted with its current value — so switching modes can never disable a monitor by
+that is hidden is still submitted with its current value : so switching modes can never disable a monitor by
 accident.
 
 ---
@@ -164,7 +166,7 @@ Shown on the home screen, and it is the most common setup problem.
 Your host blocks outgoing connections, or throttles them.
 
 1. Test from the server: `curl -I https://example.com`.
-2. Lower *simultaneous requests* to 3–5.
+2. Lower *simultaneous requests* to 3-5.
 3. Raise the timeout to 30 s.
 4. On a restrictive host you may need to have outgoing HTTP allowed for your account.
 
@@ -178,7 +180,7 @@ If neither applies, open an issue with the URL. False positives are treated as d
 
 ### The proof string was not found
 
-Uptimer needs a piece of text distinctive enough. Some sites have nothing usable — no footer copyright, no
+Uptimer needs a piece of text distinctive enough. Some sites have nothing usable : no footer copyright, no
 `og:site_name`, a generic title. Set it by hand on the monitor page: pick something that comes from the database
 and never appears on an error page.
 
@@ -197,7 +199,7 @@ sqlite3 data/uptimer.sqlite "PRAGMA integrity_check;"
 ```
 
 If it does not answer `ok`, restore your backup. If it happens repeatedly, your host's filesystem does not handle
-SQLite locking well — switch to MySQL.
+SQLite locking well : switch to MySQL.
 
 ---
 
@@ -208,17 +210,17 @@ php bin/security.php
 ```
 
 Three depths, each check labelled with its OWASP Top 10 reference. Levels 2 and 3 spin up an isolated instance
-and a deliberately hostile local site — nothing touches your installation, nothing leaves your machine.
+and a deliberately hostile local site : nothing touches your installation, nothing leaves your machine.
 
 | Level | Covers |
 |---|---|
-| 1 — light | A02 crypto, A05 misconfiguration, A03 static injection review, A04 design guards, A06 dependencies, A09 logging |
-| 2 — deep | A01 access control, A03 injection (SQL, XSS, headers), A04 CSRF, A05 runtime configuration, A07 authentication |
-| 3 — very deep | A10 SSRF, A03 XXE and spreadsheet formula injection, denial-of-service bounds, constant-time comparison |
+| 1 : light | A02 crypto, A05 misconfiguration, A03 static injection review, A04 design guards, A06 dependencies, A09 logging |
+| 2 : deep | A01 access control, A03 injection (SQL, XSS, headers), A04 CSRF, A05 runtime configuration, A07 authentication |
+| 3 : very deep | A10 SSRF, A03 XXE and spreadsheet formula injection, denial-of-service bounds, constant-time comparison |
 
 Run it after changing hosting, after an upgrade, and before exposing the interface to anyone else.
 
-**The optional SSRF guard.** A monitoring tool fetches the URLs you give it — monitoring an intranet or a
+**The optional SSRF guard.** A monitoring tool fetches the URLs you give it : monitoring an intranet or a
 staging site on `192.168.x` is a legitimate use, so nothing is blocked by default. If your interface is reachable
 by people you do not fully trust, turn the guard on:
 
@@ -226,7 +228,7 @@ by people you do not fully trust, turn the guard on:
 'security' => [ 'block_private_ranges' => true ],
 ```
 
-It then refuses loopback, private ranges and the `169.254.169.254` metadata address — the classic SSRF target.
+It then refuses loopback, private ranges and the `169.254.169.254` metadata address : the classic SSRF target.
 
 ---
 
@@ -242,6 +244,6 @@ It then refuses loopback, private ranges and the `169.254.169.254` metadata addr
 - Sessions are `HttpOnly`, `SameSite=Lax`, `Secure` behind HTTPS.
 - Every page sends `noindex, nofollow`.
 - `install.php` refuses to run once installed, and answers 403 to a POST.
-- `beat.php` returns an identical 404 for an unknown and for a malformed token — no key enumeration.
+- `beat.php` returns an identical 404 for an unknown and for a malformed token : no key enumeration.
 - The public status page requires its token and exposes nothing else.
 - Everything the user types is escaped on output; the chaos suite verifies no input is ever reflected raw.

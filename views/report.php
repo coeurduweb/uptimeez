@@ -156,7 +156,7 @@ $mons = $site ? Db::all('SELECT * FROM monitors WHERE site_id = ? ORDER BY role 
   <?php endif; ?>
 
   <footer class="rep-foot">
-    <?= te('Document produit le {date} par {app} — surveillance continue.', ['date' => date('d/m/Y H:i')]) ?>
+    <?= te('Document produit le {date} par {app}, surveillance continue.', ['date' => date('d/m/Y H:i')]) ?>
     <?= te('Les mesures sont effectuées automatiquement, sans intervention humaine.') ?>
   </footer>
 </article>

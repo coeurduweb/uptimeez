@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer — autotest. Vérifie la logique de détection sans toucher au réseau
+ * Uptimer : autotest. Vérifie la logique de détection sans toucher au réseau
  * ni à la base : utile après une mise à jour ou un changement d'hébergement.
  *
  *   php bin/selftest.php
@@ -152,7 +152,7 @@ $sh->body = '<html><body><script src="https://cdn.shopify.com/s/x.js"></script><
 check('Shopify identifié', Cms::detect($sh)['cms'], 'Shopify');
 
 section('Déduction de la chaîne de contrôle');
-$page = '<html><head><title>Nos tarifs — Agence Bellevue</title>
+$page = '<html><head><title>Nos tarifs : Agence Bellevue</title>
 <meta property="og:site_name" content="Agence Bellevue"></head>
 <body><nav><a href="/x">Nos prestations</a></nav><h1>Nos tarifs</h1>
 <footer>© 2026 Agence Bellevue — tous droits réservés</footer></body></html>';
@@ -613,6 +613,116 @@ unset($_COOKIE['uptimer_mode'], $_SESSION['uptimer_mode']);
 check('deux modes seulement', Uptimer\Ui::MODES, ['simple', 'expert']);
 check('un mode inconnu retombe sur simple',
     in_array('simple', Uptimer\Ui::MODES, true) && !in_array('nawak', Uptimer\Ui::MODES, true), true);
+
+// =========================================================================
+section('Serveur MCP : protocole et outils');
+// =========================================================================
+/**
+ * Le serveur MCP parle JSON-RPC sur stdio. On le lance vraiment et on tient une
+ * conversation complète : c'est le seul moyen de vérifier qu'un client MCP
+ * pourra s'y connecter.
+ */
+$mcpAsk = function (array $messages, bool $write = false) : array {
+    $cmd = [PHP_BINARY, UPTIMER_ROOT . '/bin/mcp.php'];
+    if ($write) $cmd[] = '--write';
+    $proc = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']],
+                      $pipes, UPTIMER_ROOT, ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+    if (!is_resource($proc)) return [];
+    foreach ($messages as $m) fwrite($pipes[0], json_encode($m) . "\n");
+    fclose($pipes[0]);
+    $out = (string)stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    proc_close($proc);
+    $replies = [];
+    foreach (explode("\n", trim($out)) as $line) {
+        if (trim($line) === '') continue;
+        $d = json_decode($line, true);
+        if (is_array($d)) $replies[] = $d;
+    }
+    return $replies;
+};
+$hello = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize',
+          'params' => ['protocolVersion' => '2024-11-05', 'capabilities' => []]];
+
+// --- Poignée de main -----------------------------------------------------
+$r = $mcpAsk([$hello]);
+check('MCP répond à initialize', isset($r[0]['result']['serverInfo']['name']), true);
+check('MCP s\'annonce sous son nom', $r[0]['result']['serverInfo']['name'] ?? '', 'uptimer');
+check('MCP annonce une version de protocole',
+    (bool)preg_match('~^\d{4}-\d{2}-\d{2}$~', (string)($r[0]['result']['protocolVersion'] ?? '')), true);
+check('MCP déclare la capacité outils', isset($r[0]['result']['capabilities']['tools']), true);
+check('MCP fournit des instructions à l\'agent',
+    mb_strlen((string)($r[0]['result']['instructions'] ?? '')) > 100, true);
+
+// --- Catalogue d'outils --------------------------------------------------
+$r = $mcpAsk([$hello, ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list']]);
+$tools = $r[1]['result']['tools'] ?? [];
+$names = array_column($tools, 'name');
+check('en lecture seule, aucun outil d\'écriture',
+    array_values(array_intersect($names, ['check_now', 'apply_fix', 'set_enabled', 'add_sites'])), []);
+foreach (['status', 'tasks', 'list_monitors', 'monitor_detail', 'incidents', 'report'] as $t) {
+    check('outil de lecture exposé : ' . $t, in_array($t, $names, true), true);
+}
+$badSchema = [];
+foreach ($tools as $t) {
+    if (($t['inputSchema']['type'] ?? '') !== 'object') $badSchema[] = $t['name'] . ' : type';
+    if (mb_strlen((string)($t['description'] ?? '')) < 40) $badSchema[] = $t['name'] . ' : description trop courte';
+    if (!isset($t['annotations']['readOnlyHint'])) $badSchema[] = $t['name'] . ' : annotation manquante';
+}
+check('chaque outil a un schéma et une description utilisables', $badSchema, []);
+
+$r = $mcpAsk([$hello, ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list']], true);
+$namesW = array_column($r[1]['result']['tools'] ?? [], 'name');
+foreach (['check_now', 'apply_fix', 'set_enabled', 'add_sites'] as $t) {
+    check('avec --write, outil exposé : ' . $t, in_array($t, $namesW, true), true);
+}
+
+// --- Appels d'outils -----------------------------------------------------
+$call = fn(string $name, array $args = []) => ['jsonrpc' => '2.0', 'id' => 9, 'method' => 'tools/call',
+                                               'params' => ['name' => $name, 'arguments' => $args]];
+$payload = function (array $replies): array {
+    foreach ($replies as $d) {
+        if (isset($d['result']['content'][0]['text'])) {
+            return json_decode((string)$d['result']['content'][0]['text'], true) ?: [];
+        }
+    }
+    return [];
+};
+$r = $payload($mcpAsk([$hello, $call('status')]));
+check('outil status : compteurs présents',
+    isset($r['down'], $r['up'], $r['total'], $r['collector_has_run']), true);
+$r = $payload($mcpAsk([$hello, $call('tasks')]));
+check('outil tasks : deux listes', isset($r['now'], $r['upcoming'], $r['nothing_to_do']), true);
+$r = $payload($mcpAsk([$hello, $call('list_monitors', ['limit' => 3])]));
+check('outil list_monitors : borne respectée', count($r['monitors'] ?? []) <= 3, true);
+$r = $payload($mcpAsk([$hello, $call('monitor_detail', ['monitor_id' => 999999])]));
+check('identifiant inconnu : erreur explicite, pas de plantage',
+    str_contains((string)($r['error'] ?? ''), '999999'), true);
+$r = $payload($mcpAsk([$hello, $call('security_target_check', ['url' => 'file:///etc/passwd'])]));
+check('outil de contrôle de cible : file:// refusé', $r['allowed'] ?? true, false);
+$r = $payload($mcpAsk([$hello, $call('security_target_check', ['url' => 'exemple.fr'])]));
+check('outil de contrôle de cible : domaine nu accepté', $r['allowed'] ?? false, true);
+
+// --- Refus et robustesse -------------------------------------------------
+$r = $payload($mcpAsk([$hello, $call('check_now')]));
+check('outil d\'écriture refusé en lecture seule',
+    str_contains((string)($r['error'] ?? ''), 'read-only'), true);
+$r = $mcpAsk([$hello, ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/call',
+                       'params' => ['name' => 'inexistant', 'arguments' => []]]]);
+check('outil inconnu : erreur JSON-RPC', isset($r[1]['error']['code']), true);
+$r = $mcpAsk([$hello, ['jsonrpc' => '2.0', 'id' => 4, 'method' => 'methode/inconnue']]);
+check('méthode inconnue : erreur JSON-RPC', ($r[1]['error']['code'] ?? 0), -32601);
+// Une ligne illisible ne doit pas interrompre la conversation.
+$proc = proc_open([PHP_BINARY, UPTIMER_ROOT . '/bin/mcp.php'],
+                  [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']],
+                  $pipes, UPTIMER_ROOT, ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+fwrite($pipes[0], "ceci n'est pas du JSON\n");
+fwrite($pipes[0], json_encode($hello) . "\n");
+fclose($pipes[0]);
+$out = (string)stream_get_contents($pipes[1]);
+fclose($pipes[1]); proc_close($proc);
+check('ligne illisible : le serveur survit et répond ensuite',
+    str_contains($out, '-32700') && str_contains($out, 'uptimer'), true);
 
 echo "\n" . str_repeat('─', 68) . "\n";
 printf("%d test(s) réussi(s), %d échec(s)\n", $pass, $fail);
