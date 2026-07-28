@@ -351,6 +351,69 @@ if ($probe) {
         }
     }
 }
+// ---------------------------------------------------------------------------
+// Inventaire logiciel et veille de sécurité
+// ---------------------------------------------------------------------------
+// Les avis ci-dessous sont fictifs, comme le reste des mesures : le bandeau de
+// l'interface le dit en permanence. Ils reproduisent la forme d'un vrai avis
+// (identifiant, date, gravité, résumé) pour que l'écran montre ce qu'il montrera
+// en production.
+$stacks = [
+    'WordPress' => [
+        ['core',   'wordpress',      'WordPress',      '6.4.2',  '7.0.2'],
+        ['theme',  'astra',          'Astra',          '4.6.2',  '4.11.1'],
+        ['plugin', 'elementor',      'Elementor',      '3.18.3', '4.2.1'],
+        ['plugin', 'contact-form-7', 'Contact Form 7', '5.8.6',  '6.1.4'],
+        ['plugin', 'woocommerce',    'WooCommerce',    '8.5.1',  '9.9.7'],
+    ],
+    'Drupal' => [
+        ['core',   'drupal',  'Drupal',  '10.1.6', '11.2.4'],
+        ['plugin', 'webform', 'Webform', '6.2.1',  '6.3.2'],
+    ],
+    'Laravel' => [['core', 'laravel', 'Laravel', '10.34.2', '12.9.0']],
+    'Next.js' => [['core', 'next-js', 'Next.js', '14.0.4', '15.4.2']],
+    'Shopify' => [],
+    'MediaWiki' => [['core', 'mediawiki', 'MediaWiki', '1.41.0', '1.44.1']],
+    'Ruby on Rails' => [],
+    'Django' => [],
+];
+$demoAdvisories = [
+    'elementor' => [[
+        'id' => 'DEMO-2026-0142', 'severity' => 'high', 'published' => date('Y-m-d', time() - 3 * 86400),
+        'summary' => "Téléversement de fichier sans contrôle du type dans le constructeur de "
+                   . "modèles. Un contributeur authentifié peut exécuter du code.",
+        'url' => null, 'aliases' => ['CVE-2026-00000'],
+    ]],
+    'contact-form-7' => [[
+        'id' => 'DEMO-2026-0117', 'severity' => 'medium', 'published' => date('Y-m-d', time() - 11 * 86400),
+        'summary' => "Injection de script stockée dans l'aperçu d'un formulaire, exploitable par "
+                   . "un administrateur de site sans privilège d'édition de code.",
+        'url' => null, 'aliases' => [],
+    ]],
+];
+foreach (Db::all('SELECT id, name, cms FROM sites') as $st) {
+    foreach ($stacks[(string)$st['cms']] ?? [] as [$kind, $slug, $name, $ver, $latest]) {
+        $adv = $demoAdvisories[$slug] ?? [];
+        Db::insert('components', [
+            'site_id' => (int)$st['id'],
+            'monitor_id' => (int)Db::val('SELECT id FROM monitors WHERE site_id = ? AND role = \'primary\' LIMIT 1',
+                                         [(int)$st['id']]),
+            'kind' => $kind, 'slug' => $slug, 'name' => $name, 'version' => $ver,
+            'source' => $kind === 'core' ? 'generator' : 'asset',
+            'latest' => $latest,
+            'outdated' => Uptimer\Detect\Stack::compare($ver, $latest) < 0 ? 1 : 0,
+            'vuln_count' => count($adv),
+            'worst' => $adv ? Uptimer\Vuln::worstSeverity($adv) : null,
+            'advisories' => $adv ? jenc($adv) : null,
+            'checked_at' => date('Y-m-d H:i:s', time() - random_int(1, 20) * 3600),
+            'first_seen_at' => date('Y-m-d H:i:s', time() - 30 * 86400),
+            'seen_at' => now(),
+        ]);
+    }
+}
+echo 'inventaire : ' . Db::val('SELECT COUNT(*) FROM components') . " composant(s), "
+   . Db::val('SELECT COUNT(*) FROM components WHERE vuln_count > 0') . " avec faille publiée\n";
+
 foreach (Db::all('SELECT id FROM monitors') as $m) Stats::refresh((int)$m['id']);
 Stats::rollup(date('Y-m-d'));
 for ($d = 1; $d <= 30; $d++) Stats::rollup(date('Y-m-d', time() - $d * 86400));

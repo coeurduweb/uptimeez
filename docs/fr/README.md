@@ -15,6 +15,7 @@ confiance à Uptimer.
 | Ajouter mes premiers sites et comprendre les écrans | **[Prise en main](prise-en-main.md)** : la visite en 5 minutes |
 | Savoir ce que fait chaque option | **[Sondes](sondes.md)** : types, cadences, chaîne de preuve, tous les réglages |
 | Comprendre *comment* il détecte | **[Détection](detection.md)** : les neuf signaux, les pannes de base, les certificats |
+| Savoir si un site tourne sur une version vulnérable | **[Veille de sécurité](veille-securite.md)** : inventaire des versions, avis publiés, ce qui sort de chez vous |
 | Recevoir les alertes là où je regarde | **[Alertes](alertes.md)**. Discord, Slack, e-mail, webhooks, heures calmes |
 | Montrer quelque chose à un client | **[Rapports et page d'état](rapports.md)** |
 | L'interroger depuis Claude ou un autre agent | **[Serveur MCP](mcp.md)** : mise en place, les douze outils, pourquoi la lecture seule par défaut |
@@ -63,6 +64,7 @@ Quelques mots reviennent partout, dans l'interface comme dans cette documentatio
 | **Sonde principale** | La sonde de référence du site : en général l'accueil. Son état est celui du site. |
 | **Chaîne de preuve** | Un texte qui ne peut venir que de la base. Sa présence prouve que le serveur web *et* la base répondent. |
 | **Référence** | L'empreinte apprise des ressources d'une page saine : poids du CSS, nombre de règles, couverture des classes, media queries. |
+| **Composant** | Un logiciel repéré sur un site : le cœur, une extension, un thème, avec sa version quand elle est lisible. |
 | **Passe** | Une exécution du collecteur (`cron.php`). Chaque passe ne vérifie que les sondes dues. |
 | **Incident** | Une période ininterrompue pendant laquelle une sonde était hors service. Ouvert à la panne, clos au rétablissement. |
 | **Battement** | Une sonde qui attend d'être appelée au lieu d'appeler. C'est le silence qui alerte. |

@@ -12,7 +12,18 @@
 import { createRequire } from 'module';
 import { mkdirSync } from 'fs';
 const require = createRequire(import.meta.url);
-const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright-core');
+// Mêmes emplacements que bin/e2e-browser.mjs : paquet local, puis système.
+let chromium = null;
+for (const candidate of [process.env.PLAYWRIGHT_PATH, 'playwright-core', 'playwright',
+                         '/usr/share/nodejs/playwright-core',
+                         '/usr/lib/node_modules/playwright-core'].filter(Boolean)) {
+  try { chromium = require(candidate).chromium; if (chromium) break; } catch (e) { /* suivant */ }
+}
+if (!chromium) {
+  console.log('Playwright introuvable : aucune capture produite.');
+  console.log('Pour les activer : npm i -D playwright-core, ou PLAYWRIGHT_PATH=/chemin/vers/playwright-core');
+  process.exit(0);
+}
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8390';
 const PASS = process.env.PASS || 'demo1234';

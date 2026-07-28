@@ -168,6 +168,7 @@ return [
     'la configurer' => 'এটি সেট করুন',
     'la tâche planifiée n\'a jamais tourné' => 'শিডিউল করা কাজ কখনো চলেনি',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'দেখানো সাইটগুলো আসল, সব পরিমাপ কল্পিত। ত্রুটিগুলো এমন স্টেজিং সাব-ডোমেইনে যা আসলে নেই।',
+    'pas encore vérifié' => 'এখনো যাচাই হয়নি',
     'pris en compte' => 'স্বীকৃত',
     'période :' => 'সময়কাল',
     'réglages' => 'সেটিংস',

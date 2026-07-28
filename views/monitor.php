@@ -372,6 +372,92 @@ if ($decisions && expert()):
 <?= Ui::accClose() ?>
 <?php endif; ?>
 
+<!-- ====================== INVENTAIRE ET FAILLES ====================== -->
+<?php
+$comps = !empty($mon['site_id']) ? Uptimer\Vuln::forSite((int)$mon['site_id']) : [];
+if ($comps):
+    $nVuln = 0; $nOld = 0; $worst = null;
+    foreach ($comps as $c) {
+        if ((int)$c['vuln_count'] > 0) $nVuln++;
+        if ((int)$c['outdated'] === 1) $nOld++;
+        if (($c['worst'] ?? '') === 'high') $worst = 'high';
+        elseif ($c['worst'] !== null && $worst === null) $worst = (string)$c['worst'];
+    }
+    $stackBadge = $nVuln > 0
+        ? Ui::badge(tn($nVuln, 'une faille publiée', '{n} failles publiées'), $worst === 'high' ? 'bad' : 'warn')
+        : ($nOld > 0 ? Ui::badge(tn($nOld, 'une version en retard', '{n} versions en retard'), 'warn')
+                     : Ui::badge(t('rien à signaler'), 'ok'));
+    echo Ui::accOpen('stack', 'shield', t('Logiciels et failles connues'),
+        tn(count($comps), 'un composant détecté', '{n} composants détectés'),
+        $nVuln > 0, $nVuln > 0 ? ($worst === 'high' ? 'attn' : 'warn') : 'none', $stackBadge);
+    echo Ui::accBody();
+?>
+  <p class="small soft prose mb0">
+    <?= te('Les versions sont lues dans le HTML déjà reçu, sans rien demander de plus au site.') ?><?= hint('Deux signaux qui ne se mélangent pas. « Faille publiée » veut dire qu\'un avis de sécurité identifié couvre précisément cette version : l\'identifiant et le lien sont donnés. « Version en retard » veut dire que la version installée est antérieure à la dernière publiée, ce qui est une dette, pas une faille.') ?>
+  </p>
+  <div class="table-scroll mt"><table class="tbl">
+    <thead><tr>
+      <th><?= te('Composant') ?></th><th><?= te('Version') ?></th>
+      <th><?= te('Dernière') ?></th><th><?= te('Sécurité') ?></th><th><?= te('Vérifié') ?></th>
+    </tr></thead>
+    <tbody>
+    <?php foreach ($comps as $c): ?>
+      <tr>
+        <td>
+          <strong><?= e((string)$c['name']) ?></strong>
+          <?= Ui::badge(match ((string)$c['kind']) {
+                'core' => t('cœur'), 'theme' => t('thème'), default => t('extension') },
+                (string)$c['kind'] === 'core' ? 'info' : 'neutral') ?>
+          <div class="tiny muted mono"><?= e((string)$c['slug']) ?></div>
+        </td>
+        <td class="mono small"><?= $c['version'] !== null ? e((string)$c['version'])
+              : '<span class="muted">' . te('non lisible') . '</span>' ?></td>
+        <td class="mono small">
+          <?php if ($c['latest'] === null): ?><span class="muted">—</span>
+          <?php elseif ((int)$c['outdated'] === 1): ?>
+            <span class="v-warn"><?= e((string)$c['latest']) ?></span>
+          <?php else: ?><span class="v-ok"><?= e((string)$c['latest']) ?></span><?php endif; ?>
+        </td>
+        <td>
+          <?php $adv = jdec($c['advisories'] ?? null);
+          if ($adv): ?>
+            <?= Ui::badge(tn((int)$c['vuln_count'], 'une faille', '{n} failles')
+                  . ' · ' . Uptimer\Vuln::severityLabel($c['worst'] !== null ? (string)$c['worst'] : null),
+                  ($c['worst'] ?? '') === 'high' ? 'bad' : 'warn') ?>
+            <ul class="adv-list">
+              <?php foreach (array_slice($adv, 0, 4) as $a): ?>
+                <li>
+                  <?php if (!empty($a['url'])): ?>
+                    <a href="<?= e((string)$a['url']) ?>" target="_blank" rel="noopener noreferrer">
+                      <?= e((string)($a['id'] ?? '')) ?></a>
+                  <?php else: ?><span class="mono"><?= e((string)($a['id'] ?? '')) ?></span><?php endif; ?>
+                  <?php if (!empty($a['published'])): ?>
+                    <span class="muted tiny"><?= e((string)$a['published']) ?></span><?php endif; ?>
+                  <?php if (!empty($a['summary'])): ?>
+                    <div class="tiny muted clamp2"><?= e(str_cut((string)$a['summary'], 130)) ?></div>
+                  <?php endif; ?>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          <?php elseif ((int)$c['outdated'] === 1): ?>
+            <?= Ui::badge(t('version en retard'), 'warn') ?>
+          <?php elseif ($c['checked_at'] !== null): ?>
+            <span class="v-ok small"><?= te('aucun avis connu') ?></span>
+          <?php else: ?>
+            <span class="muted small"><?= te('pas encore vérifié') ?></span>
+          <?php endif; ?>
+        </td>
+        <td class="small nowrap muted"><?= $c['checked_at']
+              ? e(Notifier::when((string)$c['checked_at'])) : '—' ?></td>
+      </tr>
+    <?php endforeach; ?>
+    </tbody>
+  </table></div>
+<?php
+    echo Ui::accClose();
+endif;
+?>
+
 <!-- ====================== CERTIFICAT, DOMAINE, SERVEUR ====================== -->
 <?php
 $sslNote = $sslDays === null ? 'non mesuré' : ($sslDays < 0 ? 'certificat expiré' : 'certificat valable ' . $sslDays . ' j');
@@ -427,8 +513,10 @@ echo Ui::accBody();
     <dd><?= Ui::ms((int)$mon['slow_ms']) ?>
       <?php if ((int)($mon['auto_slow'] ?? 1) === 1): ?>
         <?= Ui::badge(t('ajusté automatiquement'), 'info') ?>
-        <span class="hint"><?= te('Recalculé sur le p95 mesuré de cette sonde') ?><?php
-          if (!empty($mon['tuned_at'])) echo t(', dernière fois') . e(human_since((string)$mon['tuned_at'])); ?>.</span>
+        <span class="hint"><?= empty($mon['tuned_at'])
+          ? te('Recalculé sur le p95 mesuré de cette sonde.')
+          : te('Recalculé sur le p95 mesuré de cette sonde, dernière fois {when}.',
+               ['when' => human_since((string)$mon['tuned_at'])]) ?></span>
       <?php endif; ?></dd>
 
     <dt><?= te('Cadence') ?></dt>

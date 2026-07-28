@@ -195,6 +195,34 @@ Cette chaîne est **déduite automatiquement**, dans cet ordre de préférence :
 d'erreur. Si elle disparaît alors que la page
 répond encore 200, la couche données est tombée et vous le savez en une vérification.
 
+### Les versions vulnérables, avant que quoi que ce soit ne casse
+
+Uptimer lit déjà le HTML de chaque page qu'il vérifie, et ce HTML dit presque toujours quelle version tourne : la
+balise `generator`, le paramètre `?ver=` des fichiers statiques, les chemins d'extensions. Il construit donc
+**l'inventaire logiciel de chaque site** sans rien demander de plus, puis le croise avec les bases d'avis
+publiques : **OSV.dev** pour Packagist (Drupal, Laravel, Symfony, TYPO3, Magento, PrestaShop, Joomla) et
+**api.wordpress.org** pour le cœur WordPress, ses extensions et ses thèmes.
+
+![Logiciels et failles connues](docs/img/vulnerabilities.png)
+
+Deux signaux, et ils ne se mélangent jamais :
+
+| | |
+|---|---|
+| **Faille publiée** | Un avis identifié couvre *précisément* la version détectée. Identifiant, date et lien sont affichés. Rien n'est déduit. |
+| **Version en retard** | La version installée est antérieure à la dernière publiée. Une dette, pas une faille, et ce n'est pas dit avec les mêmes mots. |
+
+Un outil qui crie « vulnérable » alors qu'il ne sait que « pas à jour » se fait ignorer en trois semaines, et le
+jour où il a raison, personne ne regarde. La gravité n'est donc affichée que si un avis l'a annoncée, une version
+illisible ne déclenche aucune interrogation au lieu d'une supposition, et mettre un site à jour remet le verdict
+à zéro immédiatement.
+
+Une interrogation par composant et par version, gardée sept jours, plafonnée par passe d'entretien : cent sites
+ne produisent pas cent requêtes par jour. Ce qui sort de chez vous se limite au nom du composant et à son numéro
+de version, jamais l'adresse du site concerné, et l'ensemble se coupe en un clic.
+
+→ **[Veille de sécurité](docs/fr/veille-securite.md)**
+
 ### Certificats, domaines, et tout le reste
 
 | | |
@@ -222,6 +250,8 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration seulement | ❌ | ❌ | ⚠️ à scripter |
 | Erreurs de console reconstituées | ✅ | ❌ | ⚠️ dans les logs du script | ❌ | ❌ | ❌ | ⚠️ dans les logs |
 | Image avant / après de la page cassée | ✅ silhouette | ❌ | ⚠️ capture dans un script | ⚠️ capture | ❌ | ❌ | ⚠️ capture |
+| Inventaire logiciel de chaque site, versions comprises | ✅ depuis le HTML déjà reçu | ❌ | ❌ | ⚠️ avec un agent | ❌ | ✅ avec un agent | ⚠️ avec un agent |
+| Faille publiée sur la version détectée | ✅ OSV + wordpress.org | ❌ | ❌ | ⚠️ produit séparé | ❌ | ⚠️ à construire | ⚠️ produit séparé |
 | Base de données tombée derrière un 200 | ✅ signatures + chaîne de preuve | ⚠️ mot-clé manuel | ⚠️ assertion manuelle | ⚠️ mot-clé manuel | ⚠️ mot-clé manuel | ⚠️ à construire | ⚠️ assertion manuelle |
 | Chaîne de preuve déduite automatiquement | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Alerte sur un `noindex` oublié | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
@@ -421,11 +451,10 @@ uptimer/
 Le [backlog](BACKLOG.md) contient la recherche concurrentielle et les user stories derrière chaque décision.
 À suivre :
 
-- Import depuis un sitemap et depuis un CSV
-- Résumé quotidien au lieu d'une alerte par évènement, pour ceux qui préfèrent un seul e-mail
+- Mode agence multi-client, avec un accès en lecture seule à donner au client
 - Core Web Vitals sur les pages qui comptent
-- Veille de vulnérabilités WordPress sur les versions détectées
-- Rapport client mensuel envoyé automatiquement
+- Import depuis les principaux outils concurrents, pour que migrer prenne cinq minutes
+- Résumé quotidien au lieu d'une alerte par évènement, pour ceux qui préfèrent un seul e-mail
 
 ---
 

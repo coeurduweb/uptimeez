@@ -112,7 +112,7 @@ $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
         <div class="field-inline">
           <input id="<?= $uid ?>-slow" type="number" name="slow_ms" min="0" max="60000" step="100"
                  value="<?= e($v('slow_ms', (string)($d['slow_ms'] ?? 3000))) ?>">
-          <span class="unit"><?= te('ms') ?></span>
+          <span class="unit">ms</span>
         </div>
         <span class="hint"><?= te('Au-delà, la sonde passe en « à surveiller » sans être déclarée hors service.') ?></span>
       </div>

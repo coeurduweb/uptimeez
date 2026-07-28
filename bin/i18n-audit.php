@@ -131,10 +131,17 @@ function is_fragment(string $id): bool
     // légitimes (étiquette de champ, élément de liste).
     if (preg_match('~^[·—–,;:/|)]~u', $s)) return true;
     if (preg_match('~[·—–,/|(]$~u', $s)) return true;
-    // Un seul mot en minuscule, sans être un mot d'interface plausible.
-    if (preg_match('~^[a-zà-ÿ]+$~u', $s) && mb_strlen($s) > 1) {
-        static $ok = ['uptime', 'sonde', 'sondes', 'ping', 'jours', 'oui', 'non'];
-        if (!in_array($s, $ok, true)) return true;
+    // Un mot isolé n'est pas un défaut en soi : « critique », « thème » ou
+    // « activée » sont des étiquettes de badge, et chaque langue les traduit.
+    // Ce qui n'a rien à faire dans un catalogue, c'est une unité ou une
+    // abréviation technique : elle s'écrit pareil partout et elle signale
+    // presque toujours une phrase coupée autour d'une valeur.
+    if (preg_match('~^[a-zà-ÿ]+$~u', $s)) {
+        static $ok    = ['uptime', 'sonde', 'sondes', 'ping', 'jours', 'oui', 'non'];
+        static $units = ['ms', 'ko', 'mo', 'go', 'px', 'req', 'min', 'sec', 'api', 'url',
+                         'css', 'js', 'html', 'ip', 'dns', 'tls', 'ssl', 'http', 'https'];
+        if (in_array($s, $units, true)) return true;
+        if (mb_strlen($s) <= 3 && !in_array($s, $ok, true)) return true;
     }
     // Se termine par une préposition : la valeur suit, donc msgid coupé.
     // On ne l'applique qu'aux phrases courtes : un paragraphe qui finit ainsi
@@ -222,7 +229,7 @@ if ($all || isset($opts['nus'])) {
     ksort($byFile);
     foreach ($byFile as $f => $rows) {
         echo "  $f (" . count($rows) . ")\n";
-        foreach (array_slice($rows, 0, (int)($opts['nus'] === true ? 8 : 200)) as $r) echo "      $r\n";
+        foreach (array_slice($rows, 0, ($opts['nus'] ?? true) === true ? 8 : 200) as $r) echo "      $r\n";
     }
 }
 if (isset($opts['manquants'])) {

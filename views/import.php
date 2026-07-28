@@ -136,7 +136,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
             <?php endif; ?></td>
           <td class="tiny mono"><?= e(str_cut($r['url'], 70)) ?></td>
           <td class="num small"><?= e(human_duration((int)$r['interval'])) ?></td>
-          <td class="num small"><?= !empty($r['exists']) ? '—' : t('jusqu\'à') . (int)$r['pages'] ?></td>
+          <td class="num small"><?= !empty($r['exists']) ? '—' : te('jusqu\'à {n}', ['n' => (int)$r['pages']]) ?></td>
           <td class="small"><?= $r['proof'] ? e(str_cut((string)$r['proof'], 30))
               : '<span class="muted">déduite du contenu</span>' ?></td>
           <td class="num"><?= !empty($r['exists']) ? Ui::badge(t('déjà présente'), 'neutral') : Ui::badge(t('à créer'), 'ok') ?></td>

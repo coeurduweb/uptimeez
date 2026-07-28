@@ -151,6 +151,28 @@ final class Db
             created_at {$ts} NOT NULL
         ){$eng}";
 
+        /* Inventaire logiciel : ce que chaque site exécute, et ce que les avis
+           de sécurité publics en disent. La version vient du HTML déjà reçu,
+           donc rien de plus n'est demandé au site surveillé. */
+        $tables['components'] = "CREATE TABLE IF NOT EXISTS components (
+            id {$pk},
+            site_id {$int} NOT NULL,
+            monitor_id {$int} DEFAULT NULL,
+            kind {$str(12)} NOT NULL,          /* core | plugin | theme */
+            slug {$str(80)} NOT NULL,
+            name {$str(120)} NOT NULL,
+            version {$str(40)} DEFAULT NULL,
+            source {$str(12)} DEFAULT NULL,    /* generator | asset | path */
+            latest {$str(40)} DEFAULT NULL,
+            outdated {$bool} NOT NULL DEFAULT 0,
+            vuln_count {$int} NOT NULL DEFAULT 0,
+            worst {$str(12)} DEFAULT NULL,
+            advisories {$txt},
+            checked_at {$ts} DEFAULT NULL,
+            first_seen_at {$ts} DEFAULT NULL,
+            seen_at {$ts} DEFAULT NULL
+        ){$eng}";
+
         $tables['monitors'] = "CREATE TABLE IF NOT EXISTS monitors (
             id {$pk},
             site_id {$int} DEFAULT NULL,
@@ -338,6 +360,11 @@ final class Db
             'CREATE INDEX IF NOT EXISTS idx_inc_open ON incidents (ended_at)',
             'CREATE INDEX IF NOT EXISTS idx_mon_next ON monitors (enabled, next_check_at)',
             'CREATE INDEX IF NOT EXISTS idx_mon_site ON monitors (site_id)',
+            // Un composant est unique par site : l'index le garantit, ce qui
+            // évite d'accumuler des doublons à chaque analyse de page.
+            'CREATE UNIQUE INDEX IF NOT EXISTS idx_comp_uniq ON components (site_id, kind, slug)',
+            'CREATE INDEX IF NOT EXISTS idx_comp_scan ON components (checked_at)',
+            'CREATE INDEX IF NOT EXISTS idx_comp_vuln ON components (vuln_count)',
             'CREATE INDEX IF NOT EXISTS idx_events_ts ON events (ts)',
         ];
         foreach ($idx as $sql) {

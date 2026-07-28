@@ -615,6 +615,128 @@ check('un mode inconnu retombe sur simple',
     in_array('simple', Uptimer\Ui::MODES, true) && !in_array('nawak', Uptimer\Ui::MODES, true), true);
 
 // =========================================================================
+section('Inventaire logiciel : lecture des versions');
+// =========================================================================
+use Uptimer\Detect\Stack;
+
+$wpHtml = '<html><head><meta name="generator" content="WordPress 6.4.2">'
+    . '<link rel="stylesheet" href="/wp-includes/css/dist/block-library/style.min.css?ver=6.4.2">'
+    . '<link rel="stylesheet" href="/wp-content/plugins/elementor/assets/css/frontend.min.css?ver=3.18.3">'
+    . '<link rel="stylesheet" href="/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=5.8.6">'
+    . '<link rel="stylesheet" href="/wp-content/themes/astra/style.css?ver=4.6.2">'
+    . '<script src="/wp-content/plugins/woocommerce/assets/js/cart.min.js"></script>'
+    . '</head><body>x</body></html>';
+$inv = [];
+foreach (Stack::inventory($wpHtml, 'WordPress') as $c) $inv[$c['kind'] . ':' . $c['slug']] = $c;
+
+check('cœur WordPress détecté', $inv['core:wordpress']['version'] ?? null, '6.4.2');
+check('version lue dans la balise generator', $inv['core:wordpress']['source'] ?? null, 'generator');
+check('extension avec sa version', $inv['plugin:elementor']['version'] ?? null, '3.18.3');
+check('seconde extension', $inv['plugin:contact-form-7']['version'] ?? null, '5.8.6');
+check('thème détecté', $inv['theme:astra']['version'] ?? null, '4.6.2');
+check('extension sans version enregistrée sans version',
+    array_key_exists('plugin:woocommerce', $inv) && $inv['plugin:woocommerce']['version'] === null, true);
+check('nom lisible déduit du dossier', $inv['plugin:contact-form-7']['name'] ?? null, 'Contact Form 7');
+
+// La version la plus précise doit gagner, quelle que soit sa provenance.
+$dr = '<html><head><meta name="Generator" content="Drupal 10 (https://www.drupal.org)">'
+    . '<script src="/core/misc/drupal.js?v=10.1.6"></script>'
+    . '<link href="/sites/default/modules/contrib/webform/css/webform.css"></head><body></body></html>';
+$dinv = [];
+foreach (Stack::inventory($dr, 'Drupal') as $c) $dinv[$c['kind'] . ':' . $c['slug']] = $c;
+check('version précise préférée à la version majeure', $dinv['core:drupal']['version'] ?? null, '10.1.6');
+check('module Drupal détecté', isset($dinv['plugin:webform']), true);
+check('dossier « contrib » n\'est pas un module', isset($dinv['plugin:contrib']), false);
+
+// Sans rien de lisible, on n'invente pas de version.
+$bare = '<html><head><title>x</title></head><body><p>rien</p></body></html>';
+$binv = Stack::inventory($bare, 'WordPress');
+check('sans indice, le cœur est noté sans version',
+    count($binv) === 1 && $binv[0]['version'] === null, true);
+check('sans technologie connue, inventaire vide', Stack::inventory($bare, null), []);
+
+// Robustesse : le collecteur ne doit pas s'étouffer.
+foreach ([['vide', ''], ['balises cassées', '<html><head><meta name=generator content=WordPress'],
+          ['chemins hostiles', '<link href="/wp-content/plugins/../../etc/passwd/x.css?ver=1.0">'],
+          ['énorme', str_repeat('<link href="/wp-content/plugins/p' . 'x/a.css?ver=1.0">', 500)]] as [$lbl, $bad]) {
+    $r = Stack::inventory($bad, 'WordPress');
+    check('HTML ' . $lbl . ' : inventaire borné', is_array($r) && count($r) <= 40, true);
+}
+
+// Comparaison de versions, y compris avec des suffixes.
+foreach ([['6.4.2', '6.4.3', -1], ['6.4.3', '6.4.2', 1], ['6.4.2', '6.4.2', 0],
+          ['6.4', '6.4.0', 0], ['10.1.6', '9.5.0', 1], ['6.4.2-beta1', '6.4.2', 0],
+          ['', '1.0', -1], ['10', '10.1.6', -1], ['1.0.0.0', '1', 0]] as [$a, $b, $want]) {
+    check('version ' . ($a ?: '(vide)') . ' vs ' . $b, Stack::compare($a, $b), $want);
+}
+// Le retard n'est affirmé que quand il est certain.
+check('6.4.2 est en retard sur 6.4.3', Stack::isBehind('6.4.2', '6.4.3'), true);
+check('6.4.3 n\'est pas en retard sur 6.4.2', Stack::isBehind('6.4.3', '6.4.2'), false);
+check('version majeure seule : retard indécidable, donc non affirmé',
+    Stack::isBehind('10', '10.1.6'), false);
+check('version majeure différente : retard certain', Stack::isBehind('9', '10.1.6'), true);
+check('version identique : aucun retard', Stack::isBehind('6.4.2', '6.4.2'), false);
+check('version absente : aucune affirmation', Stack::isBehind('', '6.4.2'), false);
+check('précision comptée correctement', Stack::precision('6.4.2-beta1'), 3);
+
+// Gravité : on ne l'invente pas quand la source ne la donne pas.
+check('gravité absente reste inconnue', Uptimer\Vuln::worstSeverity([['id' => 'X']]), 'unknown');
+check('gravité la pire retenue',
+    Uptimer\Vuln::worstSeverity([['severity' => 'low'], ['severity' => 'high'], ['severity' => 'medium']]), 'high');
+check('aucun avis, aucune gravité', Uptimer\Vuln::worstSeverity([]), null);
+check('libellé de gravité traduit', mb_strlen(Uptimer\Vuln::severityLabel('high')) > 3, true);
+
+// --- Enregistrement et remise à zéro sur changement de version ----------
+$tmpV = sys_get_temp_dir() . '/uptimer-vuln-' . bin2hex(random_bytes(3)) . '.sqlite';
+$prevDbV = Uptimer\Config::get('db.sqlite');
+Uptimer\Config::set('db.sqlite', $tmpV);
+Uptimer\Db::migrate();
+$vsid = Uptimer\Db::insert('sites', ['name' => 'Site', 'domain' => 'site.fr', 'created_at' => now()]);
+$vmid = Uptimer\Db::insert('monitors', ['site_id' => $vsid, 'name' => 'Accueil', 'url' => 'https://site.fr/',
+    'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300, 'timeout_sec' => 15,
+    'retries' => 0, 'slow_ms' => 3000, 'expect_status' => '200-299', 'check_ssl' => 0, 'check_css' => 0,
+    'check_db' => 0, 'check_noindex' => 0, 'ssl_warn_days' => 14, 'css_drop_pct' => 35, 'enabled' => 1,
+    'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'follow_redirects' => 1]);
+
+$n = Uptimer\Vuln::record($vmid, $vsid, $wpHtml, 'WordPress');
+check('inventaire enregistré', $n >= 5, true);
+check('un composant par site, sans doublon',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$vsid]), $n);
+Uptimer\Vuln::record($vmid, $vsid, $wpHtml, 'WordPress');
+check('une seconde lecture ne duplique rien',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$vsid]), $n);
+
+// Un verdict de veille, puis une mise à jour du site : le verdict doit tomber.
+Uptimer\Db::update('components', ['vuln_count' => 2, 'worst' => 'high', 'checked_at' => now(),
+    'advisories' => jenc([['id' => 'X-1', 'severity' => 'high']])],
+    'site_id = :s AND slug = :g', ['s' => $vsid, 'g' => 'elementor']);
+check('un composant est marqué vulnérable',
+    (int)Uptimer\Db::val('SELECT vuln_count FROM components WHERE site_id = ? AND slug = ?', [$vsid, 'elementor']), 2);
+$updated = str_replace('elementor/assets/css/frontend.min.css?ver=3.18.3',
+                       'elementor/assets/css/frontend.min.css?ver=3.25.0', $wpHtml);
+Uptimer\Vuln::record($vmid, $vsid, $updated, 'WordPress');
+$after = Uptimer\Db::one('SELECT version, vuln_count, checked_at FROM components
+                          WHERE site_id = ? AND slug = ?', [$vsid, 'elementor']);
+check('la nouvelle version est enregistrée', $after['version'], '3.25.0');
+check('le verdict est remis à zéro après mise à jour', (int)$after['vuln_count'], 0);
+check('et sera revérifié', $after['checked_at'], null);
+
+// Sans version lisible, la veille n'a rien à interroger.
+Uptimer\Db::q('UPDATE components SET version = NULL');
+$sc = Uptimer\Vuln::scan(5);
+check('aucune version : aucune interrogation', $sc['checked'], 0);
+
+// Les compteurs restent cohérents.
+$vc = Uptimer\Vuln::counts();
+check('compteurs disponibles',
+    array_keys($vc), ['components', 'with_vuln', 'high', 'outdated', 'unchecked']);
+check('rien de vulnérable dans cette base', $vc['with_vuln'], 0);
+check('aucune trouvaille à signaler', Uptimer\Vuln::findings(), []);
+
+Uptimer\Config::set('db.sqlite', $prevDbV);
+@unlink($tmpV); @unlink($tmpV . '-wal'); @unlink($tmpV . '-shm');
+
+// =========================================================================
 section('Rapport mensuel : programmation et composition');
 // =========================================================================
 use Uptimer\Report;

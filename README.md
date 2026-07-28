@@ -189,6 +189,33 @@ That string is **derived automatically**, in this order of preference: footer co
 title, first nav item, H1. It is never taken from an error page. If it vanishes while the page still answers 200, the data layer is
 gone and you know within one check.
 
+### Vulnerable versions, before anything breaks
+
+Uptimer already reads the HTML of every page it checks, and that HTML almost always says which version is
+running: the `generator` tag, the `?ver=` parameter on static files, the plugin paths. So it builds a **software
+inventory of every site** at no extra cost, then crosses it with public advisory databases: **OSV.dev** for
+Packagist (Drupal, Laravel, Symfony, TYPO3, Magento, PrestaShop, Joomla) and **api.wordpress.org** for the
+WordPress core, its plugins and its themes.
+
+![Software and known vulnerabilities](docs/img/vulnerabilities.png)
+
+Two signals, and they are never mixed up:
+
+| | |
+|---|---|
+| **Published vulnerability** | An identified advisory covers *exactly* the detected version. Identifier, date and link are shown. Nothing is inferred. |
+| **Behind latest** | The installed version is older than the latest release. Technical debt, not a vulnerability, and it is worded differently. |
+
+A tool that shouts "vulnerable" when it only knows "not up to date" gets ignored within three weeks, and the day
+it is right nobody is looking. So severity is only ever displayed when an advisory announced one, an unreadable
+version means no lookup instead of a guess, and updating a site resets the verdict immediately.
+
+One lookup per component and per version, cached seven days, capped per maintenance pass: a hundred sites do not
+produce a hundred requests a day. What leaves your server is the component name and its version number, never
+the address of the site concerned, and the whole thing switches off in one click.
+
+→ **[Security watch](docs/en/security-watch.md)**
+
 ### Certificates, domains, and everything else
 
 | | |
@@ -216,6 +243,8 @@ request; the table lives in this file.
 | Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement only | ❌ | ❌ | ⚠️ write a synthetic script |
 | Browser-console errors reconstructed | ✅ | ❌ | ⚠️ in script logs | ❌ | ❌ | ❌ | ⚠️ in script logs |
 | Before / after picture of the broken page | ✅ silhouette | ❌ | ⚠️ screenshot in a script | ⚠️ screenshot | ❌ | ❌ | ⚠️ screenshot |
+| Software inventory of each site, versions included | ✅ from the HTML already fetched | ❌ | ❌ | ⚠️ with an agent | ❌ | ✅ with an agent | ⚠️ with an agent |
+| Published vulnerability on the detected version | ✅ OSV + wordpress.org | ❌ | ❌ | ⚠️ separate product | ❌ | ⚠️ build it yourself | ⚠️ separate product |
 | Database down behind a 200 | ✅ signatures + proof string | ⚠️ manual keyword | ⚠️ manual assertion | ⚠️ manual keyword | ⚠️ manual keyword | ⚠️ build it yourself | ⚠️ manual assertion |
 | Proof string inferred automatically | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Forgotten `noindex` alert | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
@@ -411,11 +440,10 @@ uptimer/
 
 The [backlog](BACKLOG.md) holds the competitor research and the user stories behind each decision. Next up:
 
-- Sitemap and CSV import sources
-- A daily digest instead of per-event alerts, for people who prefer one e-mail
+- Multi-client agency mode, with a read-only access you can hand to a client
 - Core Web Vitals on the pages that matter
-- WordPress vulnerability watch on detected versions
-- Automatic monthly client report by e-mail
+- Importers for the main competing tools, so migrating is a five-minute job
+- A daily digest instead of per-event alerts, for people who prefer one e-mail
 
 ---
 

@@ -154,6 +154,11 @@ final class Triage
             }
         }
 
+        // --- Failles publiées sur les versions détectées ----------------------
+        // Une faille ne casse pas le site : elle le mettra en danger si personne
+        // n'intervient. Sa place est donc ici, pas dans ce qui est déjà arrivé.
+        foreach (Vuln::findings(6) as $v) $out[] = $v;
+
         // --- Ralentissement durable ------------------------------------------
         foreach (self::slowdowns() as $s) $out[] = $s;
 

@@ -168,6 +168,7 @@ return [
     'la configurer' => 'इसे सेट करें',
     'la tâche planifiée n\'a jamais tourné' => 'शेड्यूल किया कार्य कभी नहीं चला',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'दिखाए गए साइट असली हैं, सभी माप काल्पनिक हैं। खराबियाँ ऐसे स्टेजिंग सब-डोमेन पर हैं जो मौजूद नहीं हैं।',
+    'pas encore vérifié' => 'अभी जाँचा नहीं',
     'pris en compte' => 'स्वीकृत',
     'période :' => 'अवधि',
     'réglages' => 'सेटिंग्स',

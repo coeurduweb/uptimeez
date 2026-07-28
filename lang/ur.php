@@ -168,6 +168,7 @@ return [
     'la configurer' => 'اسے سیٹ کریں',
     'la tâche planifiée n\'a jamais tourné' => 'شیڈول شدہ کام کبھی نہیں چلا',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'دکھائی گئی سائٹس اصلی ہیں، تمام پیمائشیں فرضی ہیں۔ خرابیاں ایسے اسٹیجنگ سب ڈومینز پر ہیں جو موجود نہیں۔',
+    'pas encore vérifié' => 'ابھی جانچا نہیں',
     'pris en compte' => 'تسلیم شدہ',
     'période :' => 'مدت',
     'réglages' => 'ترتیبات',

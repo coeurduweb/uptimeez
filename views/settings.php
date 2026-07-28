@@ -233,6 +233,30 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
     </div>
   <?= Ui::accClose() ?>
 
+  <!-- ==================== VEILLE ET SÉCURITÉ ==================== -->
+  <?= Ui::accOpen('watch', 'shield', t('Veille de sécurité'),
+        Config::get('vuln.enabled', true) ? t('activée') : t('désactivée')) ?>
+  <?= Ui::accBody() ?>
+    <p class="muted small"><?= te('Les versions sont lues dans le HTML déjà reçu, sans rien demander de plus au site.') ?>
+      <?= te('Pour savoir si une version a une faille publiée, {app} interroge deux sources publiques et sans clé : OSV.dev et api.wordpress.org. Ce qui sort de chez vous se limite au nom du composant et à son numéro de version, jamais une adresse de site.') ?></p>
+    <div class="form-cols">
+      <div>
+        <label class="switchrow"><input type="checkbox" name="vuln_enabled" <?= Config::get('vuln.enabled', true) ? 'checked' : '' ?>>
+          <span class="sw-text"><span class="sw-title"><?= te('Croiser les versions avec les avis publiés') ?></span>
+            <span class="hint"><?= te('Une interrogation par composant et par version, gardée sept jours. Un parc de cent sites ne produit pas cent requêtes par jour.') ?></span></span></label>
+        <label class="switchrow"><input type="checkbox" name="block_private" <?= Config::get('security.block_private_ranges', false) ? 'checked' : '' ?>>
+          <span class="sw-text"><span class="sw-title"><?= te('Refuser les adresses locales et privées') ?></span>
+            <span class="hint"><?= te('Empêche de surveiller 127.0.0.1, un réseau interne ou l\'adresse de métadonnées de l\'hébergeur. À activer si plusieurs personnes ont accès à cet écran.') ?></span></span></label>
+      </div>
+      <div>
+        <div class="field"><label for="vt"><?= te('Délai maximum des interrogations') ?></label><?= hint('Temps accordé à une source d\'avis pour répondre. Au-delà, la veille passe au composant suivant : elle ne retarde jamais une vérification de site.') ?>
+          <div class="field-inline"><input id="vt" type="number" name="vuln_timeout" min="3" max="30"
+                 value="<?= (int)Config::get('vuln.timeout_sec', 8) ?>"><span class="unit">s</span></div></div>
+        <p class="muted small"><?= te('Deux signaux qui ne se mélangent pas. « Faille publiée » veut dire qu\'un avis de sécurité identifié couvre précisément cette version : l\'identifiant et le lien sont donnés. « Version en retard » veut dire que la version installée est antérieure à la dernière publiée, ce qui est une dette, pas une faille.') ?></p>
+      </div>
+    </div>
+  <?= Ui::accClose() ?>
+
   <!-- ==================== APPLICATION ==================== -->
   <?= Ui::accOpen('app', 'globe', t('Application et accès'),
         $token !== '' ? 'page d\'état publique activée' : 'nom, adresse, mot de passe') ?>

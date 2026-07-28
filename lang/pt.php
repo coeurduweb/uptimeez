@@ -168,6 +168,7 @@ return [
     'la configurer' => 'configurá-la',
     'la tâche planifiée n\'a jamais tourné' => 'a tarefa agendada nunca correu',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'os sites mostrados são reais, todas as medições são fictícias. As falhas estão em subdomínios de pré-produção que não existem.',
+    'pas encore vérifié' => 'Ainda não verificado',
     'pris en compte' => 'reconhecido',
     'période :' => 'Período',
     'réglages' => 'Definições',

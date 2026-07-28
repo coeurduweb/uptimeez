@@ -168,6 +168,7 @@ return [
     'la configurer' => 'إعدادها',
     'la tâche planifiée n\'a jamais tourné' => 'المهمة المجدولة لم تعمل قطّ',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'المواقع المعروضة حقيقية، وكل القياسات خيالية. الأعطال على نطاقات فرعية للاختبار غير موجودة.',
+    'pas encore vérifié' => 'لم يُفحص بعد',
     'pris en compte' => 'تم الإقرار',
     'période :' => 'الفترة',
     'réglages' => 'الإعدادات',

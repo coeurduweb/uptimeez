@@ -21,6 +21,8 @@ use Uptimer\Db;
 use Uptimer\Importer;
 use Uptimer\Runner;
 use Uptimer\Stats;
+use Uptimer\Vuln;
+use Uptimer\Detect\Stack;
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
@@ -404,6 +406,61 @@ ok('synthèse globale cohérente', $sum['down'] > 0 && $sum['total'] > 0,
 ok('consolidation journalière', Stats::rollup(date('Y-m-d')) > 0);
 $w24 = Stats::window($ids['err500'], 86400);
 ok('uptime et incidents calculés', $w24['incidents'] >= 1, 'incidents=' . $w24['incidents']);
+
+// --- Veille de sécurité --------------------------------------------------
+// Deux parties nettement séparées : ce qui se lit dans le HTML (toujours
+// vérifié) et ce qui demande le réseau (vérifié si les sources répondent).
+title('Veille de sécurité');
+$vsite = Db::insert('sites', ['name' => 'Client veille', 'domain' => 'veille.test', 'created_at' => now()]);
+$vmon  = $mk(['site_id' => $vsite, 'name' => 'Client veille', 'url' => "$BASE/index.php"]);
+$vhtml = '<html><head><meta name="generator" content="WordPress 6.4.2">'
+       . '<link href="/wp-includes/css/dist/block-library/style.min.css?ver=6.4.2">'
+       . '<link href="/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=5.8.1">'
+       . '<link href="/wp-content/themes/twentytwentyone/style.css?ver=1.9">'
+       . '</head><body>ok</body></html>';
+$n = Vuln::record($vmon, $vsite, $vhtml, 'WordPress');
+// Trois composants : le cœur (deux lectures concordantes fusionnées en une
+// seule fiche), l'extension, le thème.
+ok('inventaire logiciel lu dans le HTML reçu', $n === 3, $n . ' composant(s)');
+$core = Db::one('SELECT * FROM components WHERE site_id = ? AND kind = ?', [$vsite, 'core']);
+ok('version du cœur lue sans requête supplémentaire', ($core['version'] ?? '') === '6.4.2',
+    (string)($core['version'] ?? '(aucune)'));
+$cf7 = Db::one('SELECT * FROM components WHERE site_id = ? AND slug = ?', [$vsite, 'contact-form-7']);
+ok('version d\'une extension distinguée de celle du cœur', ($cf7['version'] ?? '') === '5.8.1',
+    (string)($cf7['version'] ?? '(aucune)'));
+Db::update('components', ['vuln_count' => 3, 'worst' => 'critical', 'checked_at' => now()],
+           'id = :__i', ['__i' => (int)$core['id']]);
+Vuln::record($vmon, $vsite, str_replace('6.4.2', '6.7.1', $vhtml), 'WordPress');
+$core2 = Db::one('SELECT * FROM components WHERE id = ?', [(int)$core['id']]);
+ok('mise à jour du site : le verdict repart de zéro',
+    (string)$core2['version'] === '6.7.1' && (int)$core2['vuln_count'] === 0 && $core2['checked_at'] === null);
+ok('sans numéro de version, aucune interrogation lancée',
+    Db::val('SELECT COUNT(*) FROM components WHERE site_id = ? AND (version IS NULL OR version = \'\')', [$vsite]) >= 0);
+
+// Partie en ligne : les sources sont publiques et sans clé, mais un hébergement
+// peut bloquer les appels sortants. On le dit au lieu de faire échouer le banc.
+$net = Uptimer\Http::fetch('https://api.wordpress.org/core/version-check/1.7/', ['timeout_sec' => 8]);
+if ($net->status === 200) {
+    $latest = Vuln::lookup('core', 'wordpress', 'WordPress', '5.9');
+    ok('dernière version du cœur obtenue auprès de wordpress.org',
+        $latest['latest'] !== null && preg_match('~^\d+\.\d~', (string)$latest['latest']) === 1,
+        (string)$latest['latest']);
+    ok('retard signalé comme un retard, pas comme une faille',
+        $latest['outdated'] === true && $latest['advisories'] === []);
+    $adv = Vuln::lookup('core', 'drupal', 'Drupal', '9.3.0');
+    ok('avis publiés retrouvés sur OSV pour une version ancienne',
+        is_array($adv['advisories']), count($adv['advisories']) . ' avis');
+    foreach ($adv['advisories'] as $a) {
+        ok('chaque avis porte un identifiant vérifiable',
+            ($a['id'] ?? '') !== '' && ($a['url'] ?? '') !== '', (string)($a['id'] ?? ''));
+        break;
+    }
+    $scan = Vuln::scan(5);
+    ok('passe de veille bornée et comptabilisée', $scan['checked'] > 0 && $scan['checked'] <= 5,
+        $scan['checked'] . ' composant(s) examiné(s)');
+} else {
+    echo "      (sources d'avis inaccessibles depuis cet hébergement : partie en ligne non jouée)\n";
+}
 
 // =========================================================================
 echo "\n" . str_repeat('═', 68) . "\n";

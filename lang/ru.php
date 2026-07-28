@@ -168,6 +168,7 @@ return [
     'la configurer' => 'настроить её',
     'la tâche planifiée n\'a jamais tourné' => 'запланированная задача ни разу не запускалась',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => 'показанные сайты настоящие, все измерения выдуманы. Сбои — на тестовых поддоменах, которых не существует.',
+    'pas encore vérifié' => 'Ещё не проверено',
     'pris en compte' => 'принято',
     'période :' => 'Период',
     'réglages' => 'Настройки',

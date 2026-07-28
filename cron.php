@@ -98,7 +98,14 @@ try {
         if ($n) $out('  ' . $n . ' agrégat(s) d\'uptime recalculé(s)');
     }
 
-    // --- 3 bis. Rapports mensuels forcés (php cron.php --report) ---------
+    // --- 3 bis. Veille de sécurité forcée (php cron.php --vuln) ----------
+    if (in_array('--vuln', $argv ?? [], true)) {
+        $vs = Uptimer\Vuln::scan(60);
+        $out(sprintf('  veille : %d composant(s) vérifié(s), %d avec faille publiée, %d en retard',
+            $vs['checked'], $vs['vulnerable'], $vs['outdated']));
+    }
+
+    // --- 3 ter. Rapports mensuels forcés (php cron.php --report) ---------
     if (in_array('--report', $argv ?? [], true)) {
         $rep = Uptimer\Report::runMonthly();
         $out(sprintf('  rapport mensuel : %d envoyé(s), %d en échec, %d ignoré(s)',
@@ -118,6 +125,14 @@ try {
         Stats::refreshStale(0, 500);
         $out(sprintf('  entretien : %d jour(s) consolidé(s), %d mesure(s) purgée(s), %d domaine(s) vérifié(s)',
             $roll, $pur, $dom));
+
+        // Veille de sécurité : une interrogation par composant et par version,
+        // mise en cache sept jours, plafonnée pour ne pas charger le mutualisé.
+        $vs = Uptimer\Vuln::scan();
+        if ($vs['checked']) {
+            $out(sprintf('  veille : %d composant(s) vérifié(s), %d avec faille publiée, %d en retard',
+                $vs['checked'], $vs['vulnerable'], $vs['outdated']));
+        }
 
         // Rapports mensuels : l'envoi est marqué par une clé de mois, donc le
         // repasser ici chaque jour ne peut pas produire de doublon.

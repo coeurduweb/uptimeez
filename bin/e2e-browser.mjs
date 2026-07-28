@@ -242,6 +242,46 @@ try {
     ok('boutons assez hauts en ' + name, tap === 0, tap + ' bouton(s) trop petit(s)');
   }
 
+  title('Réglages');
+  await page.setViewportSize({ width: 1440, height: 950 });
+  await page.goto(BASE + '/index.php?p=settings', { waitUntil: 'networkidle' });
+  ok('écran des réglages affiché', (await page.$('form')) !== null);
+  // Chaque bloc doit s'ouvrir : un accordéon replié cache des champs qui, eux,
+  // partent quand même au serveur. Un bloc qui n'ouvre pas est une config perdue.
+  const blocks = await page.$$eval('details.acc > summary', (ss) => ss.length);
+  ok('blocs de réglages pliables', blocks >= 4, blocks + ' bloc(s)');
+  // L'ouverture des blocs est mémorisée : on n'ouvre que ce qui est replié,
+  // sinon un deuxième clic refermerait le bloc au lieu de l'ouvrir.
+  const openAcc = async (id) => {
+    // getAttribute renvoie une chaîne vide sur un attribut booléen présent :
+    // on lit donc la propriété, pas l'attribut.
+    if (!(await page.$eval(id, (el) => el.open))) await page.click(id + ' > summary');
+    await page.waitForSelector(id + '[open]');
+  };
+  await openAcc('#watch');
+  ok('bloc de veille de sécurité ouvert', await page.isVisible('input[name=vuln_enabled]'));
+  ok('délai des interrogations réglable', await page.isVisible('input[name=vuln_timeout]'));
+  // Aller-retour complet : on modifie, on enregistre, on relit.
+  const wasOn = await page.isChecked('input[name=vuln_enabled]');
+  await page.setChecked('input[name=vuln_enabled]', !wasOn);
+  await page.fill('input[name=vuln_timeout]', '11');
+  ok('barre d\'enregistrement apparue à la modification', await page.isVisible('.savebar'));
+  await page.click('.savebar button.btn-primary');
+  await page.waitForLoadState('networkidle');
+  await openAcc('#watch');
+  ok('veille enregistrée puis relue',
+    (await page.isChecked('input[name=vuln_enabled]')) === !wasOn);
+  ok('délai enregistré puis relu',
+    (await page.inputValue('input[name=vuln_timeout]')) === '11');
+  // Remise en état : le banc suivant doit retrouver la configuration d'origine.
+  await openAcc('#watch');
+  await page.setChecked('input[name=vuln_enabled]', wasOn);
+  await page.fill('input[name=vuln_timeout]', '8');
+  await page.click('.savebar button.btn-primary');
+  await page.waitForLoadState('networkidle');
+  ok('réglages remis dans leur état initial',
+    (await page.textContent('body')).includes('enregistr'));
+
   title('Import');
   await page.setViewportSize({ width: 1440, height: 950 });
   await page.goto(BASE + '/index.php?p=import', { waitUntil: 'networkidle' });

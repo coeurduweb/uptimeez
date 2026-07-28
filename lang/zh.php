@@ -168,6 +168,7 @@ return [
     'la configurer' => '去配置',
     'la tâche planifiée n\'a jamais tourné' => '计划任务从未运行',
     'les sites affichés sont réels, toutes les mesures sont fictives. Les pannes portent sur des sous-domaines de préproduction qui n\'existent pas.' => '显示的站点是真实的，所有测量数据均为虚构。故障都发生在并不存在的预发布子域名上。',
+    'pas encore vérifié' => '尚未检查',
     'pris en compte' => '已确认',
     'période :' => '时间段',
     'réglages' => '设置',

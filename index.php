@@ -293,6 +293,13 @@ function handle_post(): ?array
                     'max_parallel'   => max(1, min(20, (int)($_POST['def_parallel'] ?? 10))),
                     'retention_days' => max(7, (int)($_POST['def_retention'] ?? 60)),
                 ],
+                'vuln' => [
+                    'enabled'     => isset($_POST['vuln_enabled']),
+                    'timeout_sec' => max(3, min(30, (int)($_POST['vuln_timeout'] ?? 8))),
+                ],
+                'security' => [
+                    'block_private_ranges' => isset($_POST['block_private']),
+                ],
                 'notify' => [
                     'discord' => ['enabled' => isset($_POST['discord_enabled']), 'webhook' => trim((string)($_POST['discord_webhook'] ?? ''))],
                     'slack'   => ['enabled' => isset($_POST['slack_enabled']),   'webhook' => trim((string)($_POST['slack_webhook'] ?? ''))],

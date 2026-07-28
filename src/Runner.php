@@ -10,6 +10,7 @@ use Uptimer\Check\Silhouette;
 use Uptimer\Check\Ssl;
 use Uptimer\Detect\Discovery;
 use Uptimer\Notify\Notifier;
+use Uptimer\Vuln;
 
 /**
  * Orchestration d'une passe de surveillance.
@@ -361,6 +362,14 @@ final class Runner
                     'ua'       => $mon['user_agent'] ?: null,
                 ]);
                 $details['css'] = $css;
+                // L'inventaire logiciel se lit dans le HTML déjà reçu : aucune
+                // requête de plus, et la veille de sécurité s'appuie dessus.
+                if (!empty($mon['site_id'])) {
+                    $cms = $mon['site_cms']
+                        ?? Db::val('SELECT cms FROM sites WHERE id = ?', [(int)$mon['site_id']]);
+                    $details['stack'] = Vuln::record((int)$mon['id'], (int)$mon['site_id'],
+                                                     $res->body, $cms !== null ? (string)$cms : null);
+                }
                 if ($css['state'] === 'broken') {
                     $note('down', 'CSS_BROKEN', 'Mise en page cassée : ' . implode(' ', array_slice($css['messages'], 0, 3)));
                 } elseif ($css['state'] === 'warn') {

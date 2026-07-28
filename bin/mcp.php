@@ -247,9 +247,62 @@ function mcp_tools(): array
                                 . 'screenshot. A drift above 35 % means a visitor sees a different page. '
                                 . 'The SVG images are visible on the monitor page in the web interface.',
                     ],
+                    'software' => array_map(fn($c) => [
+                        'kind' => $c['kind'], 'name' => $c['name'], 'slug' => $c['slug'],
+                        'version' => $c['version'], 'latest' => $c['latest'],
+                        'behind_latest' => (int)$c['outdated'] === 1,
+                        'published_vulnerabilities' => (int)$c['vuln_count'],
+                        'worst_severity' => $c['worst'],
+                        'advisories' => array_map(fn($a) => [
+                            'id' => $a['id'] ?? null, 'severity' => $a['severity'] ?? null,
+                            'published' => $a['published'] ?? null, 'url' => $a['url'] ?? null,
+                            'summary' => $a['summary'] ?? null,
+                        ], jdec($c['advisories'] ?? null)),
+                        'checked_at' => $c['checked_at'],
+                    ], !empty($m['site_id']) ? \Uptimer\Vuln::forSite((int)$m['site_id']) : []),
                     'recent_incidents' => $inc,
                     'automatic_decisions' => \Uptimer\Tune::decisions($m),
                 ];
+            },
+        ],
+
+        'security_advisories' => [
+            'title' => 'Published vulnerabilities across the portfolio',
+            'desc'  => 'Software detected on the monitored sites whose exact version is covered by a '
+                     . 'published security advisory, worst severity first. Versions are read from the HTML '
+                     . 'already fetched, so nothing extra is asked of the sites. Two signals are kept '
+                     . 'strictly apart: "published vulnerability" means an identified advisory covers this '
+                     . 'exact version, "behind latest" only means the version is older than the latest '
+                     . 'release, which is a debt and not a vulnerability.',
+            'schema' => ['type' => 'object', 'properties' => [
+                'include_outdated' => ['type' => 'boolean',
+                    'description' => 'Also list components merely behind the latest version (default false)'],
+                'limit' => ['type' => 'integer', 'description' => 'Maximum rows, 1 to 100 (default 30)'],
+            ], 'additionalProperties' => false],
+            'write' => false,
+            'run' => function (array $a): array {
+                $limit = (int)max(1, min(100, (int)($a['limit'] ?? 30)));
+                $where = (bool)($a['include_outdated'] ?? false)
+                    ? 'c.vuln_count > 0 OR c.outdated = 1' : 'c.vuln_count > 0';
+                $rows = Db::all("SELECT c.*, s.name AS site_name FROM components c
+                                 JOIN sites s ON s.id = c.site_id WHERE $where
+                                 ORDER BY c.vuln_count DESC,
+                                          CASE c.worst WHEN 'high' THEN 0 WHEN 'medium' THEN 1
+                                               WHEN 'low' THEN 2 ELSE 3 END, s.name ASC
+                                 LIMIT " . $limit);
+                $out = [];
+                foreach ($rows as $c) {
+                    $out[] = [
+                        'site' => $c['site_name'], 'component' => $c['name'], 'kind' => $c['kind'],
+                        'version' => $c['version'], 'latest' => $c['latest'],
+                        'behind_latest' => (int)$c['outdated'] === 1,
+                        'published_vulnerabilities' => (int)$c['vuln_count'],
+                        'worst_severity' => $c['worst'],
+                        'advisories' => jdec($c['advisories'] ?? null),
+                    ];
+                }
+                $c = \Uptimer\Vuln::counts();
+                return ['summary' => $c, 'count' => count($out), 'components' => $out];
             },
         ],
 
