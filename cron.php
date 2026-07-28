@@ -1,0 +1,130 @@
+<?php
+/**
+ * Uptimer — passe de surveillance. À exécuter chaque minute :
+ *   * * * * * /usr/bin/php /home/user/uptimer/cron.php >/dev/null 2>&1
+ *
+ * Ou par URL si crontab n'est pas accessible (clé à définir dans les réglages) :
+ *   https://exemple.fr/uptimer/cron.php?key=VOTRECLE
+ *
+ * Uptimer choisit elle-même les sondes dues : une exécution par minute suffit
+ * quels que soient les intervalles configurés.
+ */
+declare(strict_types=1);
+
+require __DIR__ . '/src/bootstrap.php';
+
+use Uptimer\Config;
+use Uptimer\Db;
+use Uptimer\Importer;
+use Uptimer\Runner;
+use Uptimer\Stats;
+
+$isCli = PHP_SAPI === 'cli';
+
+if (!$isCli) {
+    header('Content-Type: text/plain; charset=utf-8');
+    $key = (string)Config::get('app.cron_key', '');
+    if ($key === '' || !hash_equals($key, (string)($_GET['key'] ?? ''))) {
+        http_response_code(403);
+        exit("Accès refusé. Définissez une clé de cron dans les réglages, puis appelez cron.php?key=...\n");
+    }
+    ignore_user_abort(true);
+}
+
+if (!Config::isInstalled()) {
+    exit("Uptimer n'est pas installé : ouvrez install.php dans votre navigateur.\n");
+}
+
+$t0     = microtime(true);
+$budget = (float)($isCli ? ($argv[1] ?? 50) : 25);
+$budget = max(5.0, min(280.0, $budget));
+
+// --- Verrou : jamais deux passes en parallèle -----------------------------
+$lockFile = UPTIMER_ROOT . '/data/cron.lock';
+if (!is_dir(dirname($lockFile))) @mkdir(dirname($lockFile), 0775, true);
+$lock = @fopen($lockFile, 'c');
+if ($lock === false) {
+    exit("Impossible d'ouvrir le verrou (droits sur data/ ?).\n");
+}
+if (!flock($lock, LOCK_EX | LOCK_NB)) {
+    echo "Une passe est déjà en cours, on laisse la main.\n";
+    exit;
+}
+
+$out = function (string $line): void { echo $line . "\n"; };
+
+try {
+    Db::migrate();
+
+    // --- 1. Surveillance ------------------------------------------------
+    $stats = Runner::runDue(120, $budget * 0.8);
+    $out(sprintf('[%s] %d sonde(s) en %.1fs — %d HS, %d dégradée(s), %d OK',
+        date('H:i:s'), $stats['ran'], $stats['seconds'], $stats['down'], $stats['degraded'], $stats['up']));
+
+    // Sondes réglées sous la minute : le cron ne peut pas tourner plus souvent,
+    // alors la passe se dédouble elle-même dans la minute en cours.
+    $subMinute = (int)Db::val('SELECT COUNT(*) FROM monitors WHERE enabled = 1 AND interval_sec < 60', [], 0);
+    if ($subMinute > 0) {
+        $rounds = 0;
+        while ($rounds < 2 && microtime(true) - $t0 < $budget - 12) {
+            $wait = 30 - ((int)(microtime(true) - $t0) % 30);
+            if ($wait > 0 && $wait <= 30) sleep($wait);
+            $extra = Runner::runDue(60, max(5.0, $budget - (microtime(true) - $t0) - 4));
+            if ($extra['ran'] > 0) {
+                $out(sprintf('  passe intermédiaire : %d sonde(s), %d HS', $extra['ran'], $extra['down']));
+            }
+            $rounds++;
+        }
+    }
+
+    // --- 2. Préparation des sondes importées ----------------------------
+    if (microtime(true) - $t0 < $budget * 0.9) {
+        $pending = Importer::pending(3);
+        foreach ($pending as $p) {
+            if (microtime(true) - $t0 > $budget * 0.95) break;
+            $r = Importer::setup((int)$p['id']);
+            $out('  préparation ' . $p['url'] . ' → ' . ($r['message'] ?? ($r['ok'] ? 'ok' : 'échec')));
+        }
+    }
+
+    // --- 2 bis. Sondes battement : c'est l'absence de signal qui alerte -----
+    $hb = Uptimer\Heartbeat::sweep();
+    if ($hb) $out('  ' . $hb . ' sonde(s) battement sans signal');
+
+    // --- 3. Agrégats (toutes les 5 minutes) ------------------------------
+    if ((int)date('i') % 5 === 0 || (int)Db::setting('stats_never', 1) === 1) {
+        $n = Stats::refreshStale(280, 120);
+        Db::setSetting('stats_never', '0');
+        if ($n) $out('  ' . $n . ' agrégat(s) d\'uptime recalculé(s)');
+    }
+
+    // --- 4. Entretien quotidien (vers 3 h du matin) ----------------------
+    $today = date('Y-m-d');
+    if ((int)date('G') === 3 && Db::setting('daily_done') !== $today) {
+        Db::setSetting('daily_done', $today);
+        $tuned = Uptimer\Tune::run(40);
+        if ($tuned) $out('  ' . $tuned . ' seuil(s) de lenteur réajusté(s)');
+        $roll = Stats::rollup(date('Y-m-d', time() - 86400));
+        $pur  = Stats::purge();
+        $dom  = Runner::refreshDomains(25);
+        Stats::refreshStale(0, 500);
+        $out(sprintf('  entretien : %d jour(s) consolidé(s), %d mesure(s) purgée(s), %d domaine(s) vérifié(s)',
+            $roll, $pur, $dom));
+    }
+
+    // --- 5. Consolidation du jour en cours (pour la frise 30 jours) ------
+    if ((int)date('i') % 30 === 0) {
+        Stats::rollup($today);
+    }
+
+    Db::setSetting('cron_last_ok', now());
+} catch (Throwable $e) {
+    $out('ERREUR : ' . $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')');
+    try { Db::setSetting('cron_last_error', date('Y-m-d H:i:s') . ' — ' . $e->getMessage()); } catch (Throwable) {}
+    if ($isCli) exit(1);
+} finally {
+    flock($lock, LOCK_UN);
+    fclose($lock);
+}
+
+$out(sprintf('Terminé en %.1fs', microtime(true) - $t0));

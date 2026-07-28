@@ -1,0 +1,19 @@
+# Votre configuration : mot de passe haché, webhooks, réglages
+config.php
+
+# Vos données : base, verrou du cron, faux site de démonstration
+data/*.sqlite*
+data/*.lock
+data/*.log
+data/.demo
+data/demo-site/
+
+# Artefacts de la documentation reconstructibles avec bin/shots.mjs
+docs/img/seq/
+
+# Systèmes de fichiers
+.DS_Store
+Thumbs.db
+
+# Fichier de travail de l'audit i18n
+.msgids
