@@ -779,3 +779,26 @@ fieldset.fs legend { padding: 0 6px; font-size: 12.5px; font-weight: 650;
   .cli-site { grid-template-columns: 26px 1fr; row-gap: var(--s2); }
   .cli-site > :nth-child(3), .cli-site > :nth-child(4) { grid-column: 2; }
 }
+
+/* ===========================================================================
+   Vitesse ressentie : les mesures, puis les causes, puis le remède
+   ========================================================================= */
+.vit-kv dd { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; }
+.vit-kv dd .hint { flex: 1 1 100%; margin-top: 2px; }
+
+.vit-list { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .5rem; }
+.vit-f {
+  display: grid; gap: .2rem; padding: .6rem .75rem;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  /* La gravité se lit sur le bord : l'œil trie la liste sans lire. */
+  border-inline-start: 3px solid var(--border-strong);
+  background: var(--surface);
+}
+.vit-f strong { font-size: 13.5px; font-weight: 620; }
+.vit-f .vit-why { font-size: 12.5px; color: var(--text-soft); line-height: 1.45; }
+.vit-f .vit-fix { font-size: 12.5px; display: flex; gap: .35rem; align-items: baseline; color: var(--text); }
+.vit-f .vit-fix svg { flex: 0 0 auto; color: var(--accent); position: relative; top: 2px; }
+.vit-f .vit-ev { font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.vit-high { border-inline-start-color: var(--bad); }
+.vit-medium { border-inline-start-color: var(--warn); }
+.vit-low { border-inline-start-color: var(--border-strong); }

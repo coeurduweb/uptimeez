@@ -255,6 +255,19 @@ final class Db
             silhouette_at {$ts} DEFAULT NULL,
             silhouette_drift {$int} NOT NULL DEFAULT 0,
 
+            /* Vitesse ressentie : ce que le HTML déjà reçu explique du LCP, du
+               CLS et de l'INP, plus les mesures de terrain quand une clé CrUX
+               est fournie. Rien n'est estimé : voir Check\Vitals. */
+            vitals_level {$str(10)} DEFAULT NULL,
+            vitals_detail {$txt},
+            vitals_at {$ts} DEFAULT NULL,
+            field_lcp_ms {$int} DEFAULT NULL,
+            field_inp_ms {$int} DEFAULT NULL,
+            field_cls {$flt} DEFAULT NULL,
+            field_verdict {$str(10)} DEFAULT NULL,
+            field_source {$str(10)} DEFAULT NULL,   /* url | origin */
+            field_at {$ts} DEFAULT NULL,
+
             ssl_checked_at {$ts} DEFAULT NULL,
             content_hash {$str(40)} DEFAULT NULL,
             content_hash_at {$ts} DEFAULT NULL,

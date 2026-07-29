@@ -78,6 +78,26 @@ file_put_contents("$tmp/site/tarifs.html",  $page('Tarifs', $L));
 file_put_contents("$tmp/site/casse.html",   $page('Accueil', '<link rel="stylesheet" href="/wp-content/cache/min/1/absent.css">'));
 file_put_contents("$tmp/site/dberror.php",  "<?php http_response_code(200); ?><!doctype html><html><body><h1>Error establishing a database connection</h1></body></html>");
 file_put_contents("$tmp/site/api.php",      "<?php header('Content-Type: application/json'); echo json_encode(['status'=>'ok']);");
+// Page volontairement lourde, pour l'analyse de vitesse : trois feuilles
+// bloquantes, cinq scripts bloquants, une grande image en chargement différé,
+// des images sans dimensions et une police sans font-display.
+file_put_contents("$tmp/site/gros.css", str_repeat(".r-x{margin:0}\n", 5000));
+file_put_contents("$tmp/site/lourd.js", str_repeat("var a=1;\n", 4000));
+file_put_contents("$tmp/site/fonts.css", "@font-face{font-family:A;src:url(/a.woff2)}\n");
+file_put_contents("$tmp/site/hero.jpg", "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01"
+    . str_repeat("\x00", 300 * 1024) . "\xFF\xD9");
+file_put_contents("$tmp/site/lente.html", str_replace('<body>',
+    '<body><img src="/hero.jpg" loading="lazy" alt="bandeau">'
+  . '<img src="/hero.jpg" alt="une"><img src="/hero.jpg" alt="deux">',
+    $page('Page lourde',
+      '<link rel="stylesheet" href="/style.css">'
+    . '<link rel="stylesheet" href="/gros.css">'
+    . '<link rel="stylesheet" href="/fonts.css">'
+    . '<script src="/lourd.js"></script>'
+    . '<script src="https://cdn.un.test/a.js"></script>'
+    . '<script src="https://cdn.deux.test/b.js"></script>'
+    . '<script src="https://cdn.trois.test/c.js"></script>'
+    . '<script src="https://cdn.quatre.test/d.js"></script>')));
 file_put_contents("$tmp/site/robots.txt",   "User-agent: *\nSitemap: $SITE/sitemap.xml\n");
 file_put_contents("$tmp/site/sitemap.xml",
     '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
@@ -628,6 +648,57 @@ $out = shell_exec('UPTIMER_CONFIG=' . escapeshellarg($cfgFile) . ' '
     . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --report 2>&1');
 ok('cron --report s\'exécute sans erreur',
    $out !== null && !preg_match('~Fatal|Uncaught~', (string)$out), str_cut(trim((string)$out), 60));
+
+// =========================================================================
+title('Vitesse ressentie : mesures et causes sur la fiche');
+// =========================================================================
+$slowMon = (int)$val("SELECT id FROM monitors WHERE url LIKE '%lente.html' LIMIT 1");
+if ($slowMon === 0) {
+    // La page lourde n'existe pas dans ce jeu : on la crée et on la mesure.
+    $r = $req('/index.php?p=import', ['csrf' => $tok, 'action' => 'import',
+        'list' => "$SITE/lente.html | Page lourde", 'interval_sec' => 300,
+        'pages' => 1, 'check_css' => 1]);
+    $slowMon = (int)$val("SELECT id FROM monitors WHERE url LIKE '%lente.html' LIMIT 1");
+}
+ok('page lourde surveillée', $slowMon > 0);
+$r = $req('/api.php?action=check', ['csrf' => $tok, 'id' => $slowMon]);
+ok('vérification manuelle acceptée', $r['code'] === 200, 'HTTP ' . $r['code']);
+$vd = jdec((string)$val('SELECT vitals_detail FROM monitors WHERE id = ?', [$slowMon]));
+ok('analyse de vitesse écrite en base', ($vd['ttfb_ms'] ?? null) !== null,
+    ($vd['ttfb_ms'] ?? '?') . ' ms');
+ok('causes trouvées sur une page lourde', count((array)($vd['findings'] ?? [])) >= 4,
+    count((array)($vd['findings'] ?? [])) . ' cause(s)');
+
+$r = $req('/index.php?p=monitor&id=' . $slowMon . '&ui=expert');
+ok('bloc de vitesse présent sur la fiche', $has($r, 'Vitesse ressentie par les visiteurs'));
+ok('le temps de réponse du serveur est montré', $has($r, 'Réponse du serveur'));
+ok('les causes sont montrées avec leur remède',
+    $has($r, 'Ce qui ralentit cette page') && $has($r, 'vit-fix'));
+// La distinction mesure / cause probable est la promesse de cette section.
+ok('la page dit que les causes ne sont pas des mesures',
+    $has($r, 'rien ici n') && $has($r, 'mesure de navigateur'));
+ok('sans clé, aucun LCP n\'est affiché',
+    !$has($r, 'Affichage du contenu principal') && $has($r, 'Ajouter une clé'));
+ok('fiche rendue jusqu\'au bout', $complete($r));
+
+// Réglages : la clé et l'appareil de référence s'enregistrent.
+$r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
+    'app_name' => 'Uptimer E2E', 'timezone' => 'Europe/Paris',
+    'vitals_enabled' => '1', 'crux_key' => 'cle-de-test-e2e', 'form_factor' => 'DESKTOP',
+    'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 14,
+    'def_slow' => 3000, 'def_css_drop' => 35, 'def_parallel' => 10, 'def_retention' => 45]);
+ok('clé de mesures de terrain enregistrée', $has($r, 'enregistr') || $r['code'] < 400);
+$r = $req('/index.php?p=settings&ui=expert');
+ok('clé relue dans le formulaire', $has($r, 'cle-de-test-e2e'));
+ok('appareil de référence relu', $has($r, 'value="DESKTOP" selected')
+    || preg_match('~value="DESKTOP"[^>]*selected~', $r['body']) === 1);
+// Et on la retire : le reste du banc ne doit pas partir interroger Google.
+$r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
+    'app_name' => 'Uptimer E2E', 'timezone' => 'Europe/Paris',
+    'vitals_enabled' => '1', 'crux_key' => '', 'form_factor' => 'PHONE',
+    'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 14,
+    'def_slow' => 3000, 'def_css_drop' => 35, 'def_parallel' => 10, 'def_retention' => 45]);
+ok('clé retirée sans casser les autres réglages', $r['code'] < 400);
 
 // =========================================================================
 title('Mode agence : un client ne voit que ses sites');

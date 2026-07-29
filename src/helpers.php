@@ -103,8 +103,15 @@ function human_bytes(?int $b): string
 {
     $b = (int)$b;
     if ($b < 1024) return $b . ' o';
-    if ($b < 1048576) return round($b / 1024, 1) . ' Ko';
-    return round($b / 1048576, 2) . ' Mo';
+    // Le séparateur décimal suit la langue, et la décimale ne s'affiche que si
+    // elle apporte quelque chose : « 2 Ko » plutôt que « 2,0 Ko ».
+    $show = static function (float $v, int $max): string {
+        $r = round($v, $max);
+        $dec = fmod($r, 1.0) === 0.0 ? 0 : $max;
+        return \Uptimer\Ui::num($r, $dec);
+    };
+    if ($b < 1048576) return $show($b / 1024, $b < 10240 ? 1 : 0) . ' Ko';
+    return $show($b / 1048576, 2) . ' Mo';
 }
 
 /** Normalise une saisie utilisateur en URL http(s). */

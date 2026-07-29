@@ -233,6 +233,36 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
     </div>
   <?= Ui::accClose() ?>
 
+  <!-- ==================== VITESSE RESSENTIE ==================== -->
+  <?= Ui::accOpen('speed', 'chart', t('Vitesse ressentie par les visiteurs'),
+        Uptimer\Vitals::enabled() ? t('mesures de terrain activées') : t('analyse locale seulement')) ?>
+  <?= Ui::accBody() ?>
+    <p class="muted small prose"><?= te('Sans rien configurer, {app} mesure le temps de réponse du serveur et lit dans vos pages ce qui retarde l\'affichage : fichiers qui bloquent le rendu, image du haut de page en chargement différé, images sans dimensions. C\'est ce qui permet d\'agir.') ?></p>
+    <p class="muted small prose"><?= te('Les trois mesures officielles (LCP, INP, CLS) viennent de vrais navigateurs Chrome, et de nulle part ailleurs. Pour les afficher, il faut une clé du Chrome UX Report : elle est gratuite et se crée en deux minutes. Sans clé, aucun chiffre n\'est inventé.') ?></p>
+    <div class="form-cols">
+      <div>
+        <label class="switchrow"><input type="checkbox" name="vitals_enabled" <?= Config::get('vitals.enabled', true) ? 'checked' : '' ?>>
+          <span class="sw-text"><span class="sw-title"><?= te('Récupérer les mesures de terrain') ?></span>
+            <span class="hint"><?= te('Une interrogation par page et par jour, gardée 24 heures. Une page sans trafic suffisant n\'a pas de données : c\'est dit tel quel.') ?></span></span></label>
+        <div class="field"><label for="ck"><?= te('Clé du Chrome UX Report') ?></label><?= hint('Console Google Cloud, activez « Chrome UX Report API », puis créez une clé d\'API. Elle ne donne accès qu\'à des données publiques d\'audience agrégée.') ?>
+          <input id="ck" type="text" name="crux_key" spellcheck="false" class="mono"
+                 value="<?= e((string)Config::get('vitals.crux_key', '')) ?>"
+                 placeholder="<?= te('vide = analyse locale seulement') ?>">
+        </div>
+      </div>
+      <div>
+        <div class="field"><label for="ff"><?= te('Appareil de référence') ?></label><?= hint('Le Chrome UX Report sépare les mesures par type d\'appareil. Le téléphone est le bon défaut : c\'est là que les problèmes se voient, et c\'est ce que Google utilise pour classer.') ?>
+          <select id="ff" name="form_factor">
+            <?php foreach (['PHONE' => t('Téléphone'), 'DESKTOP' => t('Ordinateur')] as $k => $lbl): ?>
+              <option value="<?= e($k) ?>"<?= Uptimer\Vitals::formFactor() === $k ? ' selected' : '' ?>><?= e($lbl) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <p class="muted small"><?= te('Les seuils appliqués sont ceux de Google : 2,5 s pour l\'affichage du contenu principal, 200 ms pour la réaction au premier clic, 0,1 pour la stabilité de la mise en page.') ?></p>
+      </div>
+    </div>
+  <?= Ui::accClose() ?>
+
   <!-- ==================== VEILLE ET SÉCURITÉ ==================== -->
   <?= Ui::accOpen('watch', 'shield', t('Veille de sécurité'),
         Config::get('vuln.enabled', true) ? t('activée') : t('désactivée')) ?>

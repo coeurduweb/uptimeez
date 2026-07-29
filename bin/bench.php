@@ -104,6 +104,28 @@ file_put_contents("$tmp/err404.php",    "<?php http_response_code(404); ?>Not Fo
 file_put_contents("$tmp/slow.php",      "<?php usleep(2600000); ?><!doctype html><html><body>Lent mais vivant : Agence Bellevue</body></html>");
 file_put_contents("$tmp/health.php",    "<?php header('Content-Type: application/json'); echo json_encode(['status'=>'ok','db'=>true]);");
 file_put_contents("$tmp/health_bad.php","<?php header('Content-Type: application/json'); echo json_encode(['status'=>'degraded']);");
+// Une page qui porte les sept défauts de vitesse les plus courants, chacun
+// avec une valeur connue : c'est ce qui rend l'analyse vérifiable.
+file_put_contents("$tmp/gros.css",  str_repeat(".r-" . bin2hex(random_bytes(2)) . "{margin:0}\n", 5000));
+file_put_contents("$tmp/lourd.js",  str_repeat("var v" . bin2hex(random_bytes(2)) . "=1;\n", 4000));
+file_put_contents("$tmp/fonts.css", "@font-face{font-family:A;src:url(/a.woff2)}\n"
+                                  . "@font-face{font-family:B;src:url(/b.woff2);font-display:swap}\n");
+// Image de 300 Ko : le poids est mesuré par une requête HEAD, pas deviné.
+file_put_contents("$tmp/hero.jpg", "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01"
+                                 . str_repeat("\x00", 300 * 1024) . "\xFF\xD9");
+file_put_contents("$tmp/lente.html", $page('Page lourde',
+      '<link rel="stylesheet" href="/style.css">'
+    . '<link rel="stylesheet" href="/gros.css">'
+    . '<link rel="stylesheet" href="/fonts.css">'
+    . '<link rel="stylesheet" href="/print.css" media="print">'
+    . '<script src="/lourd.js"></script>'
+    . '<script src="https://cdn.exemple-un.net/a.js"></script>'
+    . '<script src="https://cdn.exemple-deux.net/b.js"></script>'
+    . '<script src="https://cdn.exemple-trois.net/c.js"></script>'
+    . '<script src="https://cdn.exemple-quatre.net/d.js"></script>',
+      '<img src="/hero.jpg" loading="lazy" alt="bandeau">'
+    . '<img src="/hero.jpg" alt="une"><img src="/hero.jpg" alt="deux">'));
+file_put_contents("$tmp/print.css", "@media print{body{color:#000}}\n");
 file_put_contents("$tmp/robots.txt",    "User-agent: *\nAllow: /\nSitemap: $BASE/sitemap.xml\n");
 $sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
        "<url><loc>$BASE/</loc><priority>1.0</priority></url>"];
@@ -406,6 +428,51 @@ ok('synthèse globale cohérente', $sum['down'] > 0 && $sum['total'] > 0,
 ok('consolidation journalière', Stats::rollup(date('Y-m-d')) > 0);
 $w24 = Stats::window($ids['err500'], 86400);
 ok('uptime et incidents calculés', $w24['incidents'] >= 1, 'incidents=' . $w24['incidents']);
+
+// --- Vitesse ressentie ---------------------------------------------------
+// La page de test porte des défauts aux valeurs connues : chaque contrôle
+// vérifie que l'analyse retrouve exactement ce qui a été mis dedans.
+title('Vitesse ressentie');
+$slowId = $mk(['name' => 'Page lourde', 'url' => "$BASE/lente.html", 'check_css' => 1]);
+Runner::runBatch(Db::all('SELECT * FROM monitors WHERE id = ?', [$slowId]), true);
+$vd = jdec(Db::val('SELECT vitals_detail FROM monitors WHERE id = ?', [$slowId]));
+$lvl = (string)Db::val('SELECT vitals_level FROM monitors WHERE id = ?', [$slowId]);
+ok('analyse de vitesse enregistrée', $vd !== [] && $lvl !== '', 'niveau ' . $lvl);
+ok('temps de réponse du serveur mesuré', ($vd['ttfb_ms'] ?? null) !== null,
+    ($vd['ttfb_ms'] ?? '?') . ' ms');
+ok('feuilles bloquantes comptées sans compter media="print"',
+    (int)($vd['blocking']['css'] ?? 0) === 3, ($vd['blocking']['css'] ?? 0) . ' feuille(s)');
+ok('scripts bloquants comptés', (int)($vd['blocking']['js'] ?? 0) === 5,
+    ($vd['blocking']['js'] ?? 0) . ' script(s)');
+ok('poids réel des bloquants relevé', (int)($vd['blocking']['bytes'] ?? 0) > 100 * 1024,
+    human_bytes((int)($vd['blocking']['bytes'] ?? 0)));
+ok('image du haut de page identifiée',
+    str_contains((string)($vd['lcp_image']['url'] ?? ''), 'hero.jpg'));
+ok('chargement différé de cette image repéré', ($vd['lcp_image']['lazy'] ?? false) === true);
+// Le poids de l'image ne se lit pas dans le HTML : il vient d'une requête HEAD.
+ok('poids de l\'image obtenu par une requête HEAD',
+    (int)($vd['lcp_image']['bytes'] ?? 0) > 290 * 1024,
+    human_bytes((int)($vd['lcp_image']['bytes'] ?? 0)));
+$codes = array_column((array)($vd['findings'] ?? []), 'code');
+foreach (['BLOCKING_CSS', 'BLOCKING_JS', 'LCP_LAZY', 'LCP_HEAVY', 'IMG_NO_DIM',
+          'FONT_NO_DISPLAY', 'THIRD_PARTY'] as $code) {
+    ok('cause détectée : ' . $code, in_array($code, $codes, true));
+}
+ok('chaque cause porte un remède',
+    count(array_filter((array)$vd['findings'], fn($f) => trim((string)($f['fix'] ?? '')) !== ''))
+      === count((array)$vd['findings']));
+ok('verdict d\'ensemble mauvais sur cette page', $lvl === 'bad', $lvl);
+// Une page sobre du même site ne doit pas être signalée : sinon l'outil crie au loup.
+$leanId = $mk(['name' => 'Page sobre', 'url' => "$BASE/index.php", 'check_css' => 1]);
+Runner::runBatch(Db::all('SELECT * FROM monitors WHERE id = ?', [$leanId]), true);
+$vl = jdec(Db::val('SELECT vitals_detail FROM monitors WHERE id = ?', [$leanId]));
+$leanCodes = array_column((array)($vl['findings'] ?? []), 'code');
+ok('page sobre : aucune cause grave inventée',
+    !in_array('LCP_LAZY', $leanCodes, true) && !in_array('LCP_HEAVY', $leanCodes, true),
+    $leanCodes ? implode(' ', $leanCodes) : 'aucune cause');
+// Sans clé, aucune mesure de terrain n'est affirmée.
+ok('sans clé CrUX, aucun LCP de terrain affiché',
+    Db::val('SELECT field_verdict FROM monitors WHERE id = ?', [$slowId]) === null);
 
 // --- Veille de sécurité --------------------------------------------------
 // Deux parties nettement séparées : ce qui se lit dans le HTML (toujours

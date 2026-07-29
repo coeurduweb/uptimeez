@@ -372,6 +372,124 @@ if ($decisions && expert()):
 <?= Ui::accClose() ?>
 <?php endif; ?>
 
+<!-- ====================== VITESSE RESSENTIE ====================== -->
+<?php
+$vit = jdec($mon['vitals_detail'] ?? null);
+$fieldVerdict = $mon['field_verdict'] ?? null;
+if ($vit || $fieldVerdict !== null):
+    $vLevel = (string)($mon['vitals_level'] ?? 'ok');
+    $tone = $fieldVerdict === 'poor' || $vLevel === 'bad' ? 'attn'
+          : ($fieldVerdict === 'improve' || $vLevel === 'watch' ? 'warn' : 'none');
+    // Le badge porte la mesure de terrain quand elle existe, sinon le TTFB
+    // mesuré : dans les deux cas un chiffre réel, jamais une estimation.
+    if ($fieldVerdict !== null) {
+        [$wMetric, $wValue] = Uptimer\Vitals::worstOf($mon);
+        $vBadge = Ui::badge(Uptimer\Vitals::format((string)$wMetric, $wValue),
+            $fieldVerdict === 'poor' ? 'bad' : ($fieldVerdict === 'improve' ? 'warn' : 'ok'));
+    } else {
+        $tv = (string)($vit['ttfb_verdict'] ?? 'unknown');
+        $vBadge = $vit['ttfb_ms'] ?? null
+            ? Ui::badge(Ui::ms((int)$vit['ttfb_ms']),
+                        $tv === 'poor' ? 'bad' : ($tv === 'improve' ? 'warn' : 'ok'))
+            : '';
+    }
+    echo Ui::accOpen('speed', 'chart', t('Vitesse ressentie par les visiteurs'),
+        count((array)($vit['findings'] ?? [])) > 0
+            ? tn(count((array)$vit['findings']), 'une cause identifiée', '{n} causes identifiées')
+            : t('rien à signaler'),
+        $tone === 'attn', $tone, $vBadge);
+    echo Ui::accBody();
+?>
+  <?php if ($fieldVerdict !== null): ?>
+    <p class="small soft prose"><?= te('Mesuré sur les visiteurs réels de cette page par le Chrome UX Report, sur les 28 derniers jours.') ?>
+      <?php if (($mon['field_source'] ?? '') === 'origin'): ?>
+        <?= te('Cette page n\'a pas assez de trafic pour être mesurée seule : les chiffres portent sur l\'ensemble du site.') ?>
+      <?php endif; ?></p>
+    <dl class="kv vit-kv">
+      <?php foreach ([
+            ['lcp', t('Affichage du contenu principal'), $mon['field_lcp_ms'] !== null ? (float)$mon['field_lcp_ms'] : null,
+             t('Le temps au bout duquel la page paraît chargée au visiteur.')],
+            ['inp', t('Réaction au premier clic'), $mon['field_inp_ms'] !== null ? (float)$mon['field_inp_ms'] : null,
+             t('Le délai entre le geste du visiteur et la réponse visible de la page.')],
+            ['cls', t('Stabilité de la mise en page'), $mon['field_cls'] !== null ? (float)$mon['field_cls'] : null,
+             t('À quel point le contenu saute pendant le chargement.')],
+          ] as [$key, $label, $value, $help]): ?>
+        <dt><?= e($label) ?></dt>
+        <dd>
+          <?php if ($value === null): ?>
+            <span class="muted"><?= te('pas assez de données') ?></span>
+          <?php else: $r = Uptimer\Vitals::rate($key, $value); ?>
+            <?= Ui::badge(Uptimer\Vitals::format($key, $value),
+                  $r === 'good' ? 'ok' : ($r === 'improve' ? 'warn' : 'bad')) ?>
+            <span class="muted small"><?= te('seuil visé {v}',
+                  ['v' => Uptimer\Vitals::format($key, (float)Uptimer\Vitals::THRESHOLDS[$key][0])]) ?></span>
+          <?php endif; ?>
+          <span class="hint"><?= e($help) ?></span>
+        </dd>
+      <?php endforeach; ?>
+    </dl>
+  <?php elseif (Uptimer\Vitals::key() === ''): ?>
+    <p class="small soft prose"><?= te('Les trois mesures officielles (LCP, INP, CLS) ne peuvent venir que de vrais navigateurs. Sans clé du Chrome UX Report, {app} n\'affiche aucun chiffre plutôt que d\'en inventer un. Ce qui suit est mesuré sur cette page, et suffit pour agir.') ?>
+      <a href="<?= e(u('settings')) ?>#speed"><?= te('Ajouter une clé') ?></a></p>
+  <?php endif; ?>
+
+  <?php if (($vit['ttfb_ms'] ?? null) !== null):
+    $tv = (string)($vit['ttfb_verdict'] ?? 'unknown'); ?>
+    <dl class="kv">
+      <dt><?= te('Réponse du serveur') ?></dt>
+      <dd><?= Ui::badge(Ui::ms((int)$vit['ttfb_ms']),
+                $tv === 'good' ? 'ok' : ($tv === 'improve' ? 'warn' : 'bad')) ?>
+        <span class="muted small"><?= te('seuil visé 800 ms') ?></span>
+        <span class="hint"><?= te('Mesuré à chaque vérification. Aucun affichage ne peut commencer avant : c\'est le plancher de toutes les autres mesures.') ?></span></dd>
+      <?php if ((int)($vit['blocking']['css'] ?? 0) + (int)($vit['blocking']['js'] ?? 0) > 0): ?>
+        <dt><?= te('Bloquent le premier affichage') ?></dt>
+        <dd><?= e(tn((int)$vit['blocking']['css'], 'une feuille de style', '{n} feuilles de style')) ?>
+          · <?= e(tn((int)$vit['blocking']['js'], 'un script', '{n} scripts')) ?>
+          <?php if ((int)($vit['blocking']['bytes'] ?? 0) > 0): ?>
+            · <?= e(human_bytes((int)$vit['blocking']['bytes'])) ?>
+          <?php endif; ?>
+          <?php if (!empty($vit['blocking']['items'])): ?>
+            <span class="hint"><?php
+              $names = array_map(fn($i) => Uptimer\Check\Vitals::shortUrl((string)$i['url']),
+                                 array_slice((array)$vit['blocking']['items'], 0, 4));
+              echo e(implode(' · ', $names)); ?></span>
+          <?php endif; ?></dd>
+      <?php endif; ?>
+      <?php if (!empty($vit['lcp_image']['url'])): ?>
+        <dt><?= te('Image du haut de page') ?></dt>
+        <dd><?= e(Uptimer\Check\Vitals::shortUrl((string)$vit['lcp_image']['url'])) ?>
+          <?php if (!empty($vit['lcp_image']['bytes'])): ?>
+            · <?= e(human_bytes((int)$vit['lcp_image']['bytes'])) ?>
+          <?php endif; ?>
+          <?php if (!empty($vit['lcp_image']['lazy'])): ?>
+            <?= Ui::badge(t('chargement différé'), 'bad') ?>
+          <?php endif; ?>
+          <span class="hint"><?= te('C\'est très probablement l\'élément que la mesure d\'affichage principal retient.') ?></span></dd>
+      <?php endif; ?>
+    </dl>
+  <?php endif; ?>
+
+  <?php if (!empty($vit['findings'])): ?>
+    <h3 class="mt"><?= te('Ce qui ralentit cette page') ?></h3>
+    <p class="small soft prose"><?= te('Lu dans le HTML et les fichiers déjà téléchargés. Ce sont des causes probables, classées par impact : rien ici n\'est une mesure de navigateur.') ?></p>
+    <ul class="vit-list">
+      <?php foreach ((array)$vit['findings'] as $f): ?>
+        <li class="vit-f vit-<?= e((string)$f['severity']) ?>">
+          <strong><?= e(t((string)$f['what'], (array)($f['vars'] ?? []))) ?></strong>
+          <span class="vit-why"><?= e(t((string)$f['why'])) ?></span>
+          <span class="vit-fix"><?= Ui::icon('wrench', 14) ?> <?= e(t((string)$f['fix'])) ?></span>
+          <?php if (($f['evidence'] ?? '') !== ''): ?>
+            <span class="vit-ev mono"><?= e((string)$f['evidence']) ?></span>
+          <?php endif; ?>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
+<?php
+    echo Ui::accClose();
+endif;
+?>
+
 <!-- ====================== INVENTAIRE ET FAILLES ====================== -->
 <?php
 $comps = !empty($mon['site_id']) ? Uptimer\Vuln::forSite((int)$mon['site_id']) : [];

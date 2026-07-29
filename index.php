@@ -323,6 +323,12 @@ function handle_post(): ?array
                     'max_parallel'   => max(1, min(20, (int)($_POST['def_parallel'] ?? 10))),
                     'retention_days' => max(7, (int)($_POST['def_retention'] ?? 60)),
                 ],
+                'vitals' => [
+                    'enabled'     => isset($_POST['vitals_enabled']),
+                    'crux_key'    => trim((string)($_POST['crux_key'] ?? '')),
+                    'form_factor' => in_array($_POST['form_factor'] ?? 'PHONE', ['PHONE', 'DESKTOP'], true)
+                        ? (string)$_POST['form_factor'] : 'PHONE',
+                ],
                 'vuln' => [
                     'enabled'     => isset($_POST['vuln_enabled']),
                     'timeout_sec' => max(3, min(30, (int)($_POST['vuln_timeout'] ?? 8))),

@@ -189,6 +189,32 @@ That string is **derived automatically**, in this order of preference: footer co
 title, first nav item, H1. It is never taken from an error page. If it vanishes while the page still answers 200, the data layer is
 gone and you know within one check.
 
+### Why a page is slow, and what to change
+
+Core Web Vitals come from real Chrome browsers. A PHP tool cannot compute them, and Uptimer will not pretend
+otherwise: no browser measurement is ever invented here. What it does instead is the part nobody else does without
+launching Chrome, because it already has the data.
+
+![Perceived speed](docs/img/vitals.png)
+
+**Measured, not estimated.** Server response time in milliseconds on every check, which is the floor for
+everything: LCP will never beat it. The exact weight and transfer time of every stylesheet and script, because the
+resource audit already downloads them. The real weight of the top-of-page image, from a single HEAD request.
+
+**Read from the page, and labelled as such.** The stylesheets and scripts that actually block the first paint,
+`media="print"` correctly excluded. The top-of-page image marked `loading="lazy"`, which is the most common LCP
+mistake there is. Images with no width or height, the leading cause of layout shift. Fonts without
+`font-display`. Third-party domains loading script in the head.
+
+Every cause carries its fix, ranked by impact, severity readable off the edge of each row. A finding with no course
+of action is just a reproach.
+
+**Field data when you want it.** Add a free Chrome UX Report key and the three official metrics appear next to the
+causes, with the worst of the three deciding the verdict, exactly as Google does it. No key, no invented number,
+and a page without enough traffic is told so rather than shown a blank.
+
+→ **[Perceived speed](docs/en/speed.md)**
+
 ### One link per client, and nothing of anyone else
 
 You monitor thirty sites belonging to twelve people. Each wants to know whether theirs is fine. None of them has
@@ -280,6 +306,9 @@ request; the table lives in this file.
 | Forgotten `noindex` alert | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
 | Bulk add with CMS detection and auto-setup | ✅ paste anything | ⚠️ CSV, no detection | ❌ code-first | ⚠️ CSV | ❌ one by one | ❌ | ❌ |
 | Preview before monitors are created | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Core Web Vitals with the causes explained | ✅ measured + read from the page | ❌ | ⚠️ Lighthouse score only | ⚠️ score only | ❌ | ❌ | ⚠️ score only |
+| Render-blocking files named, with their weight | ✅ | ❌ | ⚠️ in a report | ❌ | ❌ | ❌ | ⚠️ in a report |
+| Lazy-loaded top-of-page image detected | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Self-tuning slowness threshold | ✅ from p95 | ❌ fixed | ❌ fixed | ❌ fixed | ❌ fixed | ⚠️ build it yourself | ⚠️ baselines, paid tiers |
 | Journal of the tool's own decisions | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Home screen is a to-do list with fixes | ✅ | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard |
@@ -369,7 +398,7 @@ Then you can simply ask:
 > *"Add these twelve domains, but show me what you would create first."*
 > *"The Leboncoin staging redesign is intentional, relearn its reference and check it again."*
 
-**Ten read-only tools** are exposed by default:
+**Eleven read-only tools** are exposed by default:
 
 | Tool | Answers |
 |---|---|
@@ -380,6 +409,7 @@ Then you can simply ask:
 | `incidents` | Outages over a period, with total downtime, for an SLA answer |
 | `report` | The ready-to-send report for a ticket or a client e-mail |
 | `response_time_series` | The curve, to tell a spike from a trend |
+| `web_vitals` | Perceived speed: field measurements and the causes read from the page, kept separate |
 | `security_advisories` | Which sites run a version covered by a published advisory, worst severity first |
 | `list_clients` | Every client, their sites, their state, and whether they still look at their space |
 | `security_target_check` | Would this address be refused before any request? |
@@ -474,7 +504,6 @@ uptimer/
 
 The [backlog](BACKLOG.md) holds the competitor research and the user stories behind each decision. Next up:
 
-- Core Web Vitals on the pages that matter
 - Importers for the main competing tools, so migrating is a five-minute job
 - A daily digest instead of per-event alerts, for people who prefer one e-mail
 

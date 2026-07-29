@@ -159,6 +159,12 @@ final class Triage
         // n'intervient. Sa place est donc ici, pas dans ce qui est déjà arrivé.
         foreach (Vuln::findings(6) as $v) $out[] = $v;
 
+        // --- Vitesse ressentie par les visiteurs -----------------------------
+        // Une page lente n'est pas une panne, mais c'est ce que le client vit et
+        // ce que Google classe. Chaque entrée porte la cause lue dans le HTML,
+        // parce qu'un chiffre sans cause ne fait agir personne.
+        foreach (Vitals::findings(4) as $v) $out[] = $v;
+
         // --- Ralentissement durable ------------------------------------------
         foreach (self::slowdowns() as $s) $out[] = $s;
 

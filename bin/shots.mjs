@@ -77,6 +77,30 @@ console.log('Thème clair :');
   await shot(page, '/index.php?p=settings&lang=fr&ui=expert', 'settings.png');
   await shot(page, '/index.php?p=import&lang=fr', 'import.png');
 
+  // Vitesse ressentie : la fiche de la page la plus lourde, bloc déplié.
+  const slowId = await page.evaluate(async (base) => {
+    const r = await fetch(base + '/api.php?action=search&q=airbnb',
+                          { headers: { 'X-Requested-With': 'fetch' } });
+    const j = await r.json();
+    return (j.results && j.results[0]) ? j.results[0].id : 0;
+  }, BASE);
+  if (slowId) {
+    await shot(page, `/index.php?p=monitor&id=${slowId}&lang=fr&ui=expert`, 'vitals.png', {
+      before: async p => {
+        await p.evaluate(() => {
+          const d = document.getElementById('speed');
+          if (!d) return;
+          d.open = true;
+          d.scrollIntoView({ block: 'start' });
+          // L'en-tête est fixe : sans ce décalage, il recouvre le titre du bloc.
+          const h = document.querySelector('header');
+          window.scrollBy(0, -((h ? h.getBoundingClientRect().height : 60) + 14));
+        });
+        await p.waitForTimeout(300);
+      },
+    });
+  }
+
   // Mode agence : la liste des clients, premier bloc ouvert pour montrer le
   // rattachement des sites et le lien à envoyer.
   // On ouvre le bloc du client qui a le plus de sites : une capture avec une

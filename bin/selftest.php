@@ -878,6 +878,177 @@ Uptimer\Config::set('db.sqlite', $prevDb);
 @unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
 
 // =========================================================================
+section('Vitesse ressentie : mesures et causes, jamais mélangées');
+// =========================================================================
+use Uptimer\Check\Vitals as VitalsCheck;
+use Uptimer\Vitals;
+
+// --- Le TTFB est une mesure : les seuils officiels s'appliquent tels quels
+foreach ([[120, 'good'], [800, 'good'], [801, 'improve'], [1800, 'improve'],
+          [1801, 'poor'], [9000, 'poor']] as [$ms, $want]) {
+    $r = new Uptimer\Response(); $r->ttfbMs = $ms;
+    $v = VitalsCheck::analyse('https://x.fr/', '<html><body>x</body></html>', [], $r, ['head' => false]);
+    check('TTFB ' . $ms . ' ms', $v['ttfb_verdict'], $want);
+}
+$r = new Uptimer\Response();   // aucune mesure disponible
+$v = VitalsCheck::analyse('https://x.fr/', '<html><body>x</body></html>', [], $r, ['head' => false]);
+check('sans mesure de TTFB, aucun verdict inventé', $v['ttfb_verdict'], 'unknown');
+check('et aucune valeur affichée', $v['ttfb_ms'], null);
+// Un serveur qui répond en moins d'une milliseconde a bien été mesuré.
+$fast = new Uptimer\Response(); $fast->status = 200; $fast->ttfbMs = 0; $fast->totalMs = 1;
+$vf = VitalsCheck::analyse('https://x.fr/', '<html><body>x</body></html>', [], $fast, ['head' => false]);
+check('0 ms est une mesure, pas une absence', $vf['ttfb_ms'], 0);
+check('et le verdict est bon', $vf['ttfb_verdict'], 'good');
+check('page sobre : rien à signaler', $v['level'], 'ok');
+
+// --- Ce qui bloque le premier affichage ---------------------------------
+$html = '<!doctype html><html><head>'
+      . '<link rel="stylesheet" href="/a.css">'
+      . '<link rel="stylesheet" href="/print.css" media="print">'
+      . '<link rel="stylesheet" href="/mobile.css" media="screen and (max-width:600px)">'
+      . '<script src="/bloque.js"></script>'
+      . '<script src="/ok.js" defer></script>'
+      . '<script src="/aussi-ok.js" async></script>'
+      . '</head><body><script src="/pied.js"></script></body></html>';
+$assets = ['assets' => [
+    ['url' => 'https://x.fr/a.css', 'bytes' => 210000, 'ms' => 180],
+    ['url' => 'https://x.fr/print.css', 'bytes' => 400, 'ms' => 10],
+    ['url' => 'https://x.fr/mobile.css', 'bytes' => 5000, 'ms' => 20],
+    ['url' => 'https://x.fr/bloque.js', 'bytes' => 90000, 'ms' => 100],
+    ['url' => 'https://x.fr/ok.js', 'bytes' => 40000, 'ms' => 60],
+]];
+$rr = new Uptimer\Response(); $rr->ttfbMs = 200;
+$v = VitalsCheck::analyse('https://x.fr/', $html, $assets, $rr, ['head' => false]);
+check('media="print" ne bloque pas le rendu', $v['blocking']['css'], 2);
+check('defer et async ne bloquent pas', $v['blocking']['js'], 1);
+check('un script en fin de corps ne compte pas', $v['blocking']['js'], 1);
+check('poids des feuilles compté à part du JavaScript', $v['blocking']['css_bytes'], 215000);
+check('poids des scripts bloquants', $v['blocking']['js_bytes'], 90000);
+$codes = array_column($v['findings'], 'code');
+check('feuilles trop lourdes signalées', in_array('BLOCKING_CSS', $codes, true), true);
+check('script bloquant signalé', in_array('BLOCKING_JS', $codes, true), true);
+
+// --- L'image du haut de page -------------------------------------------
+$lazy = VitalsCheck::lcpCandidate(
+    '<html><body><img src="/pixel.gif" width="1" height="1">'
+  . '<img src="/logo.svg" width="80" height="30">'
+  . '<img src="/grande.jpg" loading="lazy" width="1400" height="800"></body></html>', 'https://x.fr/');
+check('un pixel de suivi n\'est pas l\'image principale', str_contains((string)$lazy['url'], 'grande.jpg'), true);
+check('chargement différé repéré', $lazy['lazy'], true);
+$noImg = VitalsCheck::lcpCandidate('<html><body><p>texte</p></body></html>', 'https://x.fr/');
+check('page sans image : aucune image affirmée', $noImg, null);
+$dataUri = VitalsCheck::lcpCandidate('<html><body><img src="data:image/gif;base64,R0lGODdh"></body></html>', 'https://x.fr/');
+check('image en ligne ignorée', $dataUri, null);
+
+// --- Décalages de mise en page -----------------------------------------
+$dim = VitalsCheck::imagesWithoutDimensions(
+    '<img src="/a.jpg" width="10" height="10">'
+  . '<img src="/b.jpg">'
+  . '<img src="/c.jpg" style="aspect-ratio:16/9">'
+  . '<img src="/d.jpg" width="10">'
+  . '<img src="data:image/gif;base64,R0lGODdh">');
+check('images sans dimensions comptées', $dim['count'], 2);
+check('aspect-ratio compte comme une place réservée',
+    in_array('c.jpg', $dim['samples'], true), false);
+
+check('polices sans font-display comptées', VitalsCheck::fontsWithoutDisplay(
+    '@font-face{font-family:A;src:url(a.woff2)}'
+  . '@font-face{font-family:B;src:url(b.woff2);font-display:swap}'
+  . '@font-face{font-family:C;src:url(c.woff2)}'), 2);
+check('sans CSS, aucune police signalée', VitalsCheck::fontsWithoutDisplay(''), 0);
+
+// --- Domaines tiers -----------------------------------------------------
+$hosts = VitalsCheck::thirdPartyHosts(
+    '<script src="https://www.googletagmanager.com/gtm.js"></script>'
+  . '<script src="https://static.hotjar.com/h.js"></script>'
+  . '<script src="/local.js"></script>'
+  . '<script src="https://cdn.exemple.fr/interne.js"></script>', 'https://exemple.fr/');
+check('un sous-domaine du site n\'est pas un tiers', in_array('cdn.exemple.fr', $hosts, true), false);
+check('domaines tiers listés', count($hosts), 2);
+
+// --- Classement des causes : la gravité d'abord ------------------------
+$sev = array_column($v['findings'], 'severity');
+$rank = ['high' => 0, 'medium' => 1, 'low' => 2];
+$sorted = $sev;
+usort($sorted, fn($a, $b) => $rank[$a] <=> $rank[$b]);
+check('causes classées par impact', $sev, $sorted);
+
+// =====================================================================
+// Mesures de terrain : seuils, verdicts, lecture de la réponse
+// =====================================================================
+foreach ([['lcp', 2400, 'good'], ['lcp', 2500, 'good'], ['lcp', 3000, 'improve'],
+          ['lcp', 4001, 'poor'], ['inp', 200, 'good'], ['inp', 300, 'improve'],
+          ['inp', 900, 'poor'], ['cls', 0.05, 'good'], ['cls', 0.2, 'improve'],
+          ['cls', 0.4, 'poor']] as [$metric, $value, $want]) {
+    check('seuil ' . $metric . ' ' . $value, Vitals::rate($metric, (float)$value), $want);
+}
+check('métrique inconnue : aucun verdict', Vitals::rate('inventée', 1.0), 'unknown');
+
+// Le pire des trois décide : c'est la règle de Google et la seule honnête.
+check('un CLS catastrophique décide seul',
+    Vitals::verdict(['lcp_ms' => 900, 'inp_ms' => 90, 'cls' => 0.5]), 'poor');
+check('tout bon donne bon', Vitals::verdict(['lcp_ms' => 900, 'inp_ms' => 90, 'cls' => 0.02]), 'good');
+check('un seul « à améliorer » suffit à retirer le bon',
+    Vitals::verdict(['lcp_ms' => 3000, 'inp_ms' => 90, 'cls' => 0.02]), 'improve');
+check('aucune valeur : aucun mauvais verdict', Vitals::verdict([]), 'good');
+
+// Lecture d'une réponse du Chrome UX Report, sans réseau.
+$crux = jenc(['record' => ['key' => ['url' => 'https://exemple.fr/'], 'metrics' => [
+    'largest_contentful_paint' => ['percentiles' => ['p75' => 4820]],
+    'interaction_to_next_paint' => ['percentiles' => ['p75' => 168]],
+    'cumulative_layout_shift' => ['percentiles' => ['p75' => '0.19']],
+    'experimental_time_to_first_byte' => ['percentiles' => ['p75' => 1100]],
+]]]);
+$p = Vitals::parse($crux);
+check('LCP lu au p75', $p['lcp_ms'], 4820);
+check('INP lu au p75', $p['inp_ms'], 168);
+check('CLS lu même en chaîne de caractères', $p['cls'], 0.19);
+check('TTFB de terrain lu', $p['ttfb_ms'], 1100);
+check('verdict d\'ensemble sur le pire', $p['verdict'], 'poor');
+// Une métrique absente reste absente : jamais un zéro, qui se lirait « parfait ».
+$partiel = Vitals::parse(jenc(['record' => ['metrics' => [
+    'largest_contentful_paint' => ['percentiles' => ['p75' => 1800]]]]]));
+check('métrique absente reste nulle', $partiel['inp_ms'], null);
+check('et le verdict ne porte que sur ce qui existe', $partiel['verdict'], 'good');
+check('réponse vide : rien de lu', Vitals::parse('{}'), null);
+check('réponse illisible : rien de lu', Vitals::parse('pas du json'), null);
+check('réponse sans aucune métrique : rien de lu',
+    Vitals::parse(jenc(['record' => ['metrics' => []]])), null);
+
+// --- Sans clé, rien n'est ni demandé ni affiché -------------------------
+Uptimer\Config::set('vitals.crux_key', '');
+check('sans clé, la veille de terrain est inactive', Vitals::enabled(), false);
+check('sans clé, aucune interrogation n\'est lancée', Vitals::fetch('https://exemple.fr/'), null);
+check('sans clé, aucune passe d\'entretien', Vitals::refresh(5), ['checked' => 0, 'measured' => 0, 'poor' => 0]);
+Uptimer\Config::set('vitals.crux_key', 'cle-de-test');
+check('avec une clé, la veille devient active', Vitals::enabled(), true);
+Uptimer\Config::set('vitals.enabled', false);
+check('coupée dans les réglages, elle reste inactive malgré la clé', Vitals::enabled(), false);
+Uptimer\Config::set('vitals.enabled', true);
+Uptimer\Config::set('vitals.crux_key', '');
+
+// --- Appareil de référence ---------------------------------------------
+Uptimer\Config::set('vitals.form_factor', 'DESKTOP');
+check('appareil de référence respecté', Vitals::formFactor(), 'DESKTOP');
+Uptimer\Config::set('vitals.form_factor', 'n\'importe quoi');
+check('appareil inconnu : téléphone par défaut', Vitals::formFactor(), 'PHONE');
+Uptimer\Config::set('vitals.form_factor', 'PHONE');
+
+// --- Mise en forme des valeurs -----------------------------------------
+check('un temps long s\'écrit en secondes', Vitals::format('lcp', 4820.0), '4,8 s');
+check('un temps court reste en millisecondes', Vitals::format('inp', 168.0), '168 ms');
+check('le CLS est un nombre sans unité', Vitals::format('cls', 0.19), '0,19');
+check('valeur absente : un tiret', Vitals::format('lcp', null), '—');
+
+// --- La métrique la plus mauvaise, pour la liste de tâches -------------
+[$wm, $wv] = Vitals::worstOf(['field_lcp_ms' => 1200, 'field_inp_ms' => 900, 'field_cls' => 0.02]);
+check('la plus mauvaise métrique est retenue', $wm, 'inp');
+check('avec sa valeur', $wv, 900.0);
+[$wm2] = Vitals::worstOf([]);
+check('aucune mesure : aucune métrique', $wm2, null);
+check('libellé de métrique traduit', mb_strlen(Vitals::metricLabel('lcp')) > 5, true);
+
+// =========================================================================
 section('Mode agence : cloisonnement et révocation');
 // =========================================================================
 use Uptimer\Client;

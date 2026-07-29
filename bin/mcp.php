@@ -306,6 +306,85 @@ function mcp_tools(): array
             },
         ],
 
+        'web_vitals' => [
+            'title' => 'Perceived speed, measured and explained',
+            'desc'  => 'How fast the monitored pages feel, and why. Two clearly separated layers: field '
+                     . 'measurements from real Chrome users (LCP, INP, CLS from the Chrome UX Report, only '
+                     . 'when an API key is configured), and causes read from the HTML and files Uptimer '
+                     . 'already downloaded (server response time, render-blocking files, the top image and '
+                     . 'its weight, images without dimensions, fonts without font-display, third-party '
+                     . 'scripts). Nothing is estimated: if there is no field data, none is reported, and the '
+                     . 'causes are labelled as causes, never as measurements.',
+            'schema' => ['type' => 'object', 'properties' => [
+                'monitor_id' => ['type' => 'integer', 'description' => 'Restrict to one monitor'],
+                'poor_only' => ['type' => 'boolean',
+                    'description' => 'Only pages with a poor field verdict or a high-severity cause (default false)'],
+                'limit' => ['type' => 'integer', 'description' => 'Maximum rows, 1 to 60 (default 20)'],
+            ], 'additionalProperties' => false],
+            'write' => false,
+            'run' => function (array $a): array {
+                $limit = (int)max(1, min(60, (int)($a['limit'] ?? 20)));
+                $where = ["m.enabled = 1", "(m.vitals_level IS NOT NULL OR m.field_verdict IS NOT NULL)"];
+                $args  = [];
+                if (!empty($a['monitor_id'])) { $where[] = 'm.id = ?'; $args[] = (int)$a['monitor_id']; }
+                if (!empty($a['poor_only'])) $where[] = "(m.field_verdict = 'poor' OR m.vitals_level = 'bad')";
+                $args[] = $limit;
+                $rows = Db::all('SELECT m.id, m.name, m.url, m.vitals_level, m.vitals_detail, m.vitals_at,
+                                        m.field_lcp_ms, m.field_inp_ms, m.field_cls, m.field_verdict,
+                                        m.field_source, m.field_at, s.name AS site_name
+                                 FROM monitors m LEFT JOIN sites s ON s.id = m.site_id
+                                 WHERE ' . implode(' AND ', $where) . '
+                                 ORDER BY CASE m.field_verdict WHEN \'poor\' THEN 0 WHEN \'improve\' THEN 1 ELSE 2 END,
+                                          CASE m.vitals_level WHEN \'bad\' THEN 0 WHEN \'watch\' THEN 1 ELSE 2 END,
+                                          m.id ASC
+                                 LIMIT ?', $args);
+                $out = [];
+                foreach ($rows as $m) {
+                    $d = jdec($m['vitals_detail'] ?? null);
+                    $causes = [];
+                    foreach ((array)($d['findings'] ?? []) as $f) {
+                        $causes[] = [
+                            'code' => $f['code'] ?? null, 'severity' => $f['severity'] ?? null,
+                            'metric' => $f['metric'] ?? null,
+                            'what' => t((string)($f['what'] ?? ''), (array)($f['vars'] ?? [])),
+                            'fix' => $f['fix'] ?? null, 'evidence' => $f['evidence'] ?? null,
+                        ];
+                    }
+                    $out[] = [
+                        'monitor_id' => (int)$m['id'],
+                        'site' => $m['site_name'] ?: $m['name'],
+                        'url' => $m['url'],
+                        'field' => $m['field_verdict'] === null ? null : [
+                            'verdict' => $m['field_verdict'],
+                            'lcp_ms' => $m['field_lcp_ms'] !== null ? (int)$m['field_lcp_ms'] : null,
+                            'inp_ms' => $m['field_inp_ms'] !== null ? (int)$m['field_inp_ms'] : null,
+                            'cls' => $m['field_cls'] !== null ? (float)$m['field_cls'] : null,
+                            'scope' => $m['field_source'],   // url = cette page, origin = tout le site
+                            'sampled_at' => $m['field_at'],
+                            'source' => 'Chrome UX Report, real users, trailing 28 days',
+                        ],
+                        'server_response_ms' => $d['ttfb_ms'] ?? null,
+                        'server_response_verdict' => $d['ttfb_verdict'] ?? null,
+                        'render_blocking' => [
+                            'stylesheets' => (int)($d['blocking']['css'] ?? 0),
+                            'scripts' => (int)($d['blocking']['js'] ?? 0),
+                            'bytes' => (int)($d['blocking']['bytes'] ?? 0),
+                        ],
+                        'top_image' => $d['lcp_image'] ?? null,
+                        'local_level' => $m['vitals_level'],
+                        'analysed_at' => $m['vitals_at'],
+                        'causes' => $causes,
+                    ];
+                }
+                return [
+                    'field_data_available' => \Uptimer\Vitals::enabled(),
+                    'thresholds' => \Uptimer\Vitals::THRESHOLDS,
+                    'summary' => \Uptimer\Vitals::counts(),
+                    'count' => count($out), 'pages' => $out,
+                ];
+            },
+        ],
+
         'list_clients' => [
             'title' => 'Clients and their read-only spaces',
             'desc'  => 'Agency view: every client, how many sites they own, the worst state across '

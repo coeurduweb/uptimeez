@@ -15,11 +15,12 @@ confiance à Uptimer.
 | Ajouter mes premiers sites et comprendre les écrans | **[Prise en main](prise-en-main.md)** : la visite en 5 minutes |
 | Savoir ce que fait chaque option | **[Sondes](sondes.md)** : types, cadences, chaîne de preuve, tous les réglages |
 | Comprendre *comment* il détecte | **[Détection](detection.md)** : les neuf signaux, les pannes de base, les certificats |
+| Savoir pourquoi une page est lente | **[Vitesse ressentie](vitesse.md)** : ce qui est mesuré, ce qui est déduit, et pourquoi les deux ne se mélangent pas |
 | Savoir si un site tourne sur une version vulnérable | **[Veille de sécurité](veille-securite.md)** : inventaire des versions, avis publiés, ce qui sort de chez vous |
 | Recevoir les alertes là où je regarde | **[Alertes](alertes.md)**. Discord, Slack, e-mail, webhooks, heures calmes |
 | Montrer quelque chose à un client | **[Rapports et page d'état](rapports.md)** |
 | Donner à chaque client un accès à ses seuls sites | **[Mode agence](mode-agence.md)** : un lien par client, en lecture seule, révocable |
-| L'interroger depuis Claude ou un autre agent | **[Serveur MCP](mcp.md)** : mise en place, les quatorze outils, pourquoi la lecture seule par défaut |
+| L'interroger depuis Claude ou un autre agent | **[Serveur MCP](mcp.md)** : mise en place, les quinze outils, pourquoi la lecture seule par défaut |
 | L'exploiter au quotidien | **[Exploitation](exploitation.md)** : cron, ligne de commande, sauvegardes, traductions, dépannage |
 
 **Pressé ?** Trois commandes et vous surveillez :

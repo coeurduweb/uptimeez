@@ -195,6 +195,34 @@ Cette chaîne est **déduite automatiquement**, dans cet ordre de préférence :
 d'erreur. Si elle disparaît alors que la page
 répond encore 200, la couche données est tombée et vous le savez en une vérification.
 
+### Pourquoi une page est lente, et quoi changer
+
+Les Core Web Vitals viennent de vrais navigateurs Chrome. Un outil en PHP ne peut pas les calculer, et Uptimer ne
+fera pas semblant : aucune mesure de navigateur n'est inventée ici. En revanche il fait ce que personne ne fait
+sans lancer Chrome, parce qu'il a déjà les données sous la main.
+
+![Vitesse ressentie](docs/img/vitals.png)
+
+**Mesuré, pas estimé.** Le temps de réponse du serveur en millisecondes à chaque vérification, qui est le plancher
+de tout le reste : le LCP ne sera jamais meilleur. Le poids exact et le temps de transfert de chaque feuille de
+style et de chaque script, puisque l'audit des ressources les télécharge déjà. Le poids réel de l'image du haut de
+page, obtenu par une seule requête HEAD.
+
+**Lu dans la page, et annoncé comme tel.** Les feuilles et les scripts qui bloquent réellement le premier
+affichage, `media="print"` correctement écarté. L'image du haut de page en `loading="lazy"`, qui est l'erreur de
+LCP la plus répandue. Les images sans largeur ni hauteur, première cause de décalage de mise en page. Les polices
+sans `font-display`. Les domaines tiers qui chargent du script dans l'en-tête.
+
+Chaque cause porte son remède, classée par impact, la gravité lisible sur le bord de chaque ligne. Un constat sans
+conduite à tenir n'est qu'un reproche.
+
+**Les mesures de terrain si vous les voulez.** Ajoutez une clé gratuite du Chrome UX Report et les trois mesures
+officielles s'affichent à côté des causes, le pire des trois décidant du verdict, exactement comme le fait Google.
+Pas de clé, pas de chiffre inventé, et une page sans trafic suffisant se le voit dire plutôt que de recevoir un
+vide.
+
+→ **[Vitesse ressentie](docs/fr/vitesse.md)**
+
 ### Un lien par client, et rien de ce qui appartient aux autres
 
 Vous surveillez trente sites qui appartiennent à douze personnes. Chacune veut savoir si le sien va bien. Aucune
@@ -287,6 +315,9 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Alerte sur un `noindex` oublié | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
 | Ajout en masse avec détection du CMS | ✅ collez n'importe quoi | ⚠️ CSV, sans détection | ❌ orienté code | ⚠️ CSV | ❌ un par un | ❌ | ❌ |
 | Aperçu avant création des sondes | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Core Web Vitals avec les causes expliquées | ✅ mesuré + lu dans la page | ❌ | ⚠️ score Lighthouse seulement | ⚠️ score seulement | ❌ | ❌ | ⚠️ score seulement |
+| Fichiers bloquant le rendu nommés, avec leur poids | ✅ | ❌ | ⚠️ dans un rapport | ❌ | ❌ | ❌ | ⚠️ dans un rapport |
+| Image du haut de page en chargement différé repérée | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Seuil de lenteur auto-ajusté | ✅ sur le p95 | ❌ fixe | ❌ fixe | ❌ fixe | ❌ fixe | ⚠️ à construire | ⚠️ formules payantes |
 | Journal des décisions de l'outil | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Accueil = liste de tâches avec correctifs | ✅ | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord |
@@ -377,7 +408,7 @@ Vous pouvez alors demander simplement :
 > *« Ajoute ces douze domaines, mais montre d'abord ce que tu créerais. »*
 > *« La refonte de la recette Leboncoin est volontaire : réapprends sa référence et revérifie. »*
 
-**Dix outils en lecture seule** sont exposés par défaut :
+**Onze outils en lecture seule** sont exposés par défaut :
 
 | Outil | Répond à |
 |---|---|
@@ -388,6 +419,7 @@ Vous pouvez alors demander simplement :
 | `incidents` | Les interruptions d'une période, avec l'indisponibilité cumulée, pour répondre sur un SLA |
 | `report` | Le rapport prêt à coller dans un ticket ou un e-mail client |
 | `response_time_series` | La courbe, pour distinguer un pic d'une tendance |
+| `web_vitals` | La vitesse ressentie : mesures de terrain et causes lues dans la page, séparées |
 | `security_advisories` | Quels sites tournent sur une version couverte par un avis publié, le plus grave d'abord |
 | `list_clients` | Chaque client, ses sites, leur état, et s'il consulte encore son espace |
 | `security_target_check` | Cette adresse serait-elle refusée avant toute requête ? |
@@ -485,7 +517,6 @@ uptimer/
 Le [backlog](BACKLOG.md) contient la recherche concurrentielle et les user stories derrière chaque décision.
 À suivre :
 
-- Core Web Vitals sur les pages qui comptent
 - Import depuis les principaux outils concurrents, pour que migrer prenne cinq minutes
 - Résumé quotidien au lieu d'une alerte par évènement, pour ceux qui préfèrent un seul e-mail
 

@@ -257,6 +257,10 @@ final class Css
 
         // ---- 4. Métriques CSS globales ------------------------------------
         $clean = self::stripComments(implode("\n", $cssParts));
+        // Le CSS concaténé sert à l'analyse de vitesse, qui cherche les polices
+        // sans font-display. Il est renvoyé mais jamais enregistré : ce serait
+        // des centaines de kilo-octets par sonde dans la base.
+        $result['css_text']       = $clean;
         $metrics['css_bytes']     = strlen($clean);
         $metrics['rules']         = substr_count($clean, '{');
         $metrics['media_queries'] = preg_match_all('~@media[^{]{1,200}\{~i', $clean);

@@ -105,6 +105,15 @@ try {
             $vs['checked'], $vs['vulnerable'], $vs['outdated']));
     }
 
+    // --- 3 quater. Mesures de terrain forcées (php cron.php --vitals) ----
+    if (in_array('--vitals', $argv ?? [], true)) {
+        $vt = Uptimer\Vitals::refresh(60);
+        $out(Uptimer\Vitals::enabled()
+            ? sprintf('  vitesse : %d page(s) interrogée(s), %d mesurée(s), %d en échec',
+                      $vt['checked'], $vt['measured'], $vt['poor'])
+            : '  vitesse : aucune clé CrUX configurée, mesures de terrain désactivées');
+    }
+
     // --- 3 ter. Rapports mensuels forcés (php cron.php --report) ---------
     if (in_array('--report', $argv ?? [], true)) {
         $rep = Uptimer\Report::runMonthly();
@@ -132,6 +141,14 @@ try {
         if ($vs['checked']) {
             $out(sprintf('  veille : %d composant(s) vérifié(s), %d avec faille publiée, %d en retard',
                 $vs['checked'], $vs['vulnerable'], $vs['outdated']));
+        }
+
+        // Mesures de terrain : une interrogation par page et par jour, et
+        // seulement si une clé CrUX est configurée.
+        $vt = Uptimer\Vitals::refresh();
+        if ($vt['checked']) {
+            $out(sprintf('  vitesse : %d page(s) interrogée(s), %d mesurée(s), %d en échec',
+                $vt['checked'], $vt['measured'], $vt['poor']));
         }
 
         // Rapports mensuels : l'envoi est marqué par une clé de mois, donc le

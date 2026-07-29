@@ -46,6 +46,13 @@ const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-san
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => errors.push('exception : ' + e.message));
+// Ouvre un accordéon seulement s'il est replié. getAttribute renvoie une chaîne
+// vide sur un attribut booléen présent : on lit la propriété, pas l'attribut.
+const openAcc = async (id) => {
+  if (!(await page.$eval(id, (el) => el.open))) await page.click(id + ' > summary');
+  await page.waitForSelector(id + '[open]');
+};
+
 page.on('console', (m) => {
   if (m.type() === 'error' && !m.text().includes('favicon')) errors.push('console : ' + m.text());
 });
@@ -242,6 +249,36 @@ try {
     ok('boutons assez hauts en ' + name, tap === 0, tap + ' bouton(s) trop petit(s)');
   }
 
+  title('Vitesse ressentie');
+  // La sonde la plus lente du parc : c'est là que le bloc a quelque chose à dire.
+  const slowId = await page.evaluate(async (base) => {
+    // La recherche renvoie les noms, ce que la synthèse ne fait pas.
+    const r = await fetch(base + '/api.php?action=search&q=airbnb',
+                          { headers: { 'X-Requested-With': 'fetch' } });
+    const j = await r.json();
+    return (j.results && j.results[0]) ? j.results[0].id : 0;
+  }, BASE);
+  await page.goto(BASE + '/index.php?p=monitor&id=' + slowId + '&ui=expert', { waitUntil: 'networkidle' });
+  const speed = await page.$('#speed');
+  ok('bloc de vitesse présent', speed !== null);
+  if (speed) {
+    await openAcc('#speed');
+    ok('bloc de vitesse ouvert', await page.$eval('#speed', (el) => el.open));
+    const causes = await page.$$eval('#speed .vit-f', (e) => e.length);
+    ok('causes listées', causes >= 1, causes + ' cause(s)');
+    // La gravité doit se voir sans lire : le bord gauche porte la couleur.
+    const colored = await page.$$eval('#speed .vit-f', (els) => els.filter((el) => {
+      const c = getComputedStyle(el).borderInlineStartColor || getComputedStyle(el).borderLeftColor;
+      return c && c !== 'rgba(0, 0, 0, 0)';
+    }).length);
+    ok('gravité lisible sur le bord de chaque cause', colored === causes, colored + '/' + causes);
+    // Chaque cause propose un remède : sans quoi ce n'est qu'un reproche.
+    const fixes = await page.$$eval('#speed .vit-fix', (e) => e.length);
+    ok('chaque cause porte un remède', fixes === causes, fixes + '/' + causes);
+    ok('aucune valeur de LCP affichée sans clé',
+      !(await page.textContent('#speed')).includes('Affichage du contenu principal'));
+  }
+
   title('Mode agence et espace client');
   await page.setViewportSize({ width: 1440, height: 950 });
   await page.goto(BASE + '/index.php?p=clients&ui=expert', { waitUntil: 'networkidle' });
@@ -299,14 +336,6 @@ try {
   // partent quand même au serveur. Un bloc qui n'ouvre pas est une config perdue.
   const blocks = await page.$$eval('details.acc > summary', (ss) => ss.length);
   ok('blocs de réglages pliables', blocks >= 4, blocks + ' bloc(s)');
-  // L'ouverture des blocs est mémorisée : on n'ouvre que ce qui est replié,
-  // sinon un deuxième clic refermerait le bloc au lieu de l'ouvrir.
-  const openAcc = async (id) => {
-    // getAttribute renvoie une chaîne vide sur un attribut booléen présent :
-    // on lit donc la propriété, pas l'attribut.
-    if (!(await page.$eval(id, (el) => el.open))) await page.click(id + ' > summary');
-    await page.waitForSelector(id + '[open]');
-  };
   await openAcc('#watch');
   ok('bloc de veille de sécurité ouvert', await page.isVisible('input[name=vuln_enabled]'));
   ok('délai des interrogations réglable', await page.isVisible('input[name=vuln_timeout]'));

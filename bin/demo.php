@@ -72,6 +72,36 @@ $page = function (string $t, string $links, string $extraHead = '') use ($classe
         . $b . '<footer class="footer-main">© 2026 Agence Bellevue — tous droits réservés</footer></body></html>';
 };
 $L = '<link rel="stylesheet" href="/style.css?ver=1">';
+
+// Une page volontairement lourde : elle sert la démonstration de l'analyse de
+// vitesse. Tous les défauts qu'elle porte sont les défauts réels les plus
+// fréquents, dans les proportions où on les rencontre.
+$hero = "$fixtures/hero.jpg";
+// Une image de 380 Ko, sans dépendre d'aucune bibliothèque : du JPEG minimal
+// suivi d'un remplissage. Le poids est ce qui compte pour la démonstration.
+file_put_contents($hero, "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+    . str_repeat("\x00", 380 * 1024) . "\xFF\xD9");
+file_put_contents("$fixtures/gros.css", str_repeat(".remplissage-" . bin2hex(random_bytes(3))
+    . "{margin:0;padding:0;border:0}\n", 4200));
+file_put_contents("$fixtures/lourd.js", "/* script de démonstration */\n"
+    . str_repeat("var x" . bin2hex(random_bytes(2)) . " = 1;\n", 3000));
+file_put_contents("$fixtures/polices.css",
+    "@font-face{font-family:Demo;src:url(/demo.woff2) format('woff2')}\n"
+  . "@font-face{font-family:DemoBold;src:url(/demo-bold.woff2) format('woff2')}\n");
+$slowHead = '<link rel="stylesheet" href="/style.css?ver=1">'
+          . '<link rel="stylesheet" href="/gros.css?ver=1">'
+          . '<link rel="stylesheet" href="/polices.css?ver=1">'
+          . '<script src="/lourd.js"></script>'
+          . '<script src="https://cdn.tarteaucitron.io/tag.js"></script>'
+          . '<script src="https://static.hotjar.com/c/hotjar.js"></script>'
+          . '<script src="https://connect.facebook.net/fr_FR/sdk.js"></script>'
+          . '<script src="https://www.googletagmanager.com/gtm.js"></script>';
+$slowBody = '<img src="/hero.jpg" loading="lazy" alt="Bandeau">'
+          . '<img src="/hero.jpg" alt="Photo un">'
+          . '<img src="/hero.jpg" alt="Photo deux">'
+          . '<img src="/hero.jpg" alt="Photo trois">';
+file_put_contents("$fixtures/lente.html", str_replace('<body>', '<body>' . $slowBody,
+    $page('Page vitrine', $slowHead)));
 foreach (['ok' => 'Accueil', 'contact' => 'Contact', 'services' => 'Nos services',
           'tarifs' => 'Tarifs', 'mentions-legales' => 'Mentions légales'] as $f => $t) {
     file_put_contents("$fixtures/$f.html", $page($t, $L));
@@ -146,6 +176,9 @@ $sites = [
     ['Préprod BlaBlaCar',   'preprod.blablacar.fr',  'Laravel',   'Préprod',   "$B/dberror.php",   []],
     ['Bêta Deezer',         'beta.deezer.com',       'Next.js',   'Préprod',   "$B/slow.php",      []],
     ['Recette La Poste',    'recette.laposte.fr',    'Drupal',    'Préprod',   "$B/noindex.html",  []],
+
+    // --- Un site lent : c'est l'analyse de vitesse qui parle ---------------
+    ['Airbnb',              'airbnb.fr',             'Next.js',   'Boutiques', "$B/lente.html",    []],
 
     // --- Une API interne --------------------------------------------------
     ['API interne · état',  'api.exemple-interne.fr', null,       'Interne',   "$B/health.php",    []],

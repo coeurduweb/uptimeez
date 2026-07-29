@@ -8,6 +8,7 @@ use Uptimer\Check\Database;
 use Uptimer\Check\DomainExpiry;
 use Uptimer\Check\Silhouette;
 use Uptimer\Check\Ssl;
+use Uptimer\Check\Vitals;
 use Uptimer\Detect\Discovery;
 use Uptimer\Notify\Notifier;
 use Uptimer\Vuln;
@@ -362,6 +363,18 @@ final class Runner
                     'ua'       => $mon['user_agent'] ?: null,
                 ]);
                 $details['css'] = $css;
+                // Vitesse ressentie : même page, mêmes ressources déjà
+                // téléchargées, donc aucune requête de plus sauf un HEAD sur
+                // l'image du haut de page, qui est le seul poids introuvable
+                // dans le HTML.
+                $details['vitals'] = Vitals::analyse($mon['url'], $res->body,
+                    ($css['metrics'] ?? []) + ['css_text' => (string)($css['css_text'] ?? '')],
+                    $res, [
+                        'head'     => true,
+                        'timeout'  => (int)$mon['timeout_sec'],
+                        'ua'       => $mon['user_agent'] ?: null,
+                        'insecure' => (bool)$mon['ignore_ssl_errors'],
+                    ]);
                 // L'inventaire logiciel se lit dans le HTML déjà reçu : aucune
                 // requête de plus, et la veille de sécurité s'appuie dessus.
                 if (!empty($mon['site_id'])) {
@@ -580,6 +593,19 @@ final class Runner
                     $upd['silhouette_drift'] = (int)round(Silhouette::distance($refS, $sig) * 100);
                 }
             }
+        }
+        if (isset($det['vitals'])) {
+            $v = $det['vitals'];
+            $upd['vitals_level']  = $v['level'];
+            $upd['vitals_at']     = $ts;
+            $upd['vitals_detail'] = jenc([
+                'ttfb_ms' => $v['ttfb_ms'], 'ttfb_verdict' => $v['ttfb_verdict'],
+                'blocking' => ['css' => $v['blocking']['css'], 'js' => $v['blocking']['js'],
+                               'bytes' => $v['blocking']['bytes'],
+                               'items' => array_slice($v['blocking']['items'], 0, 6)],
+                'lcp_image' => $v['lcp_image'],
+                'findings'  => $v['findings'],
+            ]);
         }
         if (isset($det['watch_state'])) {
             $upd['watch_state'] = $det['watch_state'];

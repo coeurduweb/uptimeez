@@ -14,11 +14,12 @@
 | Add my first sites and understand the screens | **[Getting started](getting-started.md)** : the 5-minute tour |
 | Know what each option does | **[Monitors](monitors.md)** : types, rates, proof strings, every setting |
 | Understand *how* it detects things | **[Detection](detection.md)** : the nine layout signals, database failures, certificates |
+| Know why a page is slow | **[Perceived speed](speed.md)** : what is measured, what is inferred, and why the two never mix |
 | Know whether a site runs a vulnerable version | **[Security watch](security-watch.md)** : version inventory, published advisories, what leaves your server |
 | Receive alerts where I actually look | **[Alerts](alerts.md)**. Discord, Slack, e-mail, webhooks, quiet hours |
 | Show something to a client | **[Reports and status pages](reports.md)** |
 | Give each client access to their own sites only | **[Agency mode](agency-mode.md)** : one read-only link per client, revocable |
-| Ask it questions from Claude or another agent | **[MCP server](mcp.md)**: setup, the fourteen tools, why it is read-only by default |
+| Ask it questions from Claude or another agent | **[MCP server](mcp.md)**: setup, the fifteen tools, why it is read-only by default |
 | Run it day to day | **[Operations](operations.md)** : cron, CLI, backups, upgrades, translations, troubleshooting |
 
 **In a hurry?** Three commands and you are monitoring:
