@@ -90,7 +90,7 @@ final class Vitals
                     'vars' => ['ms' => $ttfb . ' ms'],
                     'why'  => 'Aucun affichage ne peut commencer avant. Le LCP ne sera jamais meilleur que ce temps.',
                     'fix'  => 'Cache de pages côté serveur, ou un hébergement moins chargé. Le seuil visé est 800 ms.',
-                    'evidence' => $ttfb . ' ms mesurés sur cette vérification',
+                    'evidence' => t('{ms} ms mesurés sur cette vérification', ['ms' => $ttfb]),
                 ];
             }
         }
@@ -217,7 +217,7 @@ final class Vitals
                 'vars' => ['n' => $fonts],
                 'why'  => 'Le texte reste invisible pendant le téléchargement de la police, puis apparaît d\'un coup en décalant la mise en page.',
                 'fix'  => 'Ajouter font-display: swap dans la règle @font-face.',
-                'evidence' => $fonts . ' règle(s) @font-face concernée(s)',
+                'evidence' => tn($fonts, 'une règle @font-face concernée', '{n} règles @font-face concernées'),
             ];
         }
 

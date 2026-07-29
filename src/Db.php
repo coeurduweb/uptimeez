@@ -283,6 +283,11 @@ final class Db
             status {$str(20)} NOT NULL DEFAULT 'unknown', /* up | degraded | down | paused | unknown */
             reason_code {$str(40)} DEFAULT NULL,
             last_message {$txt},
+            /* Variables du dernier verdict, en JSON. Le message est stocké comme
+               msgid (« Le certificat expire dans {n} jours ») et traduit à
+               l'affichage : sans cela, la langue du cron déciderait de la langue
+               lue par tout le monde. */
+            last_message_vars {$txt},
             status_since {$ts} DEFAULT NULL,
             last_check_at {$ts} DEFAULT NULL,
             next_check_at {$ts} DEFAULT NULL,

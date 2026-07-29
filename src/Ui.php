@@ -62,6 +62,34 @@ final class Ui
             . ($class !== '' ? ' class="' . e($class) . '"' : '') . ' aria-hidden="true">' . $body . '</svg>';
     }
 
+    /**
+     * Cadences proposées, libellées et traduites.
+     *
+     * Une seule liste pour l'écran d'import et pour la fiche d'une sonde : deux
+     * copies finissaient par diverger, et par n'être traduites qu'à moitié.
+     *
+     * @return array<int,string>
+     */
+    public static function intervalChoices(bool $withExtremes = true): array
+    {
+        $out = [];
+        if ($withExtremes) $out[30] = t('Toutes les 30 secondes');
+        $out += [
+            60   => t('Toutes les minutes'),
+            120  => t('Toutes les 2 minutes'),
+            300  => t('Toutes les 5 minutes'),
+            600  => t('Toutes les 10 minutes'),
+            900  => t('Toutes les 15 minutes'),
+            1800 => t('Toutes les 30 minutes'),
+            3600 => t('Toutes les heures'),
+        ];
+        if ($withExtremes) {
+            $out[21600] = t('Toutes les 6 heures');
+            $out[86400] = t('Une fois par jour');
+        }
+        return $out;
+    }
+
     public static function statusLabel(?string $s): string
     {
         return I18n::t(self::LABELS[$s ?? 'unknown'] ?? 'Inconnu');
@@ -200,13 +228,15 @@ final class Ui
     public static function sparkline(array $buckets, int $w = 300, int $h = 34): string
     {
         $n = count($buckets);
-        if ($n === 0) return '<div class="spark-empty">Pas encore de mesure</div>';
+        if ($n === 0) return '<div class="spark-empty">' . e(t('Pas encore de mesure')) . '</div>';
 
         $filled = 0;
         foreach ($buckets as $b) if (($b['state'] ?? 'none') !== 'none') $filled++;
-        if ($filled === 0) return '<div class="spark-empty">Aucune mesure sur la période</div>';
+        if ($filled === 0) return '<div class="spark-empty">' . e(t('Aucune mesure sur la période')) . '</div>';
         if ($filled < 3) {
-            return '<div class="spark-empty">Historique en cours (' . $filled . ' mesure' . ($filled > 1 ? 's' : '') . ')</div>';
+            return '<div class="spark-empty">'
+                 . e(tn($filled, 'Historique en cours : une mesure', 'Historique en cours : {n} mesures'))
+                 . '</div>';
         }
 
         $vals = array_values(array_filter(array_map(fn($b) => (int)($b['avg_ms'] ?? 0), $buckets)));
@@ -217,7 +247,8 @@ final class Ui
         $gap = $n > 90 ? 0.5 : 1;
         $bw  = max(1.0, ($w - ($n - 1) * $gap) / $n);
         $svg = '<svg class="spark" viewBox="0 0 ' . $w . ' ' . $h . '" preserveAspectRatio="none" role="img"'
-             . ' aria-label="Historique des ' . $n . ' derniers intervalles">';
+             . ' aria-label="' . e(tn($n, 'Historique du dernier intervalle',
+                                         'Historique des {n} derniers intervalles')) . '">';
         $x = 0.0;
         foreach ($buckets as $b) {
             $state = (string)($b['state'] ?? 'none');
@@ -283,12 +314,13 @@ final class Ui
     private static function bucketTitle(array $b): string
     {
         $when = isset($b['t']) ? date('d/m H:i', (int)$b['t']) : '';
-        if (($b['state'] ?? 'none') === 'none') return $when . ' · aucune mesure';
+        if (($b['state'] ?? 'none') === 'none') return $when . ' · ' . t('aucune mesure');
         $bits = [$when];
         if (isset($b['avg_ms']) && $b['avg_ms'] !== null) $bits[] = self::ms((int)$b['avg_ms']);
-        if (!empty($b['fails']))    $bits[] = $b['fails'] . ' échec(s)';
-        if (!empty($b['down_sec'])) $bits[] = 'HS ' . human_duration((int)$b['down_sec']);
-        if (!empty($b['degraded'])) $bits[] = $b['degraded'] . ' dégradé(s)';
+        if (!empty($b['fails']))    $bits[] = tn((int)$b['fails'], 'un échec', '{n} échecs');
+        if (!empty($b['down_sec'])) $bits[] = t('hors service {duration}',
+                                                  ['duration' => human_duration((int)$b['down_sec'])]);
+        if (!empty($b['degraded'])) $bits[] = tn((int)$b['degraded'], 'un dégradé', '{n} dégradés');
         return implode(' · ', $bits);
     }
 
@@ -298,8 +330,8 @@ final class Ui
         $buckets = $series['buckets'] ?? [];
         $n = count($buckets);
         if ($n === 0) {
-            return '<div class="chart-empty">Aucune donnée sur cette période.<br>'
-                 . '<span class="small">Lancez une vérification ou attendez la prochaine passe du cron.</span></div>';
+            return '<div class="chart-empty">' . e(t('Aucune donnée sur cette période.')) . '<br>'
+                 . '<span class="small">' . e(t('Lancez une vérification, ou attendez la prochaine passe de la tâche planifiée.')) . '</span></div>';
         }
 
         $padL = 44; $padR = 10; $padT = 10; $padB = 26;
@@ -314,7 +346,7 @@ final class Ui
         $y = fn(float $ms) => $padT + $ih - min(1, $ms / $max) * $ih;
 
         $svg = '<svg class="chart" viewBox="0 0 ' . $w . ' ' . $h . '" preserveAspectRatio="none" role="img"'
-             . ' aria-label="Temps de réponse et périodes d\'indisponibilité">';
+             . ' aria-label="' . e(t('Temps de réponse et périodes d\'indisponibilité')) . '">';
 
         for ($g = 0; $g <= 4; $g++) {
             $vy = $padT + ($ih / 4) * $g;
@@ -361,17 +393,24 @@ final class Ui
             if (!$b) continue;
             $anchor = $t === 0 ? 'start' : ($t === $ticks ? 'end' : 'middle');
             $svg .= '<text class="axis" x="' . round($x($i), 2) . '" y="' . ($h - 7) . '" text-anchor="' . $anchor . '">'
-                 . e(self::frDate($fmt, (int)$b['t'])) . '</text>';
+                 . e(self::shortDate($fmt, (int)$b['t'])) . '</text>';
         }
         return $svg . '</svg>';
     }
 
-    /** Dates courtes en français (les noms de mois de date() sont en anglais). */
-    private static function frDate(string $fmt, int $ts): string
+    /**
+     * Dates courtes, mois abrégé traduit.
+     *
+     * date() ne connaît que l'anglais : les douze abréviations sont donc des
+     * msgid comme le reste de l'interface. En anglais, le catalogue rend « Jan »
+     * plutôt que « janv. ».
+     */
+    private static function shortDate(string $fmt, int $ts): string
     {
         if ($fmt !== 'M y') return date($fmt, $ts);
-        $mois = ['', 'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-        return $mois[(int)date('n', $ts)] . ' ' . date('y', $ts);
+        static $keys = ['', 'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+                        'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+        return t($keys[(int)date('n', $ts)]) . ' ' . date('y', $ts);
     }
 
     /** Frise de disponibilité, une case par jour. */
@@ -383,11 +422,12 @@ final class Ui
         $byDay = [];
         foreach ($rows as $r) $byDay[(string)$r['day']] = $r;
 
-        $out = '<div class="daystrip" role="img" aria-label="Disponibilité des ' . $days . ' derniers jours">';
+        $out = '<div class="daystrip" role="img" aria-label="'
+             . e(tn($days, 'Disponibilité du dernier jour', 'Disponibilité des {n} derniers jours')) . '">';
         for ($i = $days - 1; $i >= 0; $i--) {
             $day = date('Y-m-d', time() - $i * 86400);
             $r   = $byDay[$day] ?? null;
-            if (!$r) { $cls = 'none'; $title = date('d/m', strtotime($day)) . ' · pas de donnée'; }
+            if (!$r) { $cls = 'none'; $title = date('d/m', strtotime($day)) . ' · ' . t('pas de donnée'); }
             else {
                 $down = (int)$r['downtime_sec'];
                 $cls  = $down > 900 ? 'down' : ($down > 0 || (int)$r['fails'] > 0 ? 'degraded' : 'up');

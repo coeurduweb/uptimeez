@@ -145,7 +145,8 @@ function mcp_tools(): array
             'write' => false,
             'run' => function (array $a): array {
                 $limit = (int)max(1, min(200, (int)($a['limit'] ?? 50)));
-                $rows = Db::all('SELECT m.id, m.name, m.url, m.kind, m.status, m.reason_code, m.last_message,
+                $rows = Db::all('SELECT m.id, m.name, m.url, m.kind, m.status, m.reason_code,
+                                        m.last_message, m.last_message_vars,
                                         m.last_ms, m.uptime_24h, m.enabled, m.last_check_at, m.interval_sec,
                                         s.name AS site_name, s.domain, s.cms, s.group_name
                                  FROM monitors m LEFT JOIN sites s ON s.id = m.site_id
@@ -165,7 +166,7 @@ function mcp_tools(): array
                     $out[] = [
                         'monitor_id' => (int)$r['id'], 'name' => $r['name'], 'url' => $r['url'],
                         'kind' => $r['kind'], 'state' => $r['status'], 'reason_code' => $r['reason_code'],
-                        'message' => $r['last_message'] !== null ? str_cut((string)$r['last_message'], 200) : null,
+                        'message' => $r['last_message'] !== null ? verdict_text($r, 200) : null,
                         'response_ms' => $r['last_ms'] !== null ? (int)$r['last_ms'] : null,
                         'uptime_24h_pct' => $r['uptime_24h'] !== null ? round((float)$r['uptime_24h'], 2) : null,
                         'site' => $r['site_name'], 'domain' => $r['domain'], 'technology' => $r['cms'],
@@ -209,7 +210,7 @@ function mcp_tools(): array
                     'diagnosis' => [
                         'reason_code' => $m['reason_code'],
                         'cause' => $diag['title'], 'why_it_matters' => $diag['why'], 'what_to_do' => $diag['fix'],
-                        'technical_reading' => $m['last_message'],
+                        'technical_reading' => verdict_text($m),
                     ],
                     'availability' => [
                         '24h' => ['uptime_pct' => $w24['uptime'] !== null ? round((float)$w24['uptime'], 2) : null,

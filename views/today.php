@@ -81,117 +81,171 @@ $taskSparks = $taskIds ? Stats::sparkBatch($taskIds, 86400, 40) : [];
 
 <!-- ===================== À TRAITER MAINTENANT ===================== -->
 <?php if ($nAct): ?>
+  <?php
+  /**
+   * Un seul foyer d'attention, puis une file.
+   *
+   * Le défaut de la version précédente : cinq cartes de même poids, deux
+   * colonnes de texte et une image chacune. Rien ne disait où regarder. Ici la
+   * panne la plus urgente occupe une carte détaillée, et les suivantes tiennent
+   * sur une ligne chacune, lisibles d'un coup d'œil et actionnables sans ouvrir
+   * quoi que ce soit. C'est l'ordre de traitement qui devient la mise en page.
+   */
+  $hero  = $actions[0];
+  $queue = array_slice($actions, 1);
+
+  /** Rend la ligne d'actions d'une tâche : un bouton principal, le reste replié. */
+  $renderActions = function (array $a, bool $compact) use ($csrf): void {
+      $mid = $a['id'];
+      $m   = $a['monitor'];
+      $primary = null; $rest = [];
+      foreach ($a['actions'] as [$act, $label]) {
+          if ($primary === null && $act === 'check') { $primary = [$act, $label]; continue; }
+          $rest[] = [$act, $label];
+      }
+      if ($primary === null && $rest) { $primary = array_shift($rest); }
+      ?>
+      <div class="act">
+        <?php if ($primary !== null):
+          [$act, $label] = $primary; ?>
+          <?php if ($act === 'check'): ?>
+            <button class="btn btn-primary<?= $compact ? ' btn-sm' : '' ?> js-check" data-id="<?= $mid ?>">
+              <?= Ui::icon('refresh', $compact ? 14 : 15) ?> <?= e($label) ?></button>
+          <?php elseif ($act === 'open'): ?>
+            <a class="btn btn-primary<?= $compact ? ' btn-sm' : '' ?>" href="<?= e((string)$m['url']) ?>"
+               target="_blank" rel="noopener"><?= Ui::icon('external', 14) ?> <?= e($label) ?></a>
+          <?php else: ?>
+            <button class="btn btn-primary<?= $compact ? ' btn-sm' : '' ?> js-fix" data-id="<?= $mid ?>"
+                    data-fix="<?= e($act) ?>"><?= e($label) ?></button>
+          <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if ($rest || ($a['incident'] && !$a['acked'])): ?>
+          <?php /* Le reste est replié : disponible en un clic, absent du regard
+                   le reste du temps. Aucun JavaScript, un details suffit. */ ?>
+          <details class="act-more">
+            <summary class="btn btn-sm btn-ghost" title="<?= te('Autres actions') ?>"
+                     aria-label="<?= te('Autres actions') ?>">···</summary>
+            <div class="act-menu">
+              <?php foreach ($rest as [$act, $label]): ?>
+                <?php if ($act === 'open'): ?>
+                  <a href="<?= e((string)$m['url']) ?>" target="_blank" rel="noopener">
+                    <?= Ui::icon('external', 14) ?> <?= e($label) ?></a>
+                <?php elseif ($act === 'copy'): ?>
+                  <button type="button" class="js-copy-report" data-id="<?= $mid ?>">
+                    <?= Ui::icon('file', 14) ?> <?= e($label) ?></button>
+                <?php else: ?>
+                  <button type="button" class="js-fix" data-id="<?= $mid ?>" data-fix="<?= e($act) ?>">
+                    <?= e($label) ?></button>
+                <?php endif; ?>
+              <?php endforeach; ?>
+              <?php if ($a['incident'] && !$a['acked']): ?>
+                <button type="button" class="js-fix" data-id="<?= $mid ?>" data-fix="ack">
+                  <?= Ui::icon('check', 14) ?> <?= te('Pris en compte') ?></button>
+              <?php endif; ?>
+              <a href="<?= e(u('monitor', ['id' => $mid])) ?>">
+                <?= Ui::icon('eye', 14) ?> <?= te('Fiche complète') ?></a>
+            </div>
+          </details>
+        <?php endif; ?>
+      </div>
+      <?php
+  };
+  ?>
+
+  <!-- ---------- Le foyer : une seule panne, celle qui compte ---------- -->
+  <?php
+  $m     = $hero['monitor'];
+  $mid   = $hero['id'];
+  $tone  = $hero['severity'] === 'down' ? 'bad' : 'warn';
+  $sil   = (string)($m['silhouette_now'] ?? '');
+  $showS = $sil !== '' && in_array($hero['reason'], ['CSS_BROKEN', 'CSS_DEGRADED', 'DB_DOWN',
+                                                     'APP_ERROR', 'STRING_MISSING',
+                                                     'STRING_FORBIDDEN', 'NOINDEX'], true);
+  ?>
   <div class="section-title">
-    <?= te('À traiter maintenant · {n}', ['n' => $nAct]) ?>
-    <?= hint('Un site par carte, dans l\'ordre d\'urgence. Chaque carte dit ce qui casse, pourquoi c\'est un problème et quoi faire. Les boutons agissent sans quitter la page.') ?>
+    <?= te('À traiter d\'abord') ?>
+    <?= hint('La panne la plus urgente occupe cette carte : la cause, ce que ça fait au visiteur, quoi faire, et le bouton qui le fait. Les autres suivent en dessous, une ligne chacune.') ?>
   </div>
 
-  <?php foreach ($actions as $a):
-    $m = $a['monitor'];
-    $mid = $a['id'];
-    $tone = $a['severity'] === 'down' ? 'bad' : 'warn';
-  ?>
-  <article class="task task-<?= $tone ?>" data-id="<?= $mid ?>" data-task>
-    <div class="task-main">
-    <div class="task-head">
-      <span class="task-icon"><?= Ui::icon($a['icon'], 22) ?></span>
-      <div class="grow">
-        <div class="task-cause"><?= e($a['cause']) ?></div>
-        <div class="task-who">
-          <a href="<?= e(u('monitor', ['id' => $mid])) ?>"><strong><?= e($a['title']) ?></strong></a>
-          <span class="muted"><?= e($a['subtitle']) ?></span>
-          <?php if ($a['also'] > 0): ?>
-            · <?= Ui::badge(tn($a['also'], '+1 autre page du site', '+{n} autres pages du site'), $tone) ?>
-          <?php endif; ?>
-          <?php if ($a['acked']): ?> <?= Ui::badge(t('pris en compte'), 'neutral') ?><?php endif; ?>
-        </div>
+  <article class="hero-task hero-<?= $tone ?>" data-id="<?= $mid ?>" data-task>
+    <div class="hero-body">
+      <div class="hero-line">
+        <span class="hero-ico"><?= Ui::icon($hero['icon'], 20) ?></span>
+        <span class="hero-site"><a href="<?= e(u('monitor', ['id' => $mid])) ?>"><?= e($hero['title']) ?></a></span>
+        <span class="hero-dom"><?= e($hero['subtitle']) ?></span>
+        <?php if ($hero['since']): ?>
+          <span class="hero-since"><?= e(human_duration(max(0, time() - strtotime((string)$hero['since'])))) ?></span>
+        <?php endif; ?>
+        <?php if ($hero['acked']): ?><?= Ui::badge(t('pris en compte'), 'neutral') ?><?php endif; ?>
       </div>
-      <?php /* La durée est le chiffre qui décide de l'ordre d'attaque : elle
-               sort du texte pour devenir la métrique de la carte. */
-      if ($a['since']): ?>
-        <div class="task-metric task-metric-<?= $tone ?>">
-          <b><?= e(human_duration(max(0, time() - strtotime((string)$a['since'])))) ?></b>
-          <span><?= $a['severity'] === 'down' ? te('hors service') : te('à surveiller') ?></span>
-          <?php if ($a['fails'] > 1): ?>
-            <span class="task-metric-sub"><?= e(tn($a['fails'], 'un échec', '{n} échecs de suite')) ?></span>
-          <?php endif; ?>
-        </div>
+
+      <h2 class="hero-cause"><?= e($hero['cause']) ?></h2>
+      <p class="hero-why"><?= e($hero['why']) ?></p>
+
+      <p class="hero-fix"><span class="hero-fix-tag"><?= te('À faire') ?></span> <?= e($hero['fix']) ?></p>
+
+      <?php $renderActions($hero, false); ?>
+
+      <?php if (expert() && ($hero['evidence'] !== '' || $hero['fails'] > 1)): ?>
+        <details class="hero-tech">
+          <summary><?= te('Relevé technique') ?></summary>
+          <div>
+            <?php if ($hero['fails'] > 1): ?>
+              <p class="mb0"><?= e(tn($hero['fails'], 'un échec consécutif', '{n} échecs consécutifs')) ?>
+                <?php if ($hero['also'] > 0): ?>
+                  · <?= e(tn($hero['also'], 'une autre page du même site touchée',
+                                            '{n} autres pages du même site touchées')) ?>
+                <?php endif; ?></p>
+            <?php endif; ?>
+            <?php if ($hero['evidence'] !== ''): ?>
+              <div class="task-evidence"><?= e($hero['evidence']) ?></div>
+            <?php endif; ?>
+          </div>
+        </details>
       <?php endif; ?>
     </div>
 
-    <div class="task-cols">
-      <p class="task-why"><?= e($a['why']) ?></p>
-      <p class="task-fix"><?= Ui::icon('wrench', 14) ?> <?= e($a['fix']) ?></p>
-    </div>
-    <?php if ($a['evidence'] !== '' && expert()): ?>
-      <div class="task-evidence"><?= e($a['evidence']) ?></div>
+    <?php if ($showS): ?>
+      <figure class="hero-proof">
+        <div class="hero-proof-view"><?= $sil ?></div>
+        <figcaption><?= te('La page maintenant') ?> ·
+          <span class="muted"><?= te('reconstitution, pas une capture') ?></span></figcaption>
+      </figure>
+    <?php elseif (!empty($taskSparks[$mid])): ?>
+      <figure class="hero-proof">
+        <div class="hero-proof-spark"><?= Ui::sparkline($taskSparks[$mid], 330, 64) ?></div>
+        <figcaption><?= te('24 dernières heures') ?>
+          <?php if (($m['last_ms'] ?? null) !== null): ?>
+            · <span class="muted"><?= e(Ui::ms((int)$m['last_ms'])) ?></span>
+          <?php endif; ?></figcaption>
+      </figure>
     <?php endif; ?>
-
-    <div class="task-actions">
-      <?php foreach ($a['actions'] as [$act, $label]):
-        if ($act === 'open'): ?>
-          <a class="btn btn-sm" href="<?= e((string)$m['url']) ?>" target="_blank" rel="noopener">
-            <?= Ui::icon('external', 14) ?> <?= e($label) ?></a>
-        <?php elseif ($act === 'check'): ?>
-          <button class="btn btn-sm btn-primary js-check" data-id="<?= $mid ?>">
-            <?= Ui::icon('refresh', 14) ?> <?= e($label) ?></button>
-        <?php elseif ($act === 'copy'): ?>
-          <button class="btn btn-sm js-copy-report" data-id="<?= $mid ?>">
-            <?= Ui::icon('file', 14) ?> <?= e($label) ?></button>
-        <?php else: ?>
-          <button class="btn btn-sm js-fix" data-id="<?= $mid ?>" data-fix="<?= e($act) ?>">
-            <?= e($label) ?></button>
-        <?php endif;
-      endforeach; ?>
-      <span class="grow"></span>
-      <?php if ($a['incident'] && !$a['acked']): ?>
-        <button class="btn btn-sm btn-ghost js-fix" data-id="<?= $mid ?>" data-fix="ack"
-                title="<?= te('Stoppe les rappels d\'alerte sans clore l\'incident') ?>"><?= te('Pris en compte') ?></button>
-      <?php endif; ?>
-      <a class="btn btn-sm btn-ghost" href="<?= e(u('monitor', ['id' => $mid])) ?>"><?= te('Fiche complète →') ?></a>
-    </div>
-    </div><?php /* fin de .task-main */ ?>
-
-    <?php
-    // La preuve, à droite : ce qu'on montrerait au client. La silhouette de la
-    // page cassée d'abord, parce qu'une image se comprend sans lecture ; à
-    // défaut, la courbe des 24 heures et la dernière mesure.
-    $sil  = (string)($m['silhouette_now'] ?? '');
-    // La silhouette ne parle que des pannes visibles à l'écran : une panne
-    // réseau ou un certificat expiré n'ont rien à montrer d'utile.
-    $showSil = $sil !== '' && in_array($a['reason'], ['CSS_BROKEN', 'CSS_DEGRADED', 'DB_DOWN',
-                                                      'APP_ERROR', 'STRING_MISSING',
-                                                      'STRING_FORBIDDEN', 'NOINDEX'], true);
-    ?>
-    <aside class="task-proof">
-      <?php if ($showSil): ?>
-        <figure class="task-sil">
-          <figcaption><?= te('La page maintenant') ?></figcaption>
-          <div class="task-sil-view"><?= $sil ?></div>
-          <figcaption class="task-sil-note"><?= te('Reconstitution, pas une capture d\'écran.') ?></figcaption>
-        </figure>
-      <?php else: ?>
-        <div class="task-spark">
-          <div class="task-spark-head">
-            <span><?= te('24 dernières heures') ?></span>
-            <?php if (($m['last_status_code'] ?? null) !== null): ?>
-              <span class="mono"><?= (int)$m['last_status_code'] ?></span>
-            <?php endif; ?>
-          </div>
-          <?= Ui::sparkline($taskSparks[$mid] ?? [], 320, 40) ?>
-          <div class="task-spark-foot">
-            <?php if (($m['last_ms'] ?? null) !== null): ?>
-              <?= e(Ui::ms((int)$m['last_ms'])) ?>
-            <?php endif; ?>
-            <?php if (($m['uptime_30d'] ?? null) !== null): ?>
-              · <?= te('{pct} sur 30 j', ['pct' => Ui::pct((float)$m['uptime_30d'], 2)]) ?>
-            <?php endif; ?>
-          </div>
-        </div>
-      <?php endif; ?>
-    </aside>
   </article>
-  <?php endforeach; ?>
+
+  <!-- ---------- La file : une ligne par panne, lisible d'un coup ---------- -->
+  <?php if ($queue): ?>
+    <div class="section-title">
+      <?= tne(count($queue), 'Ensuite · une autre', 'Ensuite · {n} autres') ?>
+      <?= hint('Une ligne par site. Le bouton agit sans quitter la page, le nom ouvre la fiche.') ?>
+    </div>
+    <ul class="queue">
+      <?php foreach ($queue as $q):
+        $qm = $q['monitor'];
+        $qid = $q['id'];
+        $qt = $q['severity'] === 'down' ? 'bad' : 'warn'; ?>
+        <li class="q-row q-<?= $qt ?>" data-id="<?= $qid ?>" data-task>
+          <span class="q-ico"><?= Ui::icon($q['icon'], 17) ?></span>
+          <span class="q-site"><a href="<?= e(u('monitor', ['id' => $qid])) ?>"><?= e($q['title']) ?></a></span>
+          <span class="q-cause"><?= e($q['cause']) ?></span>
+          <span class="q-since"><?php if ($q['since']): ?>
+            <?= e(human_duration(max(0, time() - strtotime((string)$q['since'])))) ?>
+          <?php endif; ?></span>
+          <?php $renderActions($q, true); ?>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
 <?php endif; ?>
 
 <!-- ===================== À PRÉVOIR ===================== -->
@@ -202,7 +256,12 @@ $taskSparks = $taskIds ? Stats::sparkBatch($taskIds, 86400, 40) : [];
   </div>
   <div class="panel">
     <div class="panel-body tight">
-      <?php foreach ($upcoming as $up): ?>
+      <?php
+      // Au-delà de cinq, le reste est replié : la page reste lisible et rien
+      // n'est perdu. C'est le même geste que partout ailleurs dans l'outil.
+      $foreShown = array_slice($upcoming, 0, 5);
+      $foreRest  = array_slice($upcoming, 5);
+      foreach ($foreShown as $up): ?>
         <div class="fore fore-<?= e($up['urgency']) ?>">
           <span class="fore-icon"><?= Ui::icon($up['icon'], 17) ?></span>
           <div class="grow">
@@ -214,6 +273,24 @@ $taskSparks = $taskIds ? Stats::sparkBatch($taskIds, 86400, 40) : [];
           <?php endif; ?>
         </div>
       <?php endforeach; ?>
+      <?php if ($foreRest): ?>
+        <details class="fore-more">
+          <summary><?= e(tn(count($foreRest), 'Un autre point à prévoir',
+                                              '{n} autres points à prévoir')) ?></summary>
+          <?php foreach ($foreRest as $up): ?>
+            <div class="fore fore-<?= e($up['urgency']) ?>">
+              <span class="fore-icon"><?= Ui::icon($up['icon'], 17) ?></span>
+              <div class="grow">
+                <div class="fore-title"><?= e($up['title']) ?></div>
+                <div class="fore-why"><?= e($up['why']) ?></div>
+              </div>
+              <?php if ($up['id']): ?>
+                <a class="btn btn-sm btn-ghost nowrap" href="<?= e(u('monitor', ['id' => (int)$up['id']])) ?>"><?= te('Voir') ?></a>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        </details>
+      <?php endif; ?>
     </div>
   </div>
 <?php endif; ?>

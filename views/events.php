@@ -49,7 +49,7 @@ $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m 
           <td class="small"><?php if ($n['monitor_id']): ?>
             <a href="<?= e(u('monitor', ['id' => (int)$n['monitor_id']])) ?>"><?= e((string)($n['name'] ?? '—')) ?></a>
           <?php else: ?>—<?php endif; ?></td>
-          <td class="small"><?= (int)$n['ok'] === 1 ? Ui::badge('envoyée', 'ok') : Ui::badge('échec', 'bad') ?>
+          <td class="small"><?= (int)$n['ok'] === 1 ? Ui::badge(t('envoyée'), 'ok') : Ui::badge(t('échec'), 'bad') ?>
             <span class="tiny muted"><?= e(str_cut((string)$n['response'], 90)) ?></span></td>
         </tr>
       <?php endforeach; ?>

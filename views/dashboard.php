@@ -259,22 +259,22 @@ $band  = $bad > 0 ? 'band-bad' : ($warn > 0 ? 'band-warn' : ($all['up'] > 0 ? 'b
       // Message : la cause de l'état, prise sur la sonde réellement en défaut.
       $msg = '';
       if ($st !== 'up' && $st !== 'unknown') {
-          $msg = (string)($m['last_message'] ?? '');
+          $msg = verdict_text($m);
           if ($mode === 'site' && $u['bad'] > 0) {
               foreach ($u['monitors'] as $mm) {
-                  if ($mm['status'] === $st) { $msg = (string)$mm['last_message']; break; }
+                  if ($mm['status'] === $st) { $msg = verdict_text($mm); break; }
               }
           }
       }
 
       // Deux badges maximum, et seulement s'ils réclament de l'attention.
       $flags = [];
-      if ($m['css_state'] === 'broken')    $flags[] = ['CSS cassé', 'bad'];
-      elseif ($m['css_state'] === 'warn')  $flags[] = ['CSS à vérifier', 'warn'];
+      if ($m['css_state'] === 'broken')    $flags[] = [t('CSS cassé'), 'bad'];
+      elseif ($m['css_state'] === 'warn')  $flags[] = [t('CSS à vérifier'), 'warn'];
       $sd = $m['ssl_days_left'] !== null ? (int)$m['ssl_days_left'] : null;
-      if ($sd !== null && $sd < 0)                                 $flags[] = ['SSL expiré', 'bad'];
+      if ($sd !== null && $sd < 0)                                 $flags[] = [t('SSL expiré'), 'bad'];
       elseif ($sd !== null && $sd <= (int)$m['ssl_warn_days'])     $flags[] = ['SSL ' . $sd . ' j', 'warn'];
-      if ($m['setup_state'] === 'pending') $flags[] = ['préparation…', 'info'];
+      if ($m['setup_state'] === 'pending') $flags[] = [t('préparation…'), 'info'];
       $flags = array_slice($flags, 0, 2);
   ?>
   <article class="card s-<?= e($st) ?>" data-hay="<?= e($hay) ?>" data-id="<?= $mid ?>" data-status="<?= e($st) ?>">
@@ -312,7 +312,7 @@ $band  = $bad > 0 ? 'band-bad' : ($warn > 0 ? 'band-warn' : ($all['up'] > 0 ? 'b
       <?php foreach ($flags as [$txt, $tone]): ?><?= Ui::badge($txt, $tone) ?><?php endforeach; ?>
       <div class="card-actions">
         <button class="btn btn-sm btn-ghost btn-icon js-check" data-id="<?= $mid ?>"
-                title="<?= te('Vérifier maintenant') ?>" aria-label="Vérifier <?= e($u['title']) ?> maintenant"><?= Ui::icon('refresh', 15) ?></button>
+                title="<?= te('Vérifier maintenant') ?>" aria-label="<?= te('Vérifier') ?> <?= e($u['title']) ?> maintenant"><?= Ui::icon('refresh', 15) ?></button>
         <button class="btn btn-sm btn-ghost btn-icon js-toggle" data-id="<?= $mid ?>"
                 title="<?= (int)$m['enabled'] === 1 ? 'Mettre en pause' : 'Réactiver' ?>"
                 aria-label="<?= (int)$m['enabled'] === 1 ? 'Mettre en pause' : 'Réactiver' ?>"><?=
@@ -329,7 +329,7 @@ $band  = $bad > 0 ? 'band-bad' : ($warn > 0 ? 'band-warn' : ($all['up'] > 0 ? 'b
 <?php
 $worst = Stats::worst(6);
 if (count($worst) > 1):
-  echo Ui::accOpen('fragile', 'chart', 'Les plus fragiles sur 30 jours', t('là où il faut agir en priorité'));
+  echo Ui::accOpen('fragile', 'chart', t('Les plus fragiles sur 30 jours'), t('là où il faut agir en priorité'));
   echo Ui::accBody(true);
 ?>
   <div class="table-scroll"><table class="tbl">

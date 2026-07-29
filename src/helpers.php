@@ -87,6 +87,23 @@ function import_payload(): string
     return $pasted;
 }
 
+/**
+ * Le dernier verdict d'une sonde, dans la langue de qui regarde.
+ *
+ * Le collecteur enregistre une phrase source et ses variables ; la traduction a
+ * lieu ici, à l'affichage. C'est la seule façon qu'un même incident se lise en
+ * français pour l'un et en anglais pour l'autre : la langue du cron n'a pas à
+ * décider de la langue de l'écran.
+ */
+function verdict_text(?array $row, int $cut = 0): string
+{
+    if (!$row) return '';
+    $msg = trim((string)($row['last_message'] ?? ''));
+    if ($msg === '') return '';
+    $out = t($msg, jdec($row['last_message_vars'] ?? null));
+    return $cut > 0 ? str_cut($out, $cut) : $out;
+}
+
 /** URL interne. */
 function u(string $page, array $params = []): string
 {
@@ -124,7 +141,7 @@ function human_since(?string $datetime): string
     $ts = strtotime($datetime);
     if (!$ts) return '—';
     $d = time() - $ts;
-    if ($d < 10)  return "à l'instant";
+    if ($d < 10)  return t('à l\'instant');
     if ($d < 60)  return "il y a {$d} s";
     return 'il y a ' . human_duration($d);
 }

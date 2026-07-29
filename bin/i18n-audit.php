@@ -137,7 +137,7 @@ function is_fragment(string $id): bool
     // abréviation technique : elle s'écrit pareil partout et elle signale
     // presque toujours une phrase coupée autour d'une valeur.
     if (preg_match('~^[a-zà-ÿ]+$~u', $s)) {
-        static $ok    = ['uptime', 'sonde', 'sondes', 'ping', 'jours', 'oui', 'non'];
+        static $ok    = ['uptime', 'sonde', 'sondes', 'ping', 'jours', 'oui', 'non', 'mai'];
         static $units = ['ms', 'ko', 'mo', 'go', 'px', 'req', 'min', 'sec', 'api', 'url',
                          'css', 'js', 'html', 'ip', 'dns', 'tls', 'ssl', 'http', 'https'];
         if (in_array($s, $units, true)) return true;
@@ -151,7 +151,14 @@ function is_fragment(string $id): bool
 }
 
 /** Cherche les littéraux français encore hors de t(). */
-function bare_strings(array $files): array
+/**
+ * Littéraux français encore hors traduction.
+ *
+ * @param array $known msgid déjà connus : un littéral qui EST un msgid est
+ *                     traduit quelque part, souvent à l'affichage après un
+ *                     passage en base. Le signaler serait crier au loup.
+ */
+function bare_strings(array $files, array $known = []): array
 {
     $out = [];
     foreach ($files as $f) {
@@ -173,23 +180,36 @@ function bare_strings(array $files): array
                 foreach ($m[1] as [$lit, $off]) {
                     if ($cut !== null && $off > $cut) continue;
                     $val = str_replace(["\\'", '\\"'], ["'", '"'], substr($lit, 1, -1));
+                    // Dans un gabarit, les guillemets d'un attribut HTML
+                    // ressemblent à un littéral PHP quand l'attribut contient
+                    // une balise d'échappement PHP. Ce n'est pas du texte en
+                    // dur, c'est du balisage autour d'un texte déjà traduit.
+                    // (Le commentaire évite d'écrire la balise fermante : elle
+                    // interromprait ce fichier PHP au beau milieu.)
+                    if (str_contains($val, '<?') || str_contains($val, '?>')
+                        || preg_match('~\b(?:te|t|tn|tne|hint)\s*\(~', $val)) continue;
                     if (!looks_french($val)) continue;
                     $hits[] = $val;
                 }
             }
+            // Un morceau qui contient déjà un appel de traduction est du
+            // balisage autour d'un texte traduit, pas du texte en dur.
+            $wrapped = static fn(string $txt): bool => str_contains($txt, '?=')
+                || preg_match('~\b(?:te|t|tn|tne|hint)\s*\(~', $txt) === 1;
             // Texte HTML nu.
             if (preg_match_all('~>([^<>?]{3,}?)<~', $line, $m)) {
                 foreach ($m[1] as $txt) {
-                    if (looks_french($txt) && !str_contains($txt, '?=')) $hits[] = trim($txt);
+                    if (looks_french($txt) && !$wrapped($txt)) $hits[] = trim($txt);
                 }
             }
             // Attributs visibles restés en clair.
             if (preg_match_all('~\b(?:title|placeholder|aria-label|alt)="([^"<>]{3,})"~', $line, $m)) {
                 foreach ($m[1] as $txt) {
-                    if (looks_french($txt) && !str_contains($txt, '?=')) $hits[] = trim($txt);
+                    if (looks_french($txt) && !$wrapped($txt)) $hits[] = trim($txt);
                 }
             }
             foreach (array_unique($hits) as $h) {
+                if (isset($known[trim($h)])) continue;
                 $out[] = [basename($f), $i + 1, $h];
             }
         }
@@ -212,7 +232,8 @@ function looks_french(string $s): bool
 $files   = ui_files();
 $msgids  = extract_msgids($files);
 $frags   = array_filter(array_keys($msgids), 'is_fragment');
-$bare    = bare_strings($files);
+// Les msgid déclarés (dont lang/_dynamiques.php) ne sont pas « hors traduction ».
+$bare    = bare_strings($files, $msgids);
 
 $sep = str_repeat('─', 68);
 if ($all || isset($opts['fragments'])) {

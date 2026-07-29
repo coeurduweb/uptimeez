@@ -184,7 +184,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
             <div class="field-inline">
               <input id="resend" type="number" name="resend_after" min="0" max="1440"
                      value="<?= (int)Config::get('notify.resend_after_min', 60) ?>">
-              <span class="unit">minutes (0 = jamais)</span>
+              <span class="unit"><?= te('minutes (0 = jamais)') ?></span>
             </div>
           </div>
           <div class="field">
@@ -315,7 +315,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
             <span class="hint"><?= te('Renseignez une chaîne aléatoire pour publier un état public sans authentification.') ?></span>
           <?php endif; ?></div>
         <div class="field"><label for="ck"><?= te('Clé de déclenchement du cron par URL') ?></label>
-          <input id="ck" type="text" name="cron_key" value="<?= e($cronKey) ?>" placeholder="vide = désactivé" spellcheck="false"></div>
+          <input id="ck" type="text" name="cron_key" value="<?= e($cronKey) ?>" placeholder="<?= te('vide = désactivé') ?>" spellcheck="false"></div>
       </div>
     </div>
   <?= Ui::accClose() ?>
@@ -341,7 +341,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
         <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
         <input type="hidden" name="action" value="test_notify">
         <input type="hidden" name="channel" value="<?= $ch ?>">
-        <button class="btn btn-sm" <?= Config::get("notify.$ch.enabled") ? '' : 'disabled title="Canal désactivé"' ?>>
+        <button class="btn btn-sm" <?= Config::get("notify.$ch.enabled") ? '' : 'disabled title="' . te('Canal désactivé') . '"' ?>>
           <?= Ui::icon('bell', 14) ?> <?= te('Tester') ?> <?= e($label) ?>
         </button>
       </form>

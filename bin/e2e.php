@@ -257,7 +257,8 @@ $list = "$SITE/\n$SITE/casse.html | Site cassé\n$SITE/dberror.php ; Base HS ; A
 $r = $req('/index.php?p=import', ['csrf' => $tok, 'action' => 'import', 'list' => $list,
     'interval_sec' => 300, 'pages' => 3, 'discover' => 1, 'extras' => 1,
     'check_css' => 1, 'check_db' => 1, 'check_ssl' => 1, 'check_noindex' => 1, 'group' => 'E2E']);
-ok('import accepté', $r['code'] === 200 && $has($r, 'sonde(s) créée(s)') && $noPhpError($r));
+ok('import accepté', $r['code'] === 200 && $noPhpError($r)
+    && (str_contains($r['body'], 'sondes créées') || str_contains($r['body'], 'sonde créée')));
 ok('ligne invalide signalée sans bloquer', $has($r, 'ignorée'));
 
 require_once $ROOT . '/src/bootstrap.php';
@@ -440,14 +441,15 @@ ok('historique de la sonde supprimé aussi',
 title('Écran « Aujourd\'hui » : la liste de tâches');
 $r = $req('/index.php?p=today');
 ok('page d\'accueil = liste de tâches', $r['code'] === 200 && $noPhpError($r)
-    && $has($r, 'À traiter maintenant'), 'HTTP ' . $r['code']);
+    && ($has($r, 'À traiter d&#039;abord') || $has($r, 'Rien à faire')), 'HTTP ' . $r['code']);
 ok('chaque tâche porte sa cause', $has($r, 'La mise en page est cassée')
     || $has($r, 'La base de données ne répond plus'));
-ok('chaque tâche porte la conduite à tenir', $has($r, 'task-fix'));
+ok('chaque tâche porte la conduite à tenir', $has($r, 'hero-fix'));
 ok('actions disponibles sur place', $has($r, 'js-fix') && $has($r, 'js-copy-report'));
 ok('bloc d\'anticipation présent', $has($r, 'À prévoir') || $has($r, 'sans rien à signaler'));
 $r2 = $req('/index.php');
-ok('la racine mène à Aujourd\'hui', $r2['code'] === 200 && $has($r2, 'À traiter maintenant')
+ok('la racine mène à Aujourd\'hui', ($r2['code'] === 200
+      && ($has($r2, 'À traiter d&#039;abord') || $has($r2, 'Rien à faire')))
     || str_contains((string)$r2['location'], 'today'), 'HTTP ' . $r2['code']);
 
 title('Correctifs appliqués sans quitter la page');
@@ -729,8 +731,8 @@ $before = (int)$val('SELECT COUNT(*) FROM monitors');
 $r = $upload('/index.php?p=import', ['csrf' => $tok, 'action' => 'import', 'list' => '',
     'interval_sec' => '300', 'pages' => '1', 'group' => 'Reprise E2E'],
     'file', $fixtures . '/ur.json');
-ok('import confirmé depuis le fichier', $has($r, 'Reprise depuis UptimeRobot'),
-    preg_match('~Reprise depuis [^<.]{0,60}\.~', strip_tags($r['body']), $mm) ? $mm[0] : 'HTTP ' . $r['code']);
+ok('import confirmé depuis le fichier', $has($r, 'reprise depuis UptimeRobot'),
+    preg_match('~[0-9]+ sondes créées[^<.]{0,80}~', strip_tags($r['body']), $mm) ? $mm[0] : 'HTTP ' . $r['code']);
 $a = $db('SELECT * FROM monitors WHERE url = ?', ['https://e2e-ur-a.test/'])[0] ?? null;
 $b = $db('SELECT * FROM monitors WHERE url = ?', ['https://e2e-ur-b.test/'])[0] ?? null;
 ok('les deux sondes HTTP existent', $a !== null && $b !== null);
@@ -770,15 +772,25 @@ $r = $req('/index.php?p=today&ui=simple');
 ok('bande de pouls rendue', $has($r, 'class="pulse"') && $has($r, 'il y a 24 h'));
 ok('chaque tranche porte son détail', substr_count($r['body'], '<title>') >= 24,
     substr_count($r['body'], '<title>') . ' infobulle(s)');
-ok('la durée de panne est le chiffre de la carte', $has($r, 'task-metric'));
-ok('la carte porte une preuve à droite', $has($r, 'task-proof'));
-// La silhouette d'une page cassée doit apparaître dans la liste de tâches :
-// c'est ce qui fait comprendre la panne sans ouvrir la fiche.
-ok('silhouette montrée sur une mise en page cassée',
-    $has($r, 'task-sil') || $has($r, 'task-spark'));
+// Un seul foyer d'attention : la panne la plus urgente occupe une carte, les
+// suivantes une ligne chacune. C'est ce qui dit où regarder.
+ok('une seule carte détaillée', substr_count($r['body'], 'class="hero-task') === 1,
+    substr_count($r['body'], 'class="hero-task') . ' carte(s)');
+ok('la cause est le point d\'entrée du regard', $has($r, 'hero-cause'));
+ok('la conduite à tenir est étiquetée', $has($r, 'hero-fix-tag'));
+ok('la durée est affichée sans voler le titre', $has($r, 'hero-since'));
+// La preuve : la silhouette de la page cassée, ou la courbe des 24 heures.
+ok('la carte porte une preuve', $has($r, 'hero-proof'));
 ok('la reconstitution est annoncée comme telle',
-    !$has($r, 'task-sil') || $has($r, 'pas une capture'));
-ok('cause et remède côte à côte', $has($r, 'task-cols'));
+    !$has($r, 'hero-proof-view') || $has($r, 'pas une capture'));
+// Un seul bouton principal par tâche : le reste est replié.
+ok('les actions secondaires sont repliées', $has($r, 'act-more'));
+// Le total affiché doit correspondre au parc : une carte plus la file.
+$queue = substr_count($r['body'], 'class="q-row');
+$expected = (int)$val("SELECT COUNT(DISTINCT COALESCE(site_id, -id)) FROM monitors
+                       WHERE enabled = 1 AND status IN ('down', 'degraded')");
+ok('toutes les pannes sont montrées, une carte puis une file',
+    1 + $queue === max(1, $expected), '1 + ' . $queue . ' pour ' . $expected . ' site(s) en panne');
 $r = $req('/index.php?p=dashboard');
 ok('le mur porte la même bande', $has($r, 'class="pulse"'));
 

@@ -175,12 +175,12 @@ svg { flex: 0 0 auto; }
 
 /* ===================== Bandeau de synthèse (en tête) ===================== */
 .band {
-  margin: var(--s4) 0; border-radius: var(--r-lg); padding: var(--s4) var(--s5);
+  margin: var(--s4) 0; border-radius: var(--r); padding: var(--s3) var(--s4);
   border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow);
   /* Trois zones : l'état, le pouls de la journée, l'action. Sur un écran
      étroit, elles s'empilent dans cet ordre de priorité. */
   display: grid; gap: var(--s3) var(--s4); align-items: center;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(180px, 300px) auto;
+  grid-template-columns: 32px minmax(0, 1fr) minmax(180px, 300px) auto;
   grid-template-areas: "icon text pulse cta";
 }
 .band > .band-icon { grid-area: icon; }
@@ -188,18 +188,18 @@ svg { flex: 0 0 auto; }
 .band > .band-pulse { grid-area: pulse; min-width: 0; }
 .band > .band-cta { grid-area: cta; }
 @media (max-width: 1000px) {
-  .band { grid-template-columns: 40px minmax(0, 1fr) auto;
+  .band { grid-template-columns: 32px minmax(0, 1fr) auto;
           grid-template-areas: "icon text cta" ". pulse pulse"; }
 }
 @media (max-width: 620px) {
-  .band { grid-template-columns: 40px minmax(0, 1fr);
+  .band { grid-template-columns: 32px minmax(0, 1fr);
           grid-template-areas: "icon text" "pulse pulse" "cta cta"; }
   .band > .band-cta { justify-self: stretch; }
   .band > .band-cta .btn { width: 100%; justify-content: center; }
 }
 
 /* Le pouls : la journée en une bande. Aucune légende, la couleur suffit. */
-.band-pulse svg.pulse { display: block; width: 100%; height: 26px; }
+.band-pulse svg.pulse { display: block; width: 100%; height: 20px; }
 /* La bande se dessine de gauche à droite une fois, à l'arrivée sur la page :
    le mouvement dit « voilà comment la journée s'est déroulée ». L'état final
    est l'état normal, donc rien ne peut rester caché si l'animation ne joue
@@ -215,17 +215,19 @@ svg { flex: 0 0 auto; }
   display: flex; margin-top: 5px; font-size: 11px; color: var(--muted);
   letter-spacing: .02em;
 }
-.band-ok   { border-color: color-mix(in srgb, var(--ok) 30%, var(--border)); }
-.band-bad  { border-color: color-mix(in srgb, var(--bad) 42%, var(--border)); background: linear-gradient(103deg, var(--bad-soft), var(--surface) 55%); }
-.band-warn { border-color: color-mix(in srgb, var(--warn) 40%, var(--border)); background: linear-gradient(103deg, var(--warn-soft), var(--surface) 55%); }
+/* Le bandeau résume, il ne crie pas : c'est la carte du dessous qui doit
+   attirer l'œil en premier. Un liseré coloré suffit à dire l'état. */
+.band-ok   { border-color: var(--border); border-inline-start: 4px solid var(--ok); }
+.band-bad  { border-color: var(--border); border-inline-start: 4px solid var(--bad); }
+.band-warn { border-color: var(--border); border-inline-start: 4px solid var(--warn); }
 .band-icon {
-  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
   flex: 0 0 auto; background: var(--surface); border: 1px solid var(--border); color: var(--muted);
 }
 .band-ok .band-icon   { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 40%, var(--border)); background: var(--ok-soft); }
 .band-bad .band-icon  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); background: var(--bad-soft); }
 .band-warn .band-icon { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); background: var(--warn-soft); }
-.band-title { font-size: 19px; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
+.band-title { font-size: 15.5px; font-weight: 650; letter-spacing: -.01em; line-height: 1.3; }
 .band-sub { color: var(--text-soft); font-size: 13.5px; margin-top: 3px; }
 .band-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--s3); }
 .band > .band-cta { margin-left: auto; flex: 0 0 auto; }
@@ -578,92 +580,145 @@ html[data-theme="light"] .console { background: #131a26; }
    Écran « Aujourd'hui » : la liste de tâches. Chaque bloc porte sa cause, sa
    conduite à tenir et ses actions ; rien ne renvoie vers un écran de réglages.
    ========================================================================== */
-.task {
+/* Sur l'accueil, l'action du bandeau devient secondaire : le bouton principal
+   de l'écran est celui de la carte. Deux boutons bleus se disputeraient l'œil. */
+#band .btn-primary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+#band .btn-primary:hover { background: var(--surface-2); color: var(--text); border-color: var(--muted); }
+
+/* ===========================================================================
+   Écran d'accueil : un foyer d'attention, puis une file
+   -------------------------------------------------------------------------
+   Le parti pris tient en une phrase : à tout instant, une seule chose demande
+   d'être lue en premier. La panne la plus urgente occupe une carte large, les
+   suivantes tiennent sur une ligne. La hiérarchie passe par la taille et
+   l'espace, jamais par la couleur seule.
+   ========================================================================= */
+.hero-task {
+  display: grid; gap: var(--s5); align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
   background: var(--surface); border: 1px solid var(--border);
-  border-inline-start: 4px solid var(--muted);
-  border-radius: var(--r); box-shadow: var(--shadow-sm); padding: var(--s4) var(--s5);
-  margin-bottom: var(--s3);
-  /* Deux colonnes : ce qu'il faut lire, ce qu'il faut voir. La preuve occupe
-     la place qui restait vide à droite du texte. */
-  display: grid; gap: var(--s4) var(--s5); align-items: start;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
+  border-inline-start: 5px solid var(--muted);
+  border-radius: var(--r-lg); box-shadow: var(--shadow);
+  padding: var(--s5); margin-bottom: var(--s5);
 }
-.task-main { min-width: 0; }
-/* La teinte reste une bordure et un pictogramme : cinq cartes rouges empilées
-   sur fond rouge cessent de hiérarchiser quoi que ce soit. */
-.task-bad  { border-inline-start-color: var(--bad); }
-.task-warn { border-inline-start-color: var(--warn); }
-.task-bad  { box-shadow: var(--shadow-sm), inset 3px 0 0 -1px color-mix(in srgb, var(--bad) 14%, transparent); }
-.task-head { display: flex; gap: var(--s3); align-items: flex-start; }
+.hero-bad  { border-inline-start-color: var(--bad); }
+.hero-warn { border-inline-start-color: var(--warn); }
+.hero-body { min-width: 0; }
 
-/* La durée de panne : le chiffre qui décide de l'ordre d'attaque. */
-.task-metric {
-  flex: 0 0 auto; text-align: end; line-height: 1.2; padding-inline-start: var(--s3);
-}
-.task-metric b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.02em;
-                 font-variant-numeric: tabular-nums; }
-.task-metric > span { display: block; font-size: 11.5px; text-transform: uppercase;
-                      letter-spacing: .06em; font-weight: 650; color: var(--muted); }
-.task-metric-bad b  { color: var(--bad-ink); }
-.task-metric-warn b { color: var(--warn-ink); }
-.task-metric-sub { font-size: 11.5px; color: var(--muted); text-transform: none !important;
-                   letter-spacing: 0 !important; font-weight: 400 !important; }
+/* Ligne d'identité : qui, où, depuis quand. Petit, en haut, pas au centre. */
+.hero-line { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap;
+             font-size: 13px; color: var(--muted); }
+.hero-ico { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
+            background: var(--surface-2); border: 1px solid var(--border); }
+.hero-bad  .hero-ico { color: var(--bad-ink);  border-color: color-mix(in srgb, var(--bad) 30%, var(--border)); background: var(--bad-soft); }
+.hero-warn .hero-ico { color: var(--warn-ink); border-color: color-mix(in srgb, var(--warn) 32%, var(--border)); background: var(--warn-soft); }
+.hero-site a { font-weight: 650; font-size: 14.5px; color: var(--text); }
+.hero-site a:hover { color: var(--accent); }
+.hero-dom { font-size: 12.5px; }
+/* La durée est un fait, pas un titre : discrète, mais toujours à la même place. */
+.hero-since { margin-inline-start: auto; font-variant-numeric: tabular-nums;
+              font-weight: 620; font-size: 13px; }
+.hero-bad .hero-since  { color: var(--bad-ink); }
+.hero-warn .hero-since { color: var(--warn-ink); }
 
-/* Cause et remède côte à côte : la carte perd la moitié de sa hauteur sans
-   qu'une seule phrase soit cachée. */
-.task-cols { display: grid; gap: var(--s3) var(--s5); margin-top: var(--s3);
-             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.task-cols > p { margin: 0; }
+/* Le point d'entrée du regard : la cause, en grand, seule sur sa ligne. */
+.hero-cause { font-size: 25px; font-weight: 700; letter-spacing: -.03em; line-height: 1.15;
+              margin: var(--s3) 0 0; }
+.hero-why { font-size: 14.5px; color: var(--text-soft); margin: 7px 0 0; max-width: 62ch;
+            line-height: 1.5; }
 
-/* La preuve : ce qu'on montrerait au client. */
-.task-proof { min-width: 0; }
-.task-sil { margin: 0; }
-.task-sil figcaption { font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-                       font-weight: 650; color: var(--muted); margin-bottom: 4px; }
-/* Le sélecteur porte l'élément : sinon la règle générique des légendes,
-   plus spécifique, remettrait cette note en majuscules. */
-.task-sil figcaption.task-sil-note {
-  text-transform: none; letter-spacing: 0; font-weight: 400; margin: 4px 0 0;
+/* Le remède se distingue du diagnostic par une étiquette, pas par une colonne. */
+.hero-fix { display: flex; gap: var(--s2); align-items: baseline; margin: var(--s4) 0 0;
+            font-size: 14.5px; max-width: 68ch; line-height: 1.5; }
+.hero-fix-tag { flex: 0 0 auto; font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+                text-transform: uppercase; color: var(--accent);
+                background: var(--accent-soft); border-radius: 999px; padding: 3px 8px;
+                position: relative; top: -1px; }
+
+.hero-tech { margin-top: var(--s4); font-size: 13px; }
+.hero-tech > summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+.hero-tech > summary:hover { color: var(--text); }
+.hero-tech > div { margin-top: var(--s2); }
+
+/* La preuve : une image vaut la lecture, mais elle ne prend pas la parole. */
+.hero-proof { margin: 0; min-width: 0; }
+.hero-proof figcaption { margin-top: 6px; font-size: 11.5px; color: var(--text-soft);
+                         text-transform: uppercase; letter-spacing: .04em; font-weight: 650; }
+.hero-proof figcaption .muted { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.hero-proof-view { border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+                   overflow: hidden; background: #fbfcfe; max-height: 168px; }
+html[data-theme="dark"] .hero-proof-view { background: #dde3ec; }
+.hero-proof-view svg { display: block; width: 100%; height: auto; }
+.hero-bad .hero-proof-view { border-color: color-mix(in srgb, var(--bad) 38%, var(--border)); }
+.hero-proof-spark { border: 1px solid var(--border); border-radius: var(--r-sm);
+                    padding: var(--s3); background: var(--surface-2); }
+
+/* Un bouton principal, le reste replié derrière trois points. */
+.act { display: flex; gap: 6px; align-items: center; margin-top: var(--s4); }
+.q-row .act { margin-top: 0; }
+.act-more { position: relative; display: inline-flex; }
+/* Le bouton « autres actions » : une cible carrée, pas trois points perdus. */
+.act-more > summary {
+  list-style: none; width: 30px; min-height: 30px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text-soft);
+  font-size: 15px; line-height: 1; letter-spacing: .06em; cursor: pointer;
 }
-html[data-theme="dark"] .task-sil-view, html[data-theme="dark"] .sil-view { background: #dde3ec; }
-.task-sil-view {
-  border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden;
-  /* On ne montre que le haut de la page : c'est ce que le visiteur voit en
-     premier, et cela garde la carte à une hauteur lisible d'un coup d'œil. */
-  background: #fbfcfe; max-height: 132px;
+.hero-body .act-more > summary { width: 36px; min-height: 36px; }
+.act-more > summary:hover { background: var(--surface-2); border-color: var(--muted); color: var(--text); }
+.act-more > summary::-webkit-details-marker, .act-more > summary::marker { display: none; content: ''; }
+.act-more[open] > summary { background: var(--surface-3); }
+.act-menu {
+  position: absolute; z-index: 60; inset-inline-end: 0; top: calc(100% + 4px);
+  min-width: 220px; background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm); box-shadow: var(--shadow); padding: 5px; display: grid; gap: 1px;
 }
-.task-sil-view svg { display: block; width: 100%; height: auto; }
-.task-bad .task-sil-view { border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); }
-.task-spark { border: 1px solid var(--border); border-radius: var(--r-sm);
-              padding: var(--s3); background: var(--surface-2); }
-.task-spark-head, .task-spark-foot {
-  display: flex; justify-content: space-between; gap: var(--s2);
-  font-size: 11.5px; color: var(--muted);
+.act-menu > a, .act-menu > button {
+  display: flex; align-items: center; gap: var(--s2); width: 100%; text-align: start;
+  padding: 8px 10px; border: 0; background: none; font: inherit; font-size: 13.5px;
+  color: var(--text); border-radius: 5px; cursor: pointer; min-height: 36px;
 }
-.task-spark-head { text-transform: uppercase; letter-spacing: .05em; font-weight: 650;
-                   margin-bottom: 5px; }
-.task-spark-foot { margin-top: 5px; font-variant-numeric: tabular-nums; }
+.act-menu > a:hover, .act-menu > button:hover { background: var(--surface-2); text-decoration: none; }
+.act-menu svg { color: var(--muted); flex: 0 0 auto; }
+
+/* La file : une ligne par panne. Trente lignes se lisent, trente cartes non. */
+.queue { list-style: none; margin: 0 0 var(--s5); padding: 0;
+         border: 1px solid var(--border); border-radius: var(--r); overflow: visible;
+         background: var(--surface); box-shadow: var(--shadow-sm); }
+.q-row {
+  display: grid; align-items: center; gap: var(--s3);
+  grid-template-columns: 26px minmax(120px, 1.1fr) minmax(0, 2fr) 72px auto;
+  padding: 10px var(--s4); border-bottom: 1px solid var(--border); min-height: 52px;
+}
+.q-row:last-child { border-bottom: 0; }
+.q-row:hover { background: var(--surface-2); }
+/* La gravité tient au pictogramme : cinq lignes rouges ne hiérarchisent rien. */
+.q-ico { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
+         background: var(--surface-2); border: 1px solid var(--border); }
+.q-bad  .q-ico { color: var(--bad-ink);  border-color: color-mix(in srgb, var(--bad) 28%, var(--border)); background: var(--bad-soft); }
+.q-warn .q-ico { color: var(--warn-ink); border-color: color-mix(in srgb, var(--warn) 30%, var(--border)); background: var(--warn-soft); }
+.q-site a { font-weight: 620; font-size: 14px; color: var(--text); }
+.q-site a:hover { color: var(--accent); }
+.q-cause { font-size: 13.5px; color: var(--text-soft); overflow: hidden;
+           text-overflow: ellipsis; white-space: nowrap; }
+.q-since { font-size: 13px; font-variant-numeric: tabular-nums; text-align: end; color: var(--muted); }
+.q-bad .q-since { color: var(--bad-ink); font-weight: 600; }
+
 @media (max-width: 1000px) {
-  .task { grid-template-columns: minmax(0, 1fr); }
-  /* Sur un écran étroit, la preuve passe sous le texte mais reste visible :
-     c'est elle qui fait comprendre la panne d'un coup d'œil. */
-  .task-proof { max-width: 420px; }
+  .hero-task { grid-template-columns: minmax(0, 1fr); }
+  .hero-proof { max-width: 420px; }
 }
-.task-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto;
-  border-radius: 9px; background: var(--surface); border: 1px solid var(--border); }
-.task-bad .task-icon  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 35%, var(--border)); }
-.task-warn .task-icon { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); }
-.task-cause { font-size: 17px; font-weight: 680; letter-spacing: -.02em; line-height: 1.25; }
-.task-who { font-size: 13px; color: var(--text-soft); margin-top: 3px; }
-.task-why { font-size: 14px; color: var(--text-soft); margin: var(--s3) 0 0; max-width: 92ch; }
-.task-evidence {
-  font-family: var(--mono); font-size: 12px; background: var(--surface-3); color: var(--text-soft);
-  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 11px; margin-top: var(--s3);
-  overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+@media (max-width: 720px) {
+  .hero-task { padding: var(--s4); }
+  .hero-cause { font-size: 21px; }
+  .hero-since { margin-inline-start: 0; }
+  /* Sur un téléphone, la file passe en deux lignes plutôt qu'en colonnes
+     écrasées : le nom et la cause d'abord, la durée et l'action ensuite. */
+  .q-row { grid-template-columns: 26px minmax(0, 1fr) auto; row-gap: 4px; }
+  .q-cause { grid-column: 2 / -1; white-space: normal; }
+  .q-since { grid-column: 2; text-align: start; }
 }
-.task-fix { font-size: 14px; margin: var(--s3) 0 0; color: var(--text); display: flex; gap: 7px; align-items: flex-start; max-width: 92ch; }
-.task-fix svg { margin-top: 3px; color: var(--muted); }
-.task-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: var(--s4); }
 
 /* Ce qui va casser bientôt */
 .fore { display: flex; gap: var(--s3); align-items: flex-start; padding: 12px var(--s4);
@@ -673,6 +728,10 @@ html[data-theme="dark"] .task-sil-view, html[data-theme="dark"] .sil-view { back
 .fore-warn .fore-icon { color: var(--warn); }
 .fore-title { font-size: 14px; font-weight: 580; }
 .fore-why { font-size: 13px; color: var(--muted); margin-top: 2px; max-width: 92ch; }
+.fore-more > summary { cursor: pointer; padding: 11px var(--s4); font-size: 13px;
+                       color: var(--muted); border-top: 1px solid var(--border); }
+.fore-more > summary:hover { color: var(--text); background: var(--surface-2); }
+.fore-more[open] > summary { border-bottom: 1px solid var(--border); }
 
 /* ============================ Palette de commandes ======================== */
 .pal-back {

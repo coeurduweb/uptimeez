@@ -85,4 +85,37 @@ return [
     '{n} domaines tiers chargent du script dans l\'en-tête.',
     'Chacun ajoute une résolution DNS, une négociation TLS et du travail sur le fil principal, ce qui retarde la réaction au premier clic.',
     'Charger les traceurs après l\'affichage, ou les regrouper. Un gestionnaire de balises compte pour un domaine, pas pour zéro.',
+
+    // --- Mois abrégés (Ui::shortDate) -----------------------------------
+    // date() ne sait les écrire qu'en anglais : ils passent par t().
+    'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+    'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+
+    // --- Verdicts du collecteur, avec leurs variables (Runner::evaluate) --
+    // Stockés comme phrase source dans last_message, traduits à l'affichage
+    // par verdict_text() : la langue du cron ne décide pas de celle des écrans.
+    'Tout va bien',
+    '{reason} (échéance {date})',
+    'Erreur serveur {code} : le site ne répond plus correctement',
+    'Erreur client {code}',
+    'Redirection inattendue ({code}) vers {target}',
+    'Code HTTP inattendu : {code}, attendu {expected}',
+    '{reason} : « {evidence} »',
+    'La chaîne de contrôle « {string} » est absente de la page : le contenu n\'est plus servi, par le serveur web ou par la base de données.',
+    'Chaîne interdite détectée : « {string} »',
+    'Réponse non JSON valide : {error}',
+    'Champ « {field} » absent de la réponse',
+    'Champ « {field} » vaut « {value} », attendu « {expected} »',
+    'Certificat SSL expiré le {date}',
+    'Certificat SSL invalide : {reason}',
+    'Certificat SSL expire demain',
+    'Certificat SSL expire dans {n} jours',
+    'Mise en page cassée : {detail}',
+    'CSS dégradé : {detail}',
+    'anomalie détectée à la dernière analyse',
+    '(analyse du {date})',
+    'Page en noindex : {detail}',
+    'Temps de réponse élevé : {seconds} s',
+    'Les fichiers CSS ont changé, sans doute un déploiement.',
+    'refusé',
 ];

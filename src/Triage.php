@@ -70,7 +70,7 @@ final class Triage
                 'why'       => $diag['why'],
                 'fix'       => $diag['fix'],
                 'icon'      => $diag['icon'],
-                'evidence'  => str_cut(t((string)$m['last_message']), 240),
+                'evidence'  => verdict_text($m, 240),
                 'reason'    => (string)$m['reason_code'],
                 'since'     => $m['inc_started'] ?: $m['status_since'],
                 'fails'     => (int)($m['inc_fails'] ?? 0),
@@ -290,7 +290,7 @@ final class Triage
         $L[] = '## ' . t('Diagnostic');
         $L[] = $diag['title'];
         $L[] = $diag['why'];
-        if ($m['last_message']) { $L[] = ''; $L[] = t('Relevé technique : {msg}', ['msg' => $m['last_message']]); }
+        if ($m['last_message']) { $L[] = ''; $L[] = t('Relevé technique : {msg}', ['msg' => verdict_text($m)]); }
         if (!empty($css['console'])) {
             $L[] = '';
             $L[] = t('Erreurs que le navigateur signale :');

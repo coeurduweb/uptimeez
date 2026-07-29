@@ -39,8 +39,8 @@ $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
   </div>
   <label class="sr-only" for="sort"><?= te('Trier') ?></label>
   <select id="sort" name="sort" onchange="this.form.submit()" style="max-width:210px">
-    <?php foreach (['status' => t('Les problèmes d\'abord'), 'name' => 'Par nom', 'uptime' => 'Uptime croissant',
-                    'ms' => 'Les plus lentes', 'last' => t('Vérifiées récemment')] as $k => $l): ?>
+    <?php foreach (['status' => t('Les problèmes d\'abord'), 'name' => t('Par nom'), 'uptime' => t('Uptime croissant'),
+                    'ms' => t('Les plus lentes'), 'last' => t('Vérifiées récemment')] as $k => $l): ?>
       <option value="<?= $k ?>" <?= $sort === $k ? 'selected' : '' ?>><?= e($l) ?></option>
     <?php endforeach; ?>
   </select>
@@ -121,7 +121,7 @@ $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
           </tr>
         <?php endforeach; ?>
         <?php if (!$rows): ?>
-          <tr><td colspan="8"><div class="empty"><h3><?= $q !== '' ? 'Aucun résultat' : 'Aucune sonde' ?></h3>
+          <tr><td colspan="8"><div class="empty"><h3><?= $q !== '' ? te('Aucun résultat') : te('Aucune sonde') ?></h3>
             <?php if ($q !== ''): ?><a class="btn mt" href="<?= e(u('monitors')) ?>"><?= te('Effacer la recherche') ?></a>
             <?php else: ?><a class="btn btn-primary mt" href="<?= e(u('import')) ?>"><?= te('Ajouter des sites') ?></a><?php endif; ?>
           </div></td></tr>

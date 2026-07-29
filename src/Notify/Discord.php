@@ -23,7 +23,7 @@ final class Discord
 
         $payload = ['username' => 'Uptimer', 'embeds' => [[
             'title'       => str_cut($title, 240),
-            'description' => $link ? '[Ouvrir la fiche de surveillance](' . $link . ')' : null,
+            'description' => $link ? '[' . t('Ouvrir la fiche de surveillance') . '](' . $link . ')' : null,
             'color'       => Notifier::COLORS[$sev] ?? Notifier::COLORS['info'],
             'fields'      => $fields,
             'timestamp'   => date('c'),

@@ -35,7 +35,7 @@ if ($page === 'status') {
     $token = (string)Config::get('app.public_token', '');
     if ($token === '' || !hash_equals($token, (string)($_GET['token'] ?? ''))) {
         http_response_code(404);
-        exit('Page de statut non activée.');
+        exit(t('Page de statut non activée.'));
     }
     I18n::init();
     Db::migrate();
@@ -56,7 +56,7 @@ if ($page === 'client') {
         http_response_code(404);
         // Même réponse pour un jeton inconnu, mal formé ou désactivé : rien ne
         // permet de distinguer « ce lien n'existe pas » de « ce lien est coupé ».
-        exit('Lien invalide ou expiré.');
+        exit(t('Lien invalide ou expiré.'));
     }
     // Le jeton voyage dans l'URL : on empêche l'indexation et la fuite par
     // référent vers les sites que la page met en lien.
@@ -88,7 +88,7 @@ if ($page === 'login') {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $wait = Auth::lockedFor();
         if ($wait > 0) {
-            $error = 'Trop de tentatives. Réessayez dans ' . human_duration($wait) . '.';
+            $error = t('Trop de tentatives. Réessayez dans {delay}.', ['delay' => human_duration($wait)]);
         } elseif (Auth::attempt((string)($_POST['password'] ?? ''))) {
             header('Location: ' . u('today'));
             exit;
@@ -108,7 +108,7 @@ Db::migrate();
 $flash = null;
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (!Auth::checkCsrf($_POST['csrf'] ?? null)) {
-        $flash = ['bad', 'Jeton de sécurité invalide, action annulée. Rechargez la page.'];
+        $flash = ['bad', t('Jeton de sécurité invalide, action annulée. Rechargez la page.')];
     } else {
         $flash = handle_post();
     }
@@ -159,7 +159,7 @@ function handle_post(): ?array
                 if (trim($list) === '') {
                     return ['bad', t('Collez une liste d\'adresses, ou déposez l\'export de votre outil actuel.')];
                 }
-                return ['bad', 'Aucune adresse exploitable dans ce texte. '
+                return ['bad', t('Aucune adresse exploitable dans ce texte.') . ' '
                     . implode(' ', array_slice($prev['errors'], 0, 2))];
             }
             return null;
@@ -179,7 +179,8 @@ function handle_post(): ?array
                 $foreignLabel = '';
             }
             if (!$parsed['rows']) {
-                return ['bad', 'Aucune URL exploitable. ' . implode(' ', array_slice($parsed['errors'], 0, 3))];
+                return ['bad', t('Aucune URL exploitable.') . ' '
+                    . implode(' ', array_slice($parsed['errors'], 0, 3))];
             }
             $r = Importer::createMonitors($parsed['rows'], [
                 'group'         => trim((string)($_POST['group'] ?? '')),
@@ -193,11 +194,15 @@ function handle_post(): ?array
                 'check_noindex' => isset($_POST['check_noindex']) ? 1 : 0,
                 'check_content' => isset($_POST['check_content']) ? 1 : 0,
             ]);
-            $msg = ($foreignLabel !== '' ? 'Reprise depuis ' . $foreignLabel . ' : ' : '')
-                 . $r['created'] . ' sonde(s) créée(s)'
-                 . ($r['skipped'] ? ', ' . $r['skipped'] . ' déjà présente(s)' : '')
-                 . ($foreignSkipped ? ', ' . $foreignSkipped . ' non reprise(s) faute d\'équivalent' : '')
-                 . ($parsed['errors'] ? ', ' . count($parsed['errors']) . ' ligne(s) ignorée(s)' : '') . '.';
+            // Le message se compose de phrases traduisibles, chacune avec son
+            // nombre : concaténer des morceaux ne se traduit dans aucune langue.
+            $bits = [tn($r['created'], 'une sonde créée', '{n} sondes créées')];
+            if ($foreignLabel !== '')  $bits[] = t('reprise depuis {tool}', ['tool' => $foreignLabel]);
+            if ($r['skipped'])         $bits[] = tn($r['skipped'], 'une déjà présente', '{n} déjà présentes');
+            if ($foreignSkipped)       $bits[] = tn($foreignSkipped, 'une non reprise faute d\'équivalent',
+                                                                     '{n} non reprises faute d\'équivalent');
+            if ($parsed['errors'])     $bits[] = tn(count($parsed['errors']), 'une ligne ignorée', '{n} lignes ignorées');
+            $msg = implode(', ', $bits) . '.';
             $_SESSION['uptimer_setup_queue'] = $r['ids'];
             return [$r['created'] ? 'ok' : 'warn', $msg];
 
@@ -261,7 +266,7 @@ function handle_post(): ?array
 
             if ($id > 0) {
                 Db::update('monitors', $data, 'id = :__i', ['__i' => $id]);
-                return ['ok', 'Sonde enregistrée.'];
+                return ['ok', t('Sonde enregistrée.')];
             }
             $data['role']        = 'primary';
             $data['status']      = 'unknown';
@@ -280,7 +285,7 @@ function handle_post(): ?array
             $id = (int)($_POST['id'] ?? 0);
             Db::update('monitors', ['css_baseline' => null, 'css_baseline_at' => null, 'css_checked_at' => null],
                 'id = :__i', ['__i' => $id]);
-            return ['ok', 'Empreinte CSS de référence effacée : elle sera réapprise à la prochaine analyse.'];
+            return ['ok', t('Empreinte CSS de référence effacée : elle sera réapprise à la prochaine analyse.')];
 
         case 'delete_monitor':
             $id = (int)($_POST['id'] ?? 0);
@@ -295,40 +300,46 @@ function handle_post(): ?array
         case 'bulk':
             $ids = array_map('intval', (array)($_POST['ids'] ?? []));
             $ids = array_values(array_filter($ids));
-            if (!$ids) return ['warn', 'Aucune sonde sélectionnée.'];
+            if (!$ids) return ['warn', t('Aucune sonde sélectionnée.')];
             $in = implode(',', array_fill(0, count($ids), '?'));
             switch ((string)($_POST['bulk_action'] ?? '')) {
                 case 'enable':
                     Db::q("UPDATE monitors SET enabled = 1, paused_until = NULL WHERE id IN ($in)", $ids);
-                    return ['ok', count($ids) . ' sonde(s) réactivée(s).'];
+                    return ['ok', tn(count($ids), 'Une sonde réactivée.', '{n} sondes réactivées.')];
                 case 'disable':
                     Db::q("UPDATE monitors SET enabled = 0, status = 'paused' WHERE id IN ($in)", $ids);
-                    return ['ok', count($ids) . ' sonde(s) mise(s) en pause.'];
+                    return ['ok', tn(count($ids), 'Une sonde mise en pause.', '{n} sondes mises en pause.')];
                 case 'delete':
                     foreach (['checks', 'incidents', 'events', 'daily_stats'] as $t) {
                         Db::q("DELETE FROM $t WHERE monitor_id IN ($in)", $ids);
                     }
                     Db::q("DELETE FROM monitors WHERE id IN ($in)", $ids);
-                    return ['ok', count($ids) . ' sonde(s) supprimée(s).'];
+                    return ['ok', tn(count($ids), 'Une sonde supprimée.', '{n} sondes supprimées.')];
                 case 'check':
                     // Au-delà de quelques sondes, on programme au lieu d'exécuter :
                     // une requête web n'a pas le temps de vérifier 100 sites.
                     if (count($ids) > 8) {
                         Db::q("UPDATE monitors SET next_check_at = ? WHERE id IN ($in)", array_merge([now()], $ids));
-                        return ['ok', count($ids) . ' sonde(s) programmée(s) : elles seront vérifiées à la passe suivante (moins d\'une minute).'];
+                        return ['ok', tn(count($ids),
+                            'Une sonde programmée : elle sera vérifiée à la passe suivante, dans moins d\'une minute.',
+                            '{n} sondes programmées : elles seront vérifiées à la passe suivante, dans moins d\'une minute.')];
                     }
                     foreach ($ids as $i) { Runner::runOne($i); Stats::refresh($i); }
-                    return ['ok', count($ids) . ' sonde(s) vérifiée(s) à l\'instant.'];
+                    return ['ok', tn(count($ids), 'Une sonde vérifiée à l\'instant.',
+                                                    '{n} sondes vérifiées à l\'instant.')];
                 case 'interval':
                     $iv = max(30, (int)($_POST['bulk_interval'] ?? 300));
                     Db::q("UPDATE monitors SET interval_sec = ? WHERE id IN ($in)", array_merge([$iv], $ids));
-                    return ['ok', 'Intervalle mis à jour sur ' . count($ids) . ' sonde(s).'];
+                    return ['ok', tn(count($ids), 'Intervalle mis à jour sur une sonde.',
+                                                    'Intervalle mis à jour sur {n} sondes.')];
                 case 'setup':
                     Db::q("UPDATE monitors SET setup_state = 'pending' WHERE id IN ($in)", $ids);
                     $_SESSION['uptimer_setup_queue'] = $ids;
-                    return ['ok', count($ids) . ' sonde(s) en attente de réanalyse (détection CMS, pages, preuve).'];
+                    return ['ok', tn(count($ids),
+                        'Une sonde en attente de réanalyse : technologie, pages et chaîne de contrôle.',
+                        '{n} sondes en attente de réanalyse : technologie, pages et chaîne de contrôle.')];
             }
-            return ['warn', 'Action de masse inconnue.'];
+            return ['warn', t('Action de masse inconnue.')];
 
         // ---- Réglages ---------------------------------------------------
         case 'save_settings':
@@ -392,12 +403,13 @@ function handle_post(): ?array
             }
             $newPass = (string)($_POST['new_password'] ?? '');
             if ($newPass !== '') {
-                if (strlen($newPass) < 8) return ['bad', 'Le mot de passe doit faire au moins 8 caractères.'];
+                if (strlen($newPass) < 8) return ['bad', t('Le mot de passe doit faire au moins 8 caractères.')];
                 $patch['auth'] = ['password_hash' => password_hash($newPass, PASSWORD_DEFAULT)];
             }
             return Config::save($patch)
-                ? ['ok', 'Réglages enregistrés.' . ($newPass !== '' ? ' Nouveau mot de passe actif.' : '')]
-                : ['bad', 'Impossible d\'écrire config.php (droits en écriture ?).'];
+                ? ['ok', t('Réglages enregistrés.')
+                       . ($newPass !== '' ? ' ' . t('Nouveau mot de passe actif.') : '')]
+                : ['bad', t('Impossible d\'écrire config.php : le fichier est-il accessible en écriture ?')];
 
         // ---- Rapport mensuel automatique ---------------------------------
         case 'save_autoreport':
@@ -465,11 +477,13 @@ function handle_post(): ?array
             $ch  = (string)($_POST['channel'] ?? '');
             $res = Notifier::test($ch);
             return [$res['ok'] ? 'ok' : 'bad',
-                    'Test ' . $ch . ' : ' . ($res['ok'] ? 'envoyé' : 'échec') . ' : ' . str_cut((string)$res['info'], 200)];
+                    ($res['ok'] ? t('Test {channel} : envoyé.', ['channel' => $ch])
+                                : t('Test {channel} : échec.', ['channel' => $ch]))
+                    . ' ' . str_cut((string)$res['info'], 200)];
 
         case 'ack_incident':
             Db::update('incidents', ['ack_at' => now()], 'id = :__i', ['__i' => (int)($_POST['id'] ?? 0)]);
-            return ['ok', 'Incident pris en compte : les rappels sont stoppés.'];
+            return ['ok', t('Incident pris en compte : les rappels sont stoppés.')];
 
         case 'close_incident':
             $id  = (int)($_POST['id'] ?? 0);
@@ -482,8 +496,8 @@ function handle_post(): ?array
 
         case 'maintenance_cron':
             $done = ['purge' => Stats::purge(), 'rollup' => Stats::rollup(), 'stats' => Stats::refreshStale(0, 500)];
-            return ['ok', 'Entretien exécuté : ' . $done['purge'] . ' mesure(s) purgée(s), '
-                . $done['rollup'] . ' jour(s) consolidé(s), ' . $done['stats'] . ' agrégat(s) recalculé(s).'];
+            return ['ok', t('Entretien exécuté : {purged} mesures purgées, {days} jours consolidés, {stats} agrégats recalculés.',
+                ['purged' => $done['purge'], 'days' => $done['rollup'], 'stats' => $done['stats']])];
     }
     return null;
 }
@@ -514,8 +528,10 @@ function export_incidents_csv(): never
 
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");  // BOM : Excel ouvre l'UTF-8 correctement
-    fputcsv($out, ['Sonde', 'URL', 'Gravité', 'Cause', 'Détail', 'Début', 'Fin',
-                   'Durée (s)', 'Durée', 'Échecs', 'Alertes envoyées'], ';');
+    // L'en-tête suit la langue de l'écran : un tableur ouvert par un anglophone
+    // n'a pas de raison d'afficher des colonnes en français.
+    fputcsv($out, [t('Sonde'), 'URL', t('Gravité'), t('Cause'), t('Détail'), t('Début'), t('Fin'),
+                   t('Durée (s)'), t('Durée'), t('Échecs'), t('Alertes envoyées')], ';');
     foreach ($rows as $r) {
         $dur = $r['ended_at'] ? (int)$r['duration_sec'] : max(0, time() - strtotime((string)$r['started_at']));
         // Chaque cellule d'origine utilisateur passe par csv_cell() : le fichier

@@ -20,12 +20,7 @@ $on = function (string $k, bool $def = true) use ($mon) {
 $d  = Config::get('defaults', []);
 $uid = 'f' . substr(md5((string)($mon['id'] ?? 'new')), 0, 5);   // identifiants uniques par formulaire
 
-$intervals = [
-    30 => 'Toutes les 30 secondes', 60 => 'Toutes les minutes', 120 => 'Toutes les 2 minutes',
-    300 => 'Toutes les 5 minutes', 600 => 'Toutes les 10 minutes', 900 => 'Toutes les 15 minutes',
-    1800 => 'Toutes les 30 minutes', 3600 => 'Toutes les heures', 21600 => 'Toutes les 6 heures',
-    86400 => 'Une fois par jour',
-];
+$intervals = Ui::intervalChoices();
 $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
 ?>
 
@@ -319,7 +314,7 @@ $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
           <label for="<?= $uid ?>-chan"><?= te('Canaux d\'alerte de cette sonde') ?></label>
           <input id="<?= $uid ?>-chan" type="text" name="notify_channels" value="<?= e($v('notify_channels')) ?>"
                  placeholder="<?= te('discord,mail') ?>">
-          <span class="hint">Vide = tous les canaux actifs dans les réglages généraux.</span>
+          <span class="hint"><?= te('Vide : tous les canaux actifs dans les réglages généraux.') ?></span>
         </div>
       </div>
       <div>

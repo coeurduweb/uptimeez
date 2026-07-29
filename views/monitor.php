@@ -19,7 +19,7 @@ $id  = (int)($_GET['id'] ?? 0);
 $mon = Db::one('SELECT m.*, s.domain AS site_domain, s.name AS site_name, s.cms AS site_cms, s.cms_detail
                 FROM monitors m LEFT JOIN sites s ON s.id = m.site_id WHERE m.id = ?', [$id]);
 if (!$mon) {
-    echo '<div class="panel"><div class="empty"><h3>Cette sonde n\'existe plus</h3>'
+    echo '<div class="panel"><div class="empty"><h3>' . te('Cette sonde n\'existe plus') . '</h3>'
        . '<a class="btn mt" href="' . e(u('dashboard')) . '">Retour au tableau de bord</a></div></div>';
     return;
 }
@@ -63,7 +63,7 @@ foreach (($cm['assets'] ?? []) as $a) if (!empty($a['issue'])) $failedRes++;
   </div>
   <div class="band-cta row">
     <button class="btn btn-primary js-check" data-id="<?= $id ?>"><?= Ui::icon('refresh') ?> <?= te('Vérifier') ?></button>
-    <button class="btn js-toggle" data-id="<?= $id ?>" title="<?= (int)$mon['enabled'] === 1 ? 'Suspendre la surveillance' : 'Reprendre la surveillance' ?>">
+    <button class="btn js-toggle" data-id="<?= $id ?>" title="<?= (int)$mon['enabled'] === 1 ? te('Suspendre la surveillance') : te('Reprendre la surveillance') ?>">
       <?= (int)$mon['enabled'] === 1 ? Ui::icon('pause') . ' Pause' : Ui::icon('play') . ' Reprendre' ?>
     </button>
   </div>
@@ -82,7 +82,7 @@ foreach (($cm['assets'] ?? []) as $a) if (!empty($a['issue'])) $failedRes++;
         // Message retenu + trace technique de la dernière mesure (texte brut de curl,
         // extrait de la page d'erreur…) : c'est ce qu'on veut copier dans un ticket.
         $evidence = [];
-        if ($mon['last_message']) $evidence[] = (string)$mon['last_message'];
+        if ($mon['last_message']) $evidence[] = verdict_text($mon);
         $lastDet = jdec($recent[0]['details'] ?? null);
         if (!empty($lastDet['net_error'])) $evidence[] = (string)$lastDet['net_error'];
         if ($evidence): ?>
@@ -154,7 +154,7 @@ foreach (($cm['assets'] ?? []) as $a) if (!empty($a['issue'])) $failedRes++;
     <div class="legend">
       <span><i style="background:var(--accent)"></i><?= te('temps de réponse') ?></span>
       <span><i style="background:color-mix(in srgb,var(--bad) 30%,transparent)"></i><?= te('hors service') ?></span>
-      <span><i style="background:color-mix(in srgb,var(--warn) 24%,transparent)"></i>dégradé</span>
+      <span><i style="background:color-mix(in srgb,var(--warn) 24%,transparent)"></i><?= te('dégradé') ?></span>
       <span class="grow"></span>
       <span><?= tne((int)$win['checks'], 'une mesure sur {range}', '{n} mesures sur {range}',
         ['range' => mb_strtolower(Ui::rangeLabel($range))]) ?><?php
@@ -251,12 +251,12 @@ $drift   = (int)($mon['silhouette_drift'] ?? 0);
       <div>
         <div class="stat-label"><?= te('Feuilles de style') ?></div>
         <div class="gauge"><b><?= (int)($cm['sheets_ok'] ?? 0) ?>/<?= (int)($cm['sheets_declared'] ?? 0) ?></b>
-          <span class="small muted">chargées</span></div>
+          <span class="small muted"><?= te('chargées') ?></span></div>
       </div>
       <div>
         <div class="stat-label"><?= te('Scripts') ?></div>
         <div class="gauge"><b><?= (int)($cm['js_ok'] ?? 0) ?>/<?= (int)($cm['js_declared'] ?? 0) ?></b>
-          <span class="small muted">chargés</span></div>
+          <span class="small muted"><?= te('chargés') ?></span></div>
       </div>
       <div>
         <div class="stat-label"><?= te('Poids CSS') ?></div>
@@ -578,7 +578,8 @@ endif;
 
 <!-- ====================== CERTIFICAT, DOMAINE, SERVEUR ====================== -->
 <?php
-$sslNote = $sslDays === null ? 'non mesuré' : ($sslDays < 0 ? 'certificat expiré' : 'certificat valable ' . $sslDays . ' j');
+$sslNote = $sslDays === null ? t('non mesuré')
+    : ($sslDays < 0 ? t('certificat expiré') : tn($sslDays, 'certificat valable un jour', 'certificat valable {n} jours'));
 $sslTone = $sslDays !== null && $sslDays < 0 ? 'attn' : ($sslDays !== null && $sslDays <= (int)$mon['ssl_warn_days'] ? 'warn' : 'none');
 echo Ui::accOpen('infra', 'shield', t('Certificat, domaine et serveur'), $sslNote, false, $sslTone);
 echo Ui::accBody();
@@ -586,26 +587,31 @@ echo Ui::accBody();
   <dl class="kv">
     <dt><?= te('Certificat SSL') ?></dt>
     <dd><?php
-      if ($sslDays === null) echo '<span class="muted">non mesuré</span>';
+      if ($sslDays === null) echo '<span class="muted">' . te('non mesuré') . '</span>';
       else {
           $tone = $sslDays < 0 ? 'bad' : ($sslDays <= (int)$mon['ssl_warn_days'] ? 'warn' : 'ok');
           echo Ui::badge($sslDays < 0 ? t('expiré') : $sslDays . ' jours restants', $tone);
-          if ($mon['ssl_expires_at']) echo ' <span class="muted small">échéance ' . e(date('d/m/Y', strtotime((string)$mon['ssl_expires_at']))) . '</span>';
+          if ($mon['ssl_expires_at']) echo ' <span class="muted small">'
+              . te('échéance {date}', ['date' => date('d/m/Y', strtotime((string)$mon['ssl_expires_at']))]) . '</span>';
       }
-      if ($mon['ssl_issuer']) echo '<span class="hint">Émis par ' . e((string)$mon['ssl_issuer']) . '</span>';
+      if ($mon['ssl_issuer']) echo '<span class="hint">'
+              . te('Émis par {issuer}', ['issuer' => (string)$mon['ssl_issuer']]) . '</span>';
     ?></dd>
 
     <dt><?= te('Nom de domaine') ?></dt>
     <dd><?php if ($mon['domain_expires_at']):
           $dd = (int)floor((strtotime((string)$mon['domain_expires_at']) - time()) / 86400);
           echo Ui::badge($dd . ' jours', $dd < 30 ? 'warn' : 'neutral')
-             . ' <span class="muted small">expire le ' . e(date('d/m/Y', strtotime((string)$mon['domain_expires_at']))) . '</span>';
+             . ' <span class="muted small">'
+                . te('expire le {date}', ['date' => date('d/m/Y', strtotime((string)$mon['domain_expires_at']))])
+                . '</span>';
         else: ?><span class="muted"><?= te('vérification RDAP quotidienne, pas encore effectuée') ?></span><?php endif; ?></dd>
 
     <dt><?= te('Technologie') ?></dt>
-    <dd><?= $mon['site_cms'] ? e((string)$mon['site_cms']) : '<span class="muted">non identifiée</span>' ?><?php
+    <dd><?= $mon['site_cms'] ? e((string)$mon['site_cms']) : '<span class="muted">' . te('non identifiée') . '</span>' ?><?php
       if (!empty($cmsDetail['builder'])) echo ' · ' . e((string)$cmsDetail['builder']);
-      if (!empty($cmsDetail['theme']))   echo ' <span class="muted small">thème ' . e((string)$cmsDetail['theme']) . '</span>';
+      if (!empty($cmsDetail['theme']))   echo ' <span class="muted small">'
+              . te('thème {name}', ['name' => (string)$cmsDetail['theme']]) . '</span>';
       if (!empty($cmsDetail['server']) || !empty($cmsDetail['cache'])) {
           echo '<span class="hint">' . e(trim((string)($cmsDetail['server'] ?? '')))
              . (!empty($cmsDetail['cache']) ? ' · cache ' . e((string)$cmsDetail['cache']) : '') . '</span>';
@@ -623,7 +629,8 @@ echo Ui::accBody();
     <?php if ($mon['watch_string']): ?>
       <dt><?= te('Texte surveillé') ?></dt>
       <dd><span class="mono small">« <?= e(str_cut((string)$mon['watch_string'], 60)) ?> »</span>
-        <?= Ui::badge($mon['watch_state'] === 'present' ? 'présent' : 'absent', $mon['watch_state'] === 'present' ? 'ok' : 'neutral') ?>
+        <?= Ui::badge($mon['watch_state'] === 'present' ? t('présent') : t('absent'),
+                        $mon['watch_state'] === 'present' ? 'ok' : 'neutral') ?>
         <span class="hint"><?= te('Alerte quand le texte') ?> <?= $mon['watch_mode'] === 'disappear' ? 'disparaît' : 'apparaît' ?>.</span></dd>
     <?php endif; ?>
 

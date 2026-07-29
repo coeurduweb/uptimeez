@@ -47,7 +47,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
     $pass2  = (string)($_POST['password2'] ?? '');
 
     if (strlen($pass) < 8) $errors[] = t('Le mot de passe doit faire au moins 8 caractères.');
-    if ($pass !== $pass2)  $errors[] = 'Les deux mots de passe ne correspondent pas.';
+    if ($pass !== $pass2)  $errors[] = t('Les deux mots de passe ne correspondent pas.');
 
     $patch = [
         'db' => ['driver' => $driver],
@@ -66,7 +66,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
             'user' => trim((string)($_POST['db_user'] ?? '')),
             'pass' => (string)($_POST['db_pass'] ?? ''),
         ];
-        if ($patch['db']['name'] === '') $errors[] = 'Indiquez le nom de la base MySQL.';
+        if ($patch['db']['name'] === '') $errors[] = t('Indiquez le nom de la base MySQL.');
     } else {
         $patch['db']['sqlite'] = $dataDir . '/uptimer.sqlite';
     }
@@ -106,18 +106,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12h4l3 8 4-16 3 8h6"/></svg>
     <h1>Installation de Uptimer</h1>
   </div>
-  <p class="center muted small">Surveillance de sites : fonctionne sur un hébergement mutualisé, sans Docker.</p>
+  <p class="center muted small"><?= te('Surveillance de sites : fonctionne sur un hébergement mutualisé, sans Docker.') ?></p>
 
   <?php if ($alreadyInstalled): ?>
     <div class="alert alert-warn mt">Uptimer est déjà installé : le formulaire est désactivé.
-      <a href="index.php">Accéder à l'application</a>. Pour repartir de zéro, supprimez
-      <span class="mono">config.php</span> par FTP ou SSH. Vous pouvez aussi supprimer
-      <span class="mono">install.php</span> : il n'est plus nécessaire.</div>
+      <a href="index.php"><?= te('Accéder à l\'application') ?></a>.
+      <?= te('Pour repartir de zéro, supprimez {file} par FTP ou SSH.',
+             ['file' => '<span class="mono">config.php</span>']) ?>
+      <?= te('Vous pouvez aussi supprimer {file} : il n\'est plus nécessaire.',
+             ['file' => '<span class="mono">install.php</span>']) ?></div>
   <?php endif; ?>
 
   <div class="panel">
     <div class="panel-head"><h2>Environnement</h2>
-      <span class="badge badge-<?= $blocking ? 'bad' : 'ok' ?>"><?= $blocking ? count($blocking) . t('point(s) à corriger') : 'tout est bon' ?></span></div>
+      <span class="badge badge-<?= $blocking ? 'bad' : 'ok' ?>"><?= $blocking
+        ? e(tn(count($blocking), 'un point à corriger', '{n} points à corriger'))
+        : te('tout est bon') ?></span></div>
     <div class="panel-body tight">
       <table class="tbl"><tbody>
         <?php foreach ($checks as [$label, $ok, $detail]): ?>
@@ -137,9 +141,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
   <form method="post" class="panel">
     <div class="panel-head"><h2>Configuration</h2></div>
     <div class="panel-body">
-      <label class="f"><span>Mot de passe d'accès</span>
+      <label class="f"><span><?= te('Mot de passe d\'accès') ?></span>
         <input type="password" name="password" required minlength="8" autocomplete="new-password" autofocus>
-        <span class="hint">8 caractères minimum. C'est le seul identifiant : il n'y a pas de nom d'utilisateur.</span></label>
+        <span class="hint"><?= te('8 caractères minimum. C\'est le seul identifiant : il n\'y a pas de nom d\'utilisateur.') ?></span></label>
       <label class="f"><span>Confirmation</span>
         <input type="password" name="password2" required minlength="8" autocomplete="new-password"></label>
 
@@ -147,19 +151,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
         <input type="text" name="base_url" placeholder="https://exemple.fr/uptimer"
                value="<?= e((($_SERVER['HTTPS'] ?? '') && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://'
                     . ($_SERVER['HTTP_HOST'] ?? '') . rtrim(dirname((string)($_SERVER['SCRIPT_NAME'] ?? '')), '/')) ?>">
-        <span class="hint">Pour que les alertes contiennent un lien direct vers la fiche concernée.</span></label>
+        <span class="hint"><?= te('Pour que les alertes contiennent un lien direct vers la fiche concernée.') ?></span></label>
 
       <label class="f" style="max-width:280px"><span>Fuseau horaire</span>
         <input type="text" name="timezone" value="Europe/Paris"></label>
 
       <fieldset>
-        <legend>Base de données</legend>
+        <legend><?= te('Base de données') ?></legend>
         <label class="check"><input type="radio" name="driver" value="sqlite" checked onclick="document.getElementById('mysql').hidden=true">
-          <span>SQLite (recommandé)<span class="hint">Aucune configuration : un fichier dans <span class="mono">data/</span>. Parfait jusqu'à quelques centaines de sondes.</span></span></label>
+          <span><?= te('SQLite (recommandé)') ?><span class="hint"><?= te('Aucune configuration : un fichier dans {dir}. Parfait jusqu\'à quelques centaines de sondes.',
+                ['dir' => '<span class="mono">data/</span>']) ?></span></span></label>
         <label class="check"><input type="radio" name="driver" value="mysql" onclick="document.getElementById('mysql').hidden=false" <?= $mysqlOk ? '' : 'disabled' ?>>
-          <span>MySQL / MariaDB<span class="hint">Pour un gros parc ou un historique très long.</span></span></label>
+          <span>MySQL / MariaDB<span class="hint"><?= te('Pour un gros parc ou un historique très long.') ?></span></span></label>
         <div id="mysql" hidden class="grid-3 mt">
-          <label class="f"><span>Hôte</span><input type="text" name="db_host" value="localhost"></label>
+          <label class="f"><span><?= te('Hôte') ?></span><input type="text" name="db_host" value="localhost"></label>
           <label class="f"><span>Port</span><input type="number" name="db_port" value="3306"></label>
           <label class="f"><span>Base</span><input type="text" name="db_name" placeholder="user_uptimer"></label>
           <label class="f"><span>Utilisateur</span><input type="text" name="db_user"></label>
@@ -174,13 +179,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
 
   <?php if (!$blocking): ?>
   <div class="panel">
-    <div class="panel-head"><h2>Après l'installation</h2></div>
+    <div class="panel-head"><h2><?= te('Après l\'installation') ?></h2></div>
     <div class="panel-body small soft">
-      <p><strong>1.</strong> Ajoutez la tâche planifiée (cPanel o2switch → « Tâches cron », toutes les minutes) :</p>
+      <p><strong>1.</strong> <?= te('Ajoutez la tâche planifiée, à lancer chaque minute. Sur cPanel o2switch : « Tâches cron ».') ?></p>
       <pre class="mono small" style="background:var(--surface-2);padding:10px;border-radius:8px;overflow:auto">* * * * * <?= e(PHP_BINDIR . '/php') ?> <?= e(UPTIMER_ROOT . '/cron.php') ?> &gt;/dev/null 2&gt;&amp;1</pre>
       <p><strong>2.</strong> Collez votre liste de domaines dans « Ajouter des sites » : le CMS, les pages à suivre
         et la chaîne de contrôle sont déduits automatiquement.</p>
-      <p><strong>3.</strong> Renseignez au moins un canal d'alerte dans les réglages (Discord, Slack, e-mail ou webhook).</p>
+      <p><strong>3.</strong> <?= te('Renseignez au moins un canal d\'alerte dans les réglages : Discord, Slack, e-mail ou webhook.') ?></p>
     </div>
   </div>
   <?php endif; ?>

@@ -77,11 +77,27 @@ try {
     (el) => el.getBoundingClientRect().top < 200));
   if (tasks.length) {
     const first = tasks[0];
-    ok('la tâche annonce sa cause', (await first.$eval('.task-cause', (e) => e.textContent.trim())).length > 8);
-    ok('la tâche donne la conduite à tenir', (await first.$('.task-fix')) !== null);
-    ok('actions disponibles sans changer de page', (await first.$$('.task-actions .btn')).length >= 4);
-    // Rapport copiable
+    ok('la panne la plus urgente annonce sa cause',
+      (await first.$eval('.hero-cause', (e) => e.textContent.trim())).length > 8);
+    ok('elle donne la conduite à tenir', (await first.$('.hero-fix')) !== null);
+    // Un seul bouton principal visible : le reste est replié derrière « ··· ».
+    const heroPrimary = await first.$$eval('.act > .btn-primary', (b) => b.length);
+    ok('un seul bouton principal sur la carte', heroPrimary === 1, heroPrimary + ' bouton(s)');
+    ok('les autres actions sont accessibles en un clic', (await first.$('.act-more')) !== null);
+    // La file : une ligne par panne suivante, lisible sans défiler.
+    const rows = await page.$$eval('.queue .q-row', (r) => r.length);
+    ok('les pannes suivantes tiennent sur une ligne', rows >= 0, rows + ' ligne(s)');
+    if (rows > 0) {
+      const h = await page.$$eval('.queue .q-row', (r) =>
+        r.map((x) => Math.round(x.getBoundingClientRect().height)));
+      ok('chaque ligne reste compacte', Math.max(...h) <= 90, 'hauteur max ' + Math.max(...h) + ' px');
+      ok('chaque ligne porte son action',
+        (await page.$$eval('.queue .q-row .btn-primary', (b) => b.length)) === rows);
+    }
+    // Rapport copiable : il est dans le menu replié.
     await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+    const more = await first.$('.act-more > summary');
+    if (more) await more.click();
     const copyBtn = await first.$('.js-copy-report');
     if (copyBtn) {
       await copyBtn.click();

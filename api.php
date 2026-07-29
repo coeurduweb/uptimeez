@@ -58,6 +58,7 @@ switch ($action) {
             // On efface le dernier verdict : sinon la carte affiche un message
             // périmé à côté d'un état « en attente de vérification ».
             'last_message' => $enable ? null : 'Surveillance suspendue',
+            'last_message_vars' => null,
             'reason_code'  => null,
             'status_since' => now(),
         ], 'id = :__i', ['__i' => $id]);
@@ -72,7 +73,8 @@ switch ($action) {
 
     // ---- Rafraîchissement du tableau de bord ----------------------------
     case 'summary':
-        $mons = Db::all('SELECT id, name, status, reason_code, last_message, last_ms, last_check_at,
+        $mons = Db::all('SELECT id, name, status, reason_code, last_message, last_message_vars,
+                               last_ms, last_check_at,
                                 uptime_24h, css_state, ssl_days_left, ssl_warn_days, enabled, setup_state
                          FROM monitors');
         $out = [];
@@ -81,7 +83,7 @@ switch ($action) {
                 'id'      => (int)$m['id'],
                 'status'  => (string)$m['status'],
                 'label'   => Ui::statusLabel((string)$m['status']),
-                'message' => str_cut((string)$m['last_message'], 150),
+                'message' => verdict_text($m, 150),
                 'ms'      => $m['last_ms'] !== null ? (int)$m['last_ms'] : null,
                 'ms_h'    => Ui::ms($m['last_ms'] !== null ? (int)$m['last_ms'] : null),
                 'uptime'  => $m['uptime_24h'] !== null ? (float)$m['uptime_24h'] : null,
@@ -233,7 +235,7 @@ function monitor_payload(int $id): array
         'name'     => (string)$m['name'],
         'status'   => (string)$m['status'],
         'label'    => Ui::statusLabel((string)$m['status']),
-        'message'  => str_cut((string)$m['last_message'], 200),
+        'message'  => verdict_text($m, 200),
         'reason'   => $m['reason_code'],
         'ms'       => $m['last_ms'] !== null ? (int)$m['last_ms'] : null,
         'ms_h'     => Ui::ms($m['last_ms'] !== null ? (int)$m['last_ms'] : null),

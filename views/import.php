@@ -50,9 +50,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
       <div class="field" style="flex:1 1 220px">
         <label for="iv"><?= te('Fréquence de vérification') ?></label>
         <select id="iv" name="interval_sec">
-          <?php foreach ([60 => 'Toutes les minutes', 120 => 'Toutes les 2 minutes', 300 => 'Toutes les 5 minutes',
-                          600 => 'Toutes les 10 minutes', 900 => 'Toutes les 15 minutes',
-                          1800 => 'Toutes les 30 minutes', 3600 => 'Toutes les heures'] as $s => $l): ?>
+          <?php foreach (Ui::intervalChoices(false) as $s => $l): ?>
             <option value="<?= $s ?>" <?= (int)($d['interval_sec'] ?? 300) === $s ? 'selected' : '' ?>><?= e($l) ?></option>
           <?php endforeach; ?>
         </select>
@@ -152,7 +150,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
             <?php endif; ?></td>
           <td class="num small"><?= !empty($r['exists']) ? '—' : te('jusqu\'à {n}', ['n' => (int)$r['pages']]) ?></td>
           <td class="small"><?= $r['proof'] ? e(str_cut((string)$r['proof'], 30))
-              : '<span class="muted">déduite du contenu</span>' ?></td>
+              : '<span class="muted">' . te('déduite du contenu') . '</span>' ?></td>
           <td class="num nowrap"><?php
             if (!empty($r['exists'])) echo Ui::badge(t('déjà présente'), 'neutral');
             elseif (isset($r['enabled']) && (int)$r['enabled'] === 0)

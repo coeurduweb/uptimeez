@@ -22,7 +22,7 @@ header('Cache-Control: no-store');
 
 if (!Config::isInstalled()) {
     http_response_code(503);
-    exit("Uptimer n'est pas installé.\n");
+    exit(t('{app} n\'est pas installé.') . "\n");
 }
 
 $token = (string)($_GET['k'] ?? $_POST['k'] ?? '');
@@ -30,7 +30,7 @@ $note  = trim((string)($_GET['m'] ?? $_POST['m'] ?? ''));
 
 if ($token === '') {
     http_response_code(400);
-    exit("Clé manquante.\n");
+    exit(t('Clé manquante.') . "\n");
 }
 
 Db::migrate();

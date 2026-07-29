@@ -123,7 +123,7 @@ final class Auth
         $wantsJson = $script === 'api.php'
             || str_starts_with((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
         if ($wantsJson) {
-            json_out(['error' => 'auth', 'message' => 'Session expirée'], 401);
+            json_out(['error' => 'auth', 'message' => t('Session expirée')], 401);
         }
         header('Location: ' . u('login'));
         exit;

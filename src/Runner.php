@@ -220,8 +220,11 @@ final class Runner
         $events   = [];
         $https    = str_starts_with(strtolower((string)$mon['url']), 'https://');
 
-        $note = function (string $state, ?string $reason, string $message) use (&$findings) {
-            $findings[] = ['state' => $state, 'reason' => $reason, 'message' => $message];
+        // Le message est une phrase source avec ses variables : la traduction a
+        // lieu à l'affichage, pas ici. Le collecteur ne connaît pas la langue de
+        // celui qui lira le verdict.
+        $note = function (string $state, ?string $reason, string $message, array $vars = []) use (&$findings) {
+            $findings[] = ['state' => $state, 'reason' => $reason, 'message' => $message, 'vars' => $vars];
         };
 
         // ---- 1. Couche réseau ---------------------------------------------
@@ -240,9 +243,14 @@ final class Runner
             }
 
             if ($sslDiag) {
-                $note('down', $sslDiag['code'], $sslDiag['msg']
-                    . (isset($details['ssl']['expires_at']) && $details['ssl']['expires_at']
-                        ? ' (échéance ' . date('d/m/Y', strtotime((string)$details['ssl']['expires_at'])) . ')' : ''));
+                $due = isset($details['ssl']['expires_at']) && $details['ssl']['expires_at']
+                    ? date('d/m/Y', strtotime((string)$details['ssl']['expires_at'])) : '';
+                if ($due !== '') {
+                    $note('down', $sslDiag['code'], '{reason} (échéance {date})',
+                          ['reason' => $sslDiag['msg'], 'date' => $due]);
+                } else {
+                    $note('down', $sslDiag['code'], $sslDiag['msg']);
+                }
             } else {
                 // Le message reste en français ; la trace curl brute part dans les
                 // détails techniques, consultables sur la fiche.
@@ -266,17 +274,19 @@ final class Runner
                 $c >= 300 => 'HTTP_3XX',
                 default   => 'HTTP_UNEXPECTED',
             };
-            $label = match ($reason) {
-                'HTTP_5XX' => 'Erreur serveur ' . $c . ' (le site ne répond plus correctement)',
-                'HTTP_404' => 'Page introuvable (404)',
-                'HTTP_403' => 'Accès interdit (403)',
-                'HTTP_401' => 'Authentification requise (401)',
-                'HTTP_429' => 'Trop de requêtes (429) : quota serveur atteint',
-                'HTTP_4XX' => 'Erreur client ' . $c,
-                'HTTP_3XX' => 'Redirection inattendue (' . $c . ') vers ' . str_cut($res->finalUrl, 80),
-                default    => 'Code HTTP inattendu : ' . $c . ' (attendu : ' . $expect . ')',
+            [$label, $vars] = match ($reason) {
+                'HTTP_5XX' => ['Erreur serveur {code} : le site ne répond plus correctement', ['code' => $c]],
+                'HTTP_404' => ['Page introuvable (404)', []],
+                'HTTP_403' => ['Accès interdit (403)', []],
+                'HTTP_401' => ['Authentification requise (401)', []],
+                'HTTP_429' => ['Trop de requêtes (429) : quota serveur atteint', []],
+                'HTTP_4XX' => ['Erreur client {code}', ['code' => $c]],
+                'HTTP_3XX' => ['Redirection inattendue ({code}) vers {target}',
+                               ['code' => $c, 'target' => str_cut($res->finalUrl, 80)]],
+                default    => ['Code HTTP inattendu : {code}, attendu {expected}',
+                               ['code' => $c, 'expected' => $expect]],
             };
-            $note('down', $reason, $label);
+            $note('down', $reason, $label, $vars);
         }
 
         // ---- 3. Base de données (signatures + chaîne de preuve) -----------
@@ -284,7 +294,12 @@ final class Runner
             $db = Database::audit($res, $mon);
             if ($db['state'] !== 'ok') {
                 $details['db'] = $db;
-                $note('down', $db['reason'], $db['message'] . ($db['evidence'] ? ' : « ' . $db['evidence'] . ' »' : ''));
+                if ($db['evidence']) {
+                    $note('down', $db['reason'], '{reason} : « {evidence} »',
+                          ['reason' => $db['message'], 'evidence' => $db['evidence']]);
+                } else {
+                    $note('down', $db['reason'], $db['message']);
+                }
             }
         }
 
@@ -294,28 +309,33 @@ final class Runner
             $found = self::containsAny($res->body, $expectStr);
             if (!$found) {
                 $note('down', 'STRING_MISSING',
-                    'La chaîne de contrôle « ' . str_cut($expectStr, 60) . ' » est absente de la page : '
-                    . 'le contenu n\'est plus servi (serveur web ou base de données).');
+                    'La chaîne de contrôle « {string} » est absente de la page : le contenu n\'est plus servi, par le serveur web ou par la base de données.',
+                    ['string' => str_cut($expectStr, 60)]);
             }
         }
         $forbid = trim((string)($mon['forbid_string'] ?? ''));
         if ($forbid !== '' && self::containsAny($res->body, $forbid)) {
-            $note('down', 'STRING_FORBIDDEN', 'Chaîne interdite détectée : « ' . str_cut($forbid, 60) . ' »');
+            $note('down', 'STRING_FORBIDDEN', 'Chaîne interdite détectée : « {string} »',
+                  ['string' => str_cut($forbid, 60)]);
         }
 
         // ---- 5. API JSON ---------------------------------------------------
         if ($mon['kind'] === 'api') {
             $json = json_decode($res->body, true);
             if ($res->body !== '' && $json === null && json_last_error() !== JSON_ERROR_NONE) {
-                $note('down', 'JSON_INVALID', 'Réponse non JSON valide (' . json_last_error_msg() . ')');
+                $note('down', 'JSON_INVALID', 'Réponse non JSON valide : {error}',
+                      ['error' => json_last_error_msg()]);
             } elseif (!empty($mon['json_path'])) {
                 $val = self::jsonPath($json, (string)$mon['json_path']);
                 $exp = (string)($mon['json_expect'] ?? '');
                 if ($val === null) {
-                    $note('down', 'JSON_PATH', 'Champ « ' . $mon['json_path'] . ' » absent de la réponse');
+                    $note('down', 'JSON_PATH', 'Champ « {field} » absent de la réponse',
+                          ['field' => (string)$mon['json_path']]);
                 } elseif ($exp !== '' && (string)$val !== $exp) {
                     $note('down', 'JSON_VALUE',
-                        'Champ « ' . $mon['json_path'] . ' » = « ' . str_cut((string)$val, 40) . ' » (attendu « ' . $exp . ' »)');
+                        'Champ « {field} » vaut « {value} », attendu « {expected} »',
+                        ['field' => (string)$mon['json_path'], 'value' => str_cut((string)$val, 40),
+                         'expected' => $exp]);
                 }
             }
         }
@@ -328,21 +348,29 @@ final class Runner
                 $details['ssl'] = $ssl;
                 if ($ssl['checked']) {
                     if ($ssl['code'] === 'SSL_EXPIRED') {
-                        $note('down', 'SSL_EXPIRED', 'Certificat SSL expiré' .
-                            ($ssl['expires_at'] ? ' le ' . date('d/m/Y', strtotime($ssl['expires_at'])) : ''));
+                        if ($ssl['expires_at']) {
+                            $note('down', 'SSL_EXPIRED', 'Certificat SSL expiré le {date}',
+                                  ['date' => date('d/m/Y', strtotime($ssl['expires_at']))]);
+                        } else {
+                            $note('down', 'SSL_EXPIRED', 'Certificat SSL expiré');
+                        }
                     } elseif (!$ssl['valid']) {
-                        $note('down', 'SSL_INVALID', 'Certificat SSL invalide : ' . ($ssl['error'] ?: 'refusé'));
+                        $note('down', 'SSL_INVALID', 'Certificat SSL invalide : {reason}',
+                              ['reason' => $ssl['error'] ?: t('refusé')]);
                     } elseif ($ssl['days_left'] !== null && $ssl['days_left'] <= (int)$mon['ssl_warn_days']) {
                         $note('degraded', 'SSL_SOON',
-                            'Certificat SSL expire dans ' . $ssl['days_left'] . ' jour(s)'
-                            . ($ssl['issuer'] ? ' (' . $ssl['issuer'] . ')' : ''));
+                            $ssl['days_left'] === 1 ? 'Certificat SSL expire demain'
+                                                    : 'Certificat SSL expire dans {n} jours',
+                            ['n' => (int)$ssl['days_left']]);
                     }
                 }
             } else {
                 $d = $mon['ssl_days_left'];
                 if ($d !== null && (int)$d < 0) $note('down', 'SSL_EXPIRED', 'Certificat SSL expiré');
                 elseif ($d !== null && (int)$d <= (int)$mon['ssl_warn_days']) {
-                    $note('degraded', 'SSL_SOON', 'Certificat SSL expire dans ' . (int)$d . ' jour(s)');
+                    $note('degraded', 'SSL_SOON', (int)$d === 1 ? 'Certificat SSL expire demain'
+                                                                : 'Certificat SSL expire dans {n} jours',
+                          ['n' => (int)$d]);
                 }
             }
         }
@@ -384,24 +412,30 @@ final class Runner
                                                      $res->body, $cms !== null ? (string)$cms : null);
                 }
                 if ($css['state'] === 'broken') {
-                    $note('down', 'CSS_BROKEN', 'Mise en page cassée : ' . implode(' ', array_slice($css['messages'], 0, 3)));
+                    $note('down', 'CSS_BROKEN', 'Mise en page cassée : {detail}',
+                          ['detail' => implode(' ', array_slice($css['messages'], 0, 3))]);
                 } elseif ($css['state'] === 'warn') {
-                    $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : ' . implode(' ', array_slice($css['messages'], 0, 2)));
+                    $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : {detail}',
+                          ['detail' => implode(' ', array_slice($css['messages'], 0, 2))]);
                 }
                 if ($css['changed']) {
-                    $events[] = ['kind' => 'css_changed', 'message' => 'Les fichiers CSS ont changé (déploiement ?)'];
+                    $events[] = ['kind' => 'css_changed', 'message' => t('Les fichiers CSS ont changé, sans doute un déploiement.')];
                 }
             } elseif (in_array($mon['css_state'] ?? '', ['broken', 'warn'], true)) {
                 // Entre deux analyses, le dernier verdict CSS reste valable :
                 // sans cela une mise en page cassée « guérirait » toute seule
                 // à la vérification suivante alors que rien n'a été corrigé.
                 $prev = jdec($mon['css_detail'] ?? null);
-                $why  = implode(' ', array_slice($prev['messages'] ?? [], 0, 2)) ?: 'anomalie détectée à la dernière analyse';
-                $when = !empty($mon['css_checked_at']) ? ' (analyse du ' . date('d/m H:i', strtotime((string)$mon['css_checked_at'])) . ')' : '';
+                $why = implode(' ', array_slice($prev['messages'] ?? [], 0, 2))
+                     ?: t('anomalie détectée à la dernière analyse');
+                if (!empty($mon['css_checked_at'])) {
+                    $why .= ' ' . t('(analyse du {date})',
+                                    ['date' => date('d/m H:i', strtotime((string)$mon['css_checked_at']))]);
+                }
                 if ($mon['css_state'] === 'broken') {
-                    $note('down', 'CSS_BROKEN', 'Mise en page cassée : ' . $why . $when);
+                    $note('down', 'CSS_BROKEN', 'Mise en page cassée : {detail}', ['detail' => $why]);
                 } else {
-                    $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : ' . $why . $when);
+                    $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : {detail}', ['detail' => $why]);
                 }
             }
         }
@@ -409,13 +443,14 @@ final class Runner
         // ---- 8. Indexabilité (utile en agence : un noindex oublié) --------
         if ((int)($mon['check_noindex'] ?? 0) === 1 && $htmlOk) {
             $ni = Discovery::noindex($res);
-            if ($ni) $note('degraded', 'NOINDEX', 'Page en noindex : ' . $ni);
+            if ($ni) $note('degraded', 'NOINDEX', 'Page en noindex : {detail}', ['detail' => $ni]);
         }
 
         // ---- 9. Lenteur ----------------------------------------------------
         $slow = (int)($mon['slow_ms'] ?: 3000);
         if ($slow > 0 && $res->totalMs > $slow) {
-            $note('degraded', 'SLOW', 'Temps de réponse élevé : ' . number_format($res->totalMs / 1000, 2, ',', ' ') . ' s');
+            $note('degraded', 'SLOW', 'Temps de réponse élevé : {seconds} s',
+                  ['seconds' => number_format($res->totalMs / 1000, 2, ',', ' ')]);
         }
 
         // ---- 10. Mot surveillé (mise à jour de page) ----------------------
@@ -477,14 +512,28 @@ final class Runner
         usort($primary, fn($a, $b) => (self::REASON_PRIORITY[$b['reason'] ?? ''] ?? 0)
                                    <=> (self::REASON_PRIORITY[$a['reason'] ?? ''] ?? 0));
         $reason = $state === 'up' ? null : ($primary[0]['reason'] ?? null);
-        $msg = $state === 'up'
-            ? 'Tout va bien'
-            : implode(' · ', array_slice(array_column($primary, 'message'), 0, 3));
+        // Une seule cause : la phrase source et ses variables sont conservées
+        // telles quelles, et la traduction se fera à l'affichage. Plusieurs
+        // causes de même gravité : elles sont interpolées puis jointes, parce
+        // qu'un msgid composé de trois phrases ne se traduit pas.
+        $keep = array_slice($primary, 0, 3);
+        if ($state === 'up') {
+            $msg = 'Tout va bien';
+            $vars = [];
+        } elseif (count($keep) === 1) {
+            $msg  = (string)$keep[0]['message'];
+            $vars = (array)($keep[0]['vars'] ?? []);
+        } else {
+            $msg  = implode(' · ', array_map(
+                fn(array $f): string => t((string)$f['message'], (array)($f['vars'] ?? [])), $keep));
+            $vars = [];
+        }
 
         return [
             'state'    => $state,
             'reason'   => $reason,
             'message'  => str_cut($msg, 400),
+            'vars'     => $vars,
             'findings' => $findings,
             'details'  => $details,
             'events'   => $events,
@@ -546,7 +595,8 @@ final class Runner
             'last_status_code' => $res->status ?: null,
             'last_ip'          => $res->ip !== '' ? $res->ip : ($mon['last_ip'] ?? null),
             'reason_code'      => $verdict['reason'],
-            'last_message'     => $verdict['message'],
+            'last_message'      => $verdict['message'],
+            'last_message_vars' => !empty($verdict['vars']) ? jenc($verdict['vars']) : null,
         ];
         if ($mon['status'] !== $state) {
             $upd['status']       = $state;

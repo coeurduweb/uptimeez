@@ -30,7 +30,7 @@ final class Slack
         $link = Notifier::monitorLink($mon);
         if ($link) {
             $blocks[] = ['type' => 'actions', 'elements' => [[
-                'type' => 'button', 'text' => ['type' => 'plain_text', 'text' => 'Ouvrir dans Uptimer'], 'url' => $link,
+                'type' => 'button', 'text' => ['type' => 'plain_text', 'text' => t('Ouvrir dans {app}')], 'url' => $link,
             ]]];
         }
 
