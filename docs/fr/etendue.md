@@ -12,7 +12,7 @@
 |---|---|---|
 | Disponibilité | Code HTTP, timings détaillés, redirections, relances | La requête de la page |
 | Mise en page | 9 signaux sur CSS, scripts et polices, silhouette | Les ressources de la page, toutes les 15 min au plus |
-| Données | 45 signatures, sonde CMS, chaîne de preuve, chaîne interdite | Aucun appel de plus, sauf la sonde CMS |
+| Données | 41 signatures, sonde CMS, chaîne de preuve, chaîne interdite | Aucun appel de plus, sauf la sonde CMS |
 | Vitesse | Temps de réponse, fichiers bloquants, image du haut de page | Une requête HEAD sur une image |
 | Échéances | Certificat, domaine, failles publiées | Une passe par jour, mise en cache |
 | Silence | Battement dead-man | Aucun : c'est votre script qui appelle |
@@ -88,7 +88,7 @@ référencement après une mise en ligne, et personne ne s'en aperçoit avant de
 
 ## 3. Est-ce que les données répondent
 
-**Environ 45 signatures**, classées par moteur et par framework : WordPress, MySQL et MariaDB, PDO, mysqli,
+**Environ 41 signatures**, classées par moteur et par framework : WordPress, MySQL et MariaDB, PDO, mysqli,
 Doctrine, Laravel, PrestaShop, Joomla, Drupal, SQLite, PostgreSQL. Elles couvrent la connexion impossible, la
 table corrompue, la table absente du moteur, le quota disque atteint, l'index abîmé, les erreurs fatales et les
 dépassements de mémoire ou de temps d'exécution.

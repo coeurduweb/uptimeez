@@ -543,7 +543,7 @@ uptimeez/
 │   ├── Detect/Cms.php        technology fingerprinting
 │   ├── Detect/Discovery.php  page selection + proof-string derivation
 │   ├── Triage.php            turns states into a to-do list
-│   ├── Diagnose.php          23 causes → what it means, what to do
+│   ├── Diagnose.php          25 causes → what it means, what to do
 │   ├── Tune.php              self-tuning thresholds + decisions journal
 │   ├── Heartbeat.php         the dead-man switch
 │   ├── Fail.php              UptimeEZ's own failure: cause, remedy, and nothing public

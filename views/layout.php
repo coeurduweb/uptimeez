@@ -2,6 +2,7 @@
 /** Gabarit commun. Le thème est appliqué avant peinture pour éviter tout clignotement. */
 use Uptimeez\Auth;
 use Uptimeez\Config;
+use Uptimeez\Demo;
 use Uptimeez\I18n;
 use Uptimeez\Stats;
 use Uptimeez\Ui;
@@ -92,11 +93,21 @@ $uiMode  = Ui::mode();
  * ne s'est jamais affiché. Aucune erreur nulle part : une image simplement fausse.
  * L'encodage se fait une seule fois, ici, sur du SVG écrit avec de vrais dièses.
  */
-$etatCouleur = $down > 0
-    ? '#f0555f'                                             // hors service
-    : (((int)($summary['degraded'] ?? 0)) > 0
-        ? '#f0ad3c'                                         // à regarder
-        : '#34c785');                                       // opérationnel
+// SUR LA DÉMONSTRATION, le favicon porte la marque et non l'état.
+//
+// Ce n'est pas une exception de confort : la démo est une surface de vitrine, ses
+// données sont fictives et remises à zéro chaque heure. L'état qu'elle afficherait
+// n'appelle aucune action, alors que la reconnaissance de la marque, elle, compte.
+// Signalé le 2026-07-29 : l'onglet de la démo montrait une barre verte quand le
+// site et le back-office en montraient une ambre, ce qui se lit comme deux
+// produits différents.
+$etatCouleur = Demo::on()
+    ? '#f0ad3c'                                             // la marque, telle quelle
+    : ($down > 0
+        ? '#f0555f'                                         // hors service
+        : (((int)($summary['degraded'] ?? 0)) > 0
+            ? '#f0ad3c'                                     // à regarder
+            : '#34c785'));                                  // opérationnel
 $sigle = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
     . '<rect width="64" height="64" rx="14" fill="#080b12"/>'
     . '<g fill="#34c785">'

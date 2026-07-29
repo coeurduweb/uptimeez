@@ -2248,9 +2248,95 @@ foreach (token_get_all($gabarit) as $jeton) {
 }
 check('le gabarit n\'écrit pas les couleurs du favicon en %23',
     (bool)preg_match('/fill="%23/', $codeSeul), false);
+// En démonstration le favicon porte la MARQUE et non l'état : les données sont
+// fictives, donc l'état n'appelle aucune action, alors que la cohérence de marque
+// avec le site et le back-office compte. Vu en production le 2026-07-29 : l'onglet
+// de la démo montrait du vert quand le reste montrait de l'ambre.
+$couleurDemo = function (bool $demo, int $down, int $degraded): string {
+    return $demo ? '#f0ad3c'
+        : ($down > 0 ? '#f0555f' : ($degraded > 0 ? '#f0ad3c' : '#34c785'));
+};
+check('en démonstration, le favicon porte la marque même si tout va bien',
+    $couleurDemo(true, 0, 0), '#f0ad3c');
+check('et même si un service est tombé',
+    $couleurDemo(true, 3, 0), '#f0ad3c');
+check('hors démonstration, il porte bien l\'état',
+    $couleurDemo(false, 3, 0), '#f0555f');
+
 check('le sigle du produit est bien celui affiché',
     str_contains(Uptimeez\Ui::brand(21), 'viewBox="0 0 64 64"')
     && substr_count(Uptimeez\Ui::brand(21), '<rect') === 5, true);
+
+// ---------------------------------------------------------------------------
+section('Chiffres annoncés : la documentation doit dire vrai');
+// ---------------------------------------------------------------------------
+/*
+ * Le produit affirme des nombres : « 41 signatures », « 25 causes », « 9 signaux »,
+ * « 10 langues ». Ces nombres partent dans la documentation, sur le site, dans les
+ * pages de comparaison, et un jour dans une réponse de moteur génératif. Un outil
+ * de supervision qui exagère sur ce qu'il détecte se disqualifie tout seul.
+ *
+ * Or ils dérivent en silence. Constaté le 2026-07-29 : la documentation annonçait
+ * « 45 signatures » là où le code en compte 41, et « 23 causes » là où il en compte
+ * 25. Personne n'avait menti : le code avait bougé, les textes non.
+ *
+ * Ces contrôles comparent donc ce que le code fait à ce que les textes disent. Si
+ * l'un change, le test réclame l'autre.
+ */
+// Les tables de signatures sont des constantes PRIVÉES : l'accès direct lève une
+// erreur, la réflexion les voit. C'est voulu côté produit (rien n'a besoin d'y
+// toucher de l'extérieur), donc c'est au test de s'adapter, pas au code.
+$refDb = new ReflectionClass(Uptimeez\Check\Database::class);
+$constDb = $refDb->getConstants();
+$sigs = count($constDb['SIGNATURES'] ?? []) + count($constDb['PHP_FATAL'] ?? []);
+$branches = preg_match_all(
+    "/^\s{12}((?:'[A-Z][A-Z0-9_]*'\s*,\s*)*'[A-Z][A-Z0-9_]*')\s*=>/m",
+    (string)file_get_contents(__DIR__ . '/../src/Diagnose.php'));
+$signaux = count((new ReflectionClass(Uptimeez\Check\Css::class))->getConstants()['HIDDEN_CLASSES'] ?? []);
+$langues = count(Uptimeez\I18n::available());
+
+check('les signatures de données se comptent', $sigs > 0, true);
+check('les causes expliquées se comptent', $branches > 0, true);
+
+// Chaque cause doit porter les trois pièces : sans correctif, ce n'est plus
+// « dire quoi faire », c'est juste un message d'erreur de plus.
+$incompletes = [];
+preg_match_all("/^\s{12}'([A-Z][A-Z0-9_]*)'/m",
+    (string)file_get_contents(__DIR__ . '/../src/Diagnose.php'), $mCodes);
+foreach (array_unique($mCodes[1]) as $code) {
+    $e = Uptimeez\Diagnose::explain($code);
+    if (($e['title'] ?? '') === '' || ($e['why'] ?? '') === '' || ($e['fix'] ?? '') === '') {
+        $incompletes[] = $code;
+    }
+}
+check('chaque cause porte titre, explication ET correctif', implode(',', $incompletes), '');
+
+// Les textes, confrontés aux mesures. On lit les fichiers plutôt que de recopier
+// les nombres ici : recopier, c'est créer une troisième source à faire dériver.
+$textes = [];
+foreach (['/../README.md', '/../docs/en/coverage.md', '/../docs/fr/etendue.md',
+          '/../docs/en/detection.md', '/../docs/fr/detection.md'] as $f) {
+    $chemin = __DIR__ . $f;
+    if (is_file($chemin)) $textes[$f] = (string)file_get_contents($chemin);
+}
+$annonces = [
+    'signatures' => ['/(\d+) signatures?/', $sigs],
+    'causes'     => ['/(\d+) causes?/', $branches],
+    'signaux'    => ['/(\d+) (?:signals?|signaux)/', $signaux],
+    'langues'    => ['/(\d+) (?:languages?|langues)/', $langues],
+];
+foreach ($annonces as $quoi => [$motif, $mesure]) {
+    $faux = [];
+    foreach ($textes as $f => $t) {
+        if (preg_match_all($motif, $t, $m)) {
+            foreach ($m[1] as $n) {
+                if ((int)$n !== $mesure) $faux[] = basename($f) . ":$n";
+            }
+        }
+    }
+    check("« $quoi » : les textes annoncent $mesure partout",
+        implode(' ', array_unique($faux)), '');
+}
 
 echo "\n" . str_repeat('─', 68) . "\n";
 printf("%d test(s) réussi(s), %d échec(s)\n", $pass, $fail);

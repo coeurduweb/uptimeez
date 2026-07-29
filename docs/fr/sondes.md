@@ -72,7 +72,7 @@ renseigniez à la main.
 | Interrupteur | Défaut | Notes |
 |---|---|---|
 | Contrôler les ressources de la page | activé | CSS, scripts et polices : c'est ce qui détecte une mise en page cassée. [Comment ça marche](detection.md) |
-| Détecter une base de données hors service | activé | ~45 signatures d'erreur, plus la chaîne de preuve |
+| Détecter une base de données hors service | activé | ~41 signatures d'erreur, plus la chaîne de preuve |
 | Surveiller le certificat TLS | activé | Validité, chaîne, correspondance du domaine, expiration |
 | Prévenir avant l'expiration | 14 jours | Let's Encrypt se renouvelle seul ; ceci attrape les fois où il ne le fait pas |
 | Alerter sur un `noindex` oublié | activé en production | Le tueur silencieux du SEO après une mise en ligne |

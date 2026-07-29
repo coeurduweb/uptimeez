@@ -7,7 +7,7 @@ un verdict avant d'agir dessus, et il faut savoir pourquoi une fausse alerte est
 
 ---
 
-## Les 23 causes
+## Les 25 causes
 
 Chaque verdict se résout en une cause, et chaque cause porte un titre, une explication et un remède, dans votre
 langue.

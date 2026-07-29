@@ -12,7 +12,7 @@
 |---|---|---|
 | Availability | HTTP code, detailed timings, redirects, retries | The page request |
 | Layout | 9 signals over CSS, scripts and fonts, plus the silhouette | The page's resources, at most every 15 min |
-| Data | 45 signatures, CMS probe, proof string, forbidden string | No extra call, except the CMS probe |
+| Data | 41 signatures, CMS probe, proof string, forbidden string | No extra call, except the CMS probe |
 | Speed | Response time, render-blocking files, top-of-page image | One HEAD request on an image |
 | Deadlines | Certificate, domain, published advisories | One pass a day, cached |
 | Silence | Dead-man heartbeat | None: your script does the calling |
@@ -87,7 +87,7 @@ release, and nobody notices for weeks.
 
 ## 3. Does the data answer
 
-**Around 45 signatures**, grouped by engine and framework: WordPress, MySQL and MariaDB, PDO, mysqli, Doctrine,
+**Around 41 signatures**, grouped by engine and framework: WordPress, MySQL and MariaDB, PDO, mysqli, Doctrine,
 Laravel, PrestaShop, Joomla, Drupal, SQLite, PostgreSQL. They cover connection refused, a corrupt table, a table
 missing from the engine, a disk quota reached, a damaged index, fatal errors, and memory or execution-time
 exhaustion.
