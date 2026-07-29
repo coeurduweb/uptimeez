@@ -1,4 +1,4 @@
-# Everything Uptimer watches
+# Everything Uptimeez watches
 
 **The complete list, layer by layer, with what each check catches and what it costs.**
 
@@ -30,13 +30,13 @@ that must return 503 is monitored just as well as a normal one.
 tells "the server is slow" apart from "DNS resolution takes two seconds".
 
 **Redirect chain.** Followed to the target, with loop detection. If a site redirects permanently (`http` to
-`https`, adding `www`), Uptimer says so and offers to align the monitor on the target in one click.
+`https`, adding `www`), Uptimeez says so and offers to align the monitor on the target in one click.
 
 **Retries before alerting.** A two-second network hiccup is not an outage. A monitor only goes down after N
 consecutive failures, N being per-monitor.
 
 **The address actually contacted.** The IP is recorded on every measurement. When ten sites fail together on one
-IP, Uptimer sends **one** grouped alert saying the problem is very probably the hosting.
+IP, Uptimeez sends **one** grouped alert saying the problem is very probably the hosting.
 
 **Maintenance windows.** `02:00-04:00`, `mon-fri 02:00-04:00` or `sat,sun 01:00-06:00`: nothing alerts during
 those ranges.
@@ -62,7 +62,7 @@ and display nothing but a wall of raw text.
 | Media queries | The responsive layout vanished |
 | Blocks awaiting an animation | Content hidden by a reveal script that never loaded: an *invisible* page |
 
-**Reconstructed console messages.** Uptimer rewrites what the browser would have printed:
+**Reconstructed console messages.** Uptimeez rewrites what the browser would have printed:
 `net::ERR_ABORTED 404`, `Refused to apply style from …`, `Mixed Content: …`,
 `Failed to find a valid digest in the 'integrity' attribute …`. The ticket you hand a developer already contains
 the evidence.
@@ -157,7 +157,7 @@ someone else.
 fetched, then crossed with OSV.dev and api.wordpress.org. "Published vulnerability" and "behind latest" are never
 conflated. See [Security watch](security-watch.md).
 
-**Dead-man heartbeat.** Your backup, your export, your nightly job calls Uptimer when it finishes. **Silence**
+**Dead-man heartbeat.** Your backup, your export, your nightly job calls Uptimeez when it finishes. **Silence**
 raises the alert, the one failure no HTTP request can ever see.
 
 ---
@@ -176,19 +176,19 @@ A main monitor carries the site's state; the site's other pages are grouped with
 
 ---
 
-## What Uptimer deliberately does not watch
+## What Uptimeez deliberately does not watch
 
 A tool that claims to do everything does nothing well. What is out of scope, and why:
 
-- **TCP ports, ICMP ping, DNS, SMTP.** Uptimer monitors over HTTP. An open port does not say a site works, and an
+- **TCP ports, ICMP ping, DNS, SMTP.** Uptimeez monitors over HTTP. An open port does not say a site works, and an
   HTTP monitor does not replace a port test: claiming otherwise would misrepresent what is being checked.
 - **Server metrics** (load, disk, memory). That needs an agent on the machine. Zabbix does it very well.
 - **Scripted journeys** (log in, add to basket, pay). That needs a browser. Checkly does it very well.
 - **Application tracing** inside your code. New Relic does it very well.
-- **Full SEO auditing.** Uptimer reports a forgotten `noindex` because it is an operational accident, not because
+- **Full SEO auditing.** Uptimeez reports a forgotten `noindex` because it is an operational accident, not because
   it audits SEO.
 
-Uptimer does one thing: **keep other people's websites alive without a full-time human watching dashboards.**
+Uptimeez does one thing: **keep other people's websites alive without a full-time human watching dashboards.**
 
 ---
 

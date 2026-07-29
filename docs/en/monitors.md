@@ -23,7 +23,7 @@ This one is different in kind: it is the only way to monitor something that prod
 heartbeat monitor, copy the line it gives you, and put it at the end of the script you care about:
 
 ```bash
-curl -fsS --max-time 10 "https://yourdomain.com/uptimer/beat.php?k=TOKEN" > /dev/null
+curl -fsS --max-time 10 "https://yourdomain.com/uptimeez/beat.php?k=TOKEN" > /dev/null
 ```
 
 Add `&m=some+text` to attach a word to the signal : a file count, a duration, a row total. If the signal does not
@@ -45,7 +45,7 @@ wins, permanently.
 | Field | Default | Touch it when |
 |---|---|---|
 | Name | the site name | It should read well in an alert |
-| Monitored address | as pasted | A bare domain becomes `https://`, redirects are followed. If HTTPS does not answer at all, Uptimer retries over HTTP, says so, and monitors anyway |
+| Monitored address | as pasted | A bare domain becomes `https://`, redirects are followed. If HTTPS does not answer at all, Uptimeez retries over HTTP, says so, and monitors anyway |
 | Check frequency | **auto** by importance | You want a pricing page every minute. Shorter means faster detection and more load on the site |
 | Group | empty | You want to filter the wall by client |
 | Monitor enabled | on | Unchecking keeps the monitor and its history but stops checking it |
@@ -60,7 +60,7 @@ wins, permanently.
 Why it matters: without it, an empty page returning `200` passes as valid. With it, a database outage is caught
 in one check even though the HTTP status is perfect.
 
-Uptimer derives it in this order of preference: footer copyright (which comes from the site settings, hence from
+Uptimeez derives it in this order of preference: footer copyright (which comes from the site settings, hence from
 the database) → `og:site_name` → page title → first navigation entry → H1. Boilerplate is rejected ("all rights
 reserved", "home"), and it is never taken from a page that looks like an error page. If nothing distinctive is
 found, the monitor appears in *Coming up* asking you to set it by hand.

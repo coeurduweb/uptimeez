@@ -10,10 +10,10 @@ wrong.
 ## The collector
 
 `cron.php` is the only thing that needs to run on a schedule. One pass per minute, whatever your intervals:
-Uptimer picks the monitors that are due itself.
+Uptimeez picks the monitors that are due itself.
 
 ```
-* * * * * /usr/local/bin/php /path/to/uptimer/cron.php >/dev/null 2>&1
+* * * * * /usr/local/bin/php /path/to/uptimeez/cron.php >/dev/null 2>&1
 ```
 
 What a pass does:
@@ -98,7 +98,7 @@ php bin/e2e.php               # 233 checks: full user journey, isolated instance
 node bin/e2e-browser.mjs      # 105 checks: real Chromium
 php bin/chaos.php             # 35 checks: 859 hostile requests, nothing must break
 php bin/chaos.php --long      # adds the bulky payloads
-php bin/infra.php             # 61 checks: Uptimer down, what it says and what it withholds
+php bin/infra.php             # 61 checks: Uptimeez down, what it says and what it withholds
 php bin/mysql.php             # 43 checks: the MySQL driver, skipped without a test database
 php bin/security.php          # 105 checks: OWASP Top 10, three depths
 php bin/security.php --niveau=1   # light only: configuration, secrets, surface
@@ -121,11 +121,11 @@ detection against real broken certificates).
 rest of the product stays covered by the other suites, on SQLite:
 
 ```bash
-UPTIMER_TEST_MYSQL_NAME=uptimer_test UPTIMER_TEST_MYSQL_USER=root \
-UPTIMER_TEST_MYSQL_PASS=secret php bin/mysql.php
+UPTIMEEZ_TEST_MYSQL_NAME=uptimeez_test UPTIMEEZ_TEST_MYSQL_USER=root \
+UPTIMEEZ_TEST_MYSQL_PASS=secret php bin/mysql.php
 ```
 
-### When Uptimer itself goes down
+### When Uptimeez itself goes down
 
 A storage-layer failure no longer shows a blank page. The screen names the cause and gives the command that
 fixes it: `data/` not writable, a database corrupted by an FTP transfer in text mode, a read-only file, a full
@@ -164,12 +164,12 @@ Two things to back up:
 | What | Why |
 |---|---|
 | `config.php` | Password hash, webhook URLs, every setting |
-| `data/uptimer.sqlite` | All your history |
+| `data/uptimeez.sqlite` | All your history |
 
 On SQLite, copy the file when no pass is running, or use the safe route:
 
 ```bash
-sqlite3 data/uptimer.sqlite ".backup '/backups/uptimer-$(date +%F).sqlite'"
+sqlite3 data/uptimeez.sqlite ".backup '/backups/uptimeez-$(date +%F).sqlite'"
 ```
 
 Restoring is putting the two files back. There is no other state anywhere.
@@ -232,7 +232,7 @@ accident.
 Shown on the home screen, and it is the most common setup problem.
 
 1. Check the cron line uses the **CLI** PHP binary. On o2switch that is `/usr/local/bin/php`, not the web SAPI.
-2. Run it by hand: `php /path/to/uptimer/cron.php --once`. Any error appears immediately.
+2. Run it by hand: `php /path/to/uptimeez/cron.php --once`. Any error appears immediately.
 3. No crontab? Use the URL trigger from Settings and call it from an external scheduler.
 
 ### Every site reports a timeout
@@ -254,7 +254,7 @@ If neither applies, open an issue with the URL. False positives are treated as d
 
 ### The proof string was not found
 
-Uptimer needs a piece of text distinctive enough. Some sites have nothing usable : no footer copyright, no
+Uptimeez needs a piece of text distinctive enough. Some sites have nothing usable : no footer copyright, no
 `og:site_name`, a generic title. Set it by hand on the monitor page: pick something that comes from the database
 and never appears on an error page.
 
@@ -269,7 +269,7 @@ Two passes ran at once, or a pass was killed while writing. `PRAGMA integrity_ch
 can run it too:
 
 ```bash
-sqlite3 data/uptimer.sqlite "PRAGMA integrity_check;"
+sqlite3 data/uptimeez.sqlite "PRAGMA integrity_check;"
 ```
 
 If it does not answer `ok`, restore your backup. If it happens repeatedly, your host's filesystem does not handle

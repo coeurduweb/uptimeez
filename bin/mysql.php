@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : le pilote MySQL / MariaDB, vérifié pour de vrai.
+ * Uptimeez : le pilote MySQL / MariaDB, vérifié pour de vrai.
  *
  * Les huit autres suites tournent sur SQLite, parce qu'un fichier jetable rend
  * chaque test isolé et instantané. Conséquence longtemps ignorée : le pilote
@@ -20,8 +20,8 @@
  * quand aucune base de test n'est configurée : personne n'a besoin d'un serveur
  * MySQL pour contribuer.
  *
- *   UPTIMER_TEST_MYSQL_NAME=uptimer_test \
- *   UPTIMER_TEST_MYSQL_USER=root UPTIMER_TEST_MYSQL_PASS=secret \
+ *   UPTIMEEZ_TEST_MYSQL_NAME=uptimeez_test \
+ *   UPTIMEEZ_TEST_MYSQL_USER=root UPTIMEEZ_TEST_MYSQL_PASS=secret \
  *   php bin/mysql.php
  *
  * Variables reconnues : HOST (127.0.0.1), PORT (3306), NAME, USER, PASS.
@@ -31,25 +31,25 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-use Uptimer\Client;
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Report;
-use Uptimer\Runner;
-use Uptimer\Stats;
-use Uptimer\Triage;
-use Uptimer\Vuln;
+use Uptimeez\Client;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Report;
+use Uptimeez\Runner;
+use Uptimeez\Stats;
+use Uptimeez\Triage;
+use Uptimeez\Vuln;
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
-$env = fn(string $k, string $def = ''): string => (string)(getenv('UPTIMER_TEST_MYSQL_' . $k) ?: $def);
+$env = fn(string $k, string $def = ''): string => (string)(getenv('UPTIMEEZ_TEST_MYSQL_' . $k) ?: $def);
 $name = $env('NAME');
 $user = $env('USER');
 if ($name === '' || $user === '') {
     echo "Base MySQL de test non configurée : suite ignorée.\n";
     echo "Pour l'activer :\n";
-    echo "  UPTIMER_TEST_MYSQL_NAME=uptimer_test UPTIMER_TEST_MYSQL_USER=root \\\n";
-    echo "  UPTIMER_TEST_MYSQL_PASS=secret php bin/mysql.php\n";
+    echo "  UPTIMEEZ_TEST_MYSQL_NAME=uptimeez_test UPTIMEEZ_TEST_MYSQL_USER=root \\\n";
+    echo "  UPTIMEEZ_TEST_MYSQL_PASS=secret php bin/mysql.php\n";
     echo "Le reste du produit est couvert par les autres suites, sur SQLite.\n";
     exit(0);
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : recherche de code mort.
+ * Uptimeez : recherche de code mort.
  *
  * Cinq familles, cinq questions :
  *   1. quelles méthodes publiques ne sont appelées nulle part ?
@@ -97,7 +97,7 @@ foreach ($php as $f) {
     if (!preg_match('~^\s*(?:final\s+)?class\s+(\w+)~m', $src, $cm)) continue;
     $class = $cm[1];
     $uses = substr_count($srcAll, $class . '::') + substr_count($srcAll, 'new ' . $class)
-          + substr_count($srcAll, '\\' . $class) + substr_count($srcAll, 'use Uptimer\\' . $class);
+          + substr_count($srcAll, '\\' . $class) + substr_count($srcAll, 'use Uptimeez\\' . $class);
     if ($uses === 0) $deadCls[] = "$class   " . basename($f);
 }
 if ($deadCls) { $issues += count($deadCls); foreach ($deadCls as $d) echo "  MORT  $d\n"; }

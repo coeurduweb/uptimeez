@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Notify;
+namespace Uptimeez\Notify;
 
-use Uptimer\Config;
+use Uptimeez\Config;
 
 final class Mail
 {
@@ -15,8 +15,8 @@ final class Mail
         $recipients = array_values(array_filter(array_map('trim', preg_split('~[,;]~', $to) ?: [])));
         if (!$recipients) return ['ok' => false, 'info' => t('Destinataire invalide')];
 
-        $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimer@' . (gethostname() ?: 'localhost'));
-        $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimer'));
+        $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimeez@' . (gethostname() ?: 'localhost'));
+        $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimeez'));
         $subject  = self::subjectPrefix($sev) . ' ' . strip_tags($title);
         [$html, $text] = self::body($title, $lines, $sev, $mon);
 
@@ -25,13 +25,13 @@ final class Mail
             return Smtp::send($recipients, $from, $fromName, $subject, $html, $text);
         }
 
-        $boundary = 'uptimer' . bin2hex(random_bytes(8));
+        $boundary = 'uptimeez' . bin2hex(random_bytes(8));
         $headers  = [
             'From: ' . self::encodeName($fromName) . ' <' . $from . '>',
             'Reply-To: ' . $from,
             'MIME-Version: 1.0',
             'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
-            'X-Mailer: Uptimer',
+            'X-Mailer: Uptimeez',
             'X-Priority: ' . ($sev === 'down' ? '1' : '3'),
         ];
         $msg = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
@@ -66,20 +66,20 @@ final class Mail
             return ['ok' => false, 'info' => t('Le canal e-mail est désactivé dans les réglages.')];
         }
 
-        $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimer@' . (gethostname() ?: 'localhost'));
-        $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimer'));
+        $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimeez@' . (gethostname() ?: 'localhost'));
+        $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimeez'));
 
         if (Config::get('notify.mail.transport', 'mail') === 'smtp') {
             return Smtp::send($recipients, $from, $fromName, $subject, $html, $text);
         }
 
-        $boundary = 'uptimer' . bin2hex(random_bytes(8));
+        $boundary = 'uptimeez' . bin2hex(random_bytes(8));
         $headers  = [
             'From: ' . self::encodeName($fromName) . ' <' . $from . '>',
             'Reply-To: ' . $from,
             'MIME-Version: 1.0',
             'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
-            'X-Mailer: Uptimer',
+            'X-Mailer: Uptimeez',
             'Auto-Submitted: auto-generated',
         ];
         $msg = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
@@ -100,7 +100,7 @@ final class Mail
             'down'     => '[ALERTE]',
             'degraded' => '[VIGILANCE]',
             'up'       => t('[RÉTABLI]'),
-            default    => '[UPTIMER]',
+            default    => '[UPTIMEEZ]',
         };
     }
 

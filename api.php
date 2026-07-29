@@ -1,30 +1,30 @@
 <?php
 /**
- * Uptimer : points d'entrée JSON pour l'interface (vérification à la demande,
+ * Uptimeez : points d'entrée JSON pour l'interface (vérification à la demande,
  * mise en pause, préparation d'un site, rafraîchissement du tableau de bord).
  */
 declare(strict_types=1);
 
 require __DIR__ . '/src/bootstrap.php';
 
-use Uptimer\Auth;
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\I18n;
-use Uptimer\Importer;
-use Uptimer\Runner;
-use Uptimer\Stats;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\I18n;
+use Uptimeez\Importer;
+use Uptimeez\Runner;
+use Uptimeez\Stats;
+use Uptimeez\Ui;
 
 // Un appelant JSON qui reçoit une page HTML d'erreur n'affiche rien du tout.
-Uptimer\Fail::asJson();
+Uptimeez\Fail::asJson();
 
 if (!Config::isInstalled()) json_out(['error' => 'not_installed'], 503);
 
 Auth::start();
 I18n::init();
 if (!Auth::check()) json_out(['error' => 'auth', 'message' => t('Session expirée, rechargez la page.')], 401);
-Uptimer\Fail::trusted();
+Uptimeez\Fail::trusted();
 Db::migrate();
 
 $action  = (string)($_REQUEST['action'] ?? '');
@@ -182,25 +182,25 @@ switch ($action) {
         $token = null;
         if ($undo) {
             $token = bin2hex(random_bytes(8));
-            $_SESSION['uptimer_undo'][$token] = ['id' => $id, 'data' => $undo, 'at' => time()];
+            $_SESSION['uptimeez_undo'][$token] = ['id' => $id, 'data' => $undo, 'at' => time()];
             // On ne garde que les cinq dernières annulations possibles.
-            if (count($_SESSION['uptimer_undo']) > 5) {
-                $_SESSION['uptimer_undo'] = array_slice($_SESSION['uptimer_undo'], -5, null, true);
+            if (count($_SESSION['uptimeez_undo']) > 5) {
+                $_SESSION['uptimeez_undo'] = array_slice($_SESSION['uptimeez_undo'], -5, null, true);
             }
         }
         json_out(['ok' => true, 'message' => $msg, 'undo' => $token, 'monitor' => monitor_payload($id)]);
 
     case 'undo':
         $token = (string)($_POST['token'] ?? '');
-        $rec   = $_SESSION['uptimer_undo'][$token] ?? null;
+        $rec   = $_SESSION['uptimeez_undo'][$token] ?? null;
         if (!$rec || time() - (int)$rec['at'] > 600) json_out(['ok' => false, 'message' => t('Annulation expirée.')]);
-        unset($_SESSION['uptimer_undo'][$token]);
+        unset($_SESSION['uptimeez_undo'][$token]);
         Db::update('monitors', $rec['data'], 'id = :__i', ['__i' => (int)$rec['id']]);
         json_out(['ok' => true, 'message' => t('Modification annulée.'), 'monitor' => monitor_payload((int)$rec['id'])]);
 
     // ---- Rapport prêt à coller dans un ticket ---------------------------
     case 'report':
-        $txt = Uptimer\Triage::report($id);
+        $txt = Uptimeez\Triage::report($id);
         if ($txt === '') json_out(['error' => 'not_found'], 404);
         json_out(['ok' => true, 'report' => $txt]);
 

@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 /**
  * Moteur de triage : transforme un parc de sondes en liste de choses à faire.
  *
- * C'est le cœur du parti pris de Uptimer. Les outils du marché affichent des états
+ * C'est le cœur du parti pris de Uptimeez. Les outils du marché affichent des états
  * et laissent l'interprétation à l'utilisateur ; ici on répond à trois questions,
  * dans cet ordre :
  *

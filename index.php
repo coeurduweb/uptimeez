@@ -1,20 +1,20 @@
 <?php
 /**
- * Uptimer : point d'entrée web (routeur simple, sans réécriture d'URL requise).
+ * Uptimeez : point d'entrée web (routeur simple, sans réécriture d'URL requise).
  */
 declare(strict_types=1);
 
 require __DIR__ . '/src/bootstrap.php';
 
-use Uptimer\Auth;
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\I18n;
-use Uptimer\Importer;
-use Uptimer\Notify\Notifier;
-use Uptimer\Runner;
-use Uptimer\Stats;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\I18n;
+use Uptimeez\Importer;
+use Uptimeez\Notify\Notifier;
+use Uptimeez\Runner;
+use Uptimeez\Stats;
+use Uptimeez\Ui;
 
 // --- Installation nécessaire ? -------------------------------------------
 if (!Config::isInstalled()) {
@@ -51,7 +51,7 @@ if ($page === 'status') {
 if ($page === 'client') {
     I18n::init();
     Db::migrate();
-    $client = Uptimer\Client::byToken((string)($_GET['k'] ?? ''));
+    $client = Uptimeez\Client::byToken((string)($_GET['k'] ?? ''));
     if ($client === null) {
         http_response_code(404);
         // Même réponse pour un jeton inconnu, mal formé ou désactivé : rien ne
@@ -63,8 +63,8 @@ if ($page === 'client') {
     header('X-Robots-Tag: noindex, nofollow, noarchive');
     header('Referrer-Policy: no-referrer');
     header('Cache-Control: private, no-store');
-    Uptimer\Client::touch((int)$client['id']);
-    $clientOverview = Uptimer\Client::overview((int)$client['id']);
+    Uptimeez\Client::touch((int)$client['id']);
+    $clientOverview = Uptimeez\Client::overview((int)$client['id']);
     // Le compteur de pannes du titre est celui de ce client, pas le global.
     $clientSummary = ['down' => $clientOverview['down'], 'degraded' => $clientOverview['degraded'],
                       'total' => $clientOverview['sites']];
@@ -104,7 +104,7 @@ if ($page === 'login') {
 Auth::requireLogin();
 // À partir d'ici le visiteur est l'exploitant : une panne d'infrastructure peut
 // lui montrer les chemins et la commande qui la répare.
-Uptimer\Fail::trusted();
+Uptimeez\Fail::trusted();
 Db::migrate();
 
 // --- Actions POST --------------------------------------------------------
@@ -144,9 +144,9 @@ function handle_post(): ?array
                      'pages'        => max(1, min(12, (int)($_POST['pages'] ?? 4)))];
             // Un export d'outil concurrent est reconnu à son contenu : l'aperçu
             // est le même, avec en plus ce qui n'a pas pu être repris.
-            $foreign = Uptimer\Import\Foreign::detect($list);
+            $foreign = Uptimeez\Import\Foreign::detect($list);
             if ($foreign !== null) {
-                $f = Uptimer\Import\Foreign::parse($list, $foreign);
+                $f = Uptimeez\Import\Foreign::parse($list, $foreign);
                 $prev = Importer::previewRows($f['rows'], $opt);
                 $prev['errors']  = $f['errors'];
                 $prev['skipped'] = $f['skipped'];
@@ -157,7 +157,7 @@ function handle_post(): ?array
             }
             $prev['raw']  = $list;
             $prev['opt']  = $_POST;
-            $GLOBALS['uptimer_preview'] = $prev;
+            $GLOBALS['uptimeez_preview'] = $prev;
             if (!$prev['rows']) {
                 if (trim($list) === '') {
                     return ['bad', t('Collez une liste d\'adresses, ou déposez l\'export de votre outil actuel.')];
@@ -170,9 +170,9 @@ function handle_post(): ?array
         // ---- Import de masse -------------------------------------------
         case 'import':
             $payload = import_payload();
-            $src = Uptimer\Import\Foreign::detect($payload);
+            $src = Uptimeez\Import\Foreign::detect($payload);
             if ($src !== null) {
-                $f = Uptimer\Import\Foreign::parse($payload, $src);
+                $f = Uptimeez\Import\Foreign::parse($payload, $src);
                 $parsed = ['rows' => $f['rows'], 'errors' => $f['errors']];
                 $foreignSkipped = count($f['skipped']);
                 $foreignLabel = $f['label'];
@@ -206,7 +206,7 @@ function handle_post(): ?array
                                                                      '{n} non reprises faute d\'équivalent');
             if ($parsed['errors'])     $bits[] = tn(count($parsed['errors']), 'une ligne ignorée', '{n} lignes ignorées');
             $msg = implode(', ', $bits) . '.';
-            $_SESSION['uptimer_setup_queue'] = $r['ids'];
+            $_SESSION['uptimeez_setup_queue'] = $r['ids'];
             return [$r['created'] ? 'ok' : 'warn', $msg];
 
         // ---- Création / édition d'une sonde -----------------------------
@@ -284,7 +284,7 @@ function handle_post(): ?array
             $data['site_id'] = (int)(Db::val('SELECT id FROM sites WHERE domain = ?', [registrable_domain($host)])
                 ?: Db::insert('sites', ['name' => registrable_domain($host), 'domain' => registrable_domain($host), 'created_at' => now()]));
             $newId = Db::insert('monitors', $data);
-            $_SESSION['uptimer_setup_queue'] = $data['setup_state'] === 'pending' ? [$newId] : [];
+            $_SESSION['uptimeez_setup_queue'] = $data['setup_state'] === 'pending' ? [$newId] : [];
             header('Location: ' . u('monitor', ['id' => $newId, 'created' => 1]));
             exit;
 
@@ -340,7 +340,7 @@ function handle_post(): ?array
                                                     'Intervalle mis à jour sur {n} sondes.')];
                 case 'setup':
                     Db::q("UPDATE monitors SET setup_state = 'pending' WHERE id IN ($in)", $ids);
-                    $_SESSION['uptimer_setup_queue'] = $ids;
+                    $_SESSION['uptimeez_setup_queue'] = $ids;
                     return ['ok', tn(count($ids),
                         'Une sonde en attente de réanalyse : technologie, pages et chaîne de contrôle.',
                         '{n} sondes en attente de réanalyse : technologie, pages et chaîne de contrôle.')];
@@ -351,11 +351,11 @@ function handle_post(): ?array
         case 'save_settings':
             $patch = [
                 'app' => [
-                    'name'         => trim((string)($_POST['app_name'] ?? 'Uptimer')) ?: 'Uptimer',
+                    'name'         => trim((string)($_POST['app_name'] ?? 'Uptimeez')) ?: 'Uptimeez',
                     'base_url'     => rtrim(trim((string)($_POST['base_url'] ?? '')), '/'),
                     'timezone'     => trim((string)($_POST['timezone'] ?? 'Europe/Paris')) ?: 'Europe/Paris',
                     'locale'       => in_array((string)($_POST['locale'] ?? 'auto'),
-                                               array_merge(['auto'], array_keys(Uptimer\I18n::LANGS)), true)
+                                               array_merge(['auto'], array_keys(Uptimeez\I18n::LANGS)), true)
                                       ? (string)$_POST['locale'] : 'auto',
                     'public_token' => trim((string)($_POST['public_token'] ?? '')),
                     'cron_key'     => trim((string)($_POST['cron_key'] ?? '')),
@@ -391,7 +391,7 @@ function handle_post(): ?array
                         'enabled'   => isset($_POST['mail_enabled']),
                         'to'        => trim((string)($_POST['mail_to'] ?? '')),
                         'from'      => trim((string)($_POST['mail_from'] ?? '')),
-                        'from_name' => trim((string)($_POST['mail_from_name'] ?? 'Uptimer')),
+                        'from_name' => trim((string)($_POST['mail_from_name'] ?? 'Uptimeez')),
                         'transport' => ($_POST['mail_transport'] ?? 'mail') === 'smtp' ? 'smtp' : 'mail',
                         'smtp'      => [
                             'host'   => trim((string)($_POST['smtp_host'] ?? '')),
@@ -448,12 +448,12 @@ function handle_post(): ?array
 
         case 'send_site_report':
             $sid = (int)($_POST['site_id'] ?? 0);
-            $r   = Uptimer\Report::sendFor($sid);
+            $r   = Uptimeez\Report::sendFor($sid);
             return [$r['ok'] ? 'ok' : 'bad', $r['info']];
 
         // ---- Clients de l'agence -----------------------------------------
         case 'client_create':
-            $cid = Uptimer\Client::create((string)($_POST['client_name'] ?? ''),
+            $cid = Uptimeez\Client::create((string)($_POST['client_name'] ?? ''),
                                           (string)($_POST['client_email'] ?? ''),
                                           (string)($_POST['client_notes'] ?? ''));
             return ['ok', t('Client créé. Son lien est prêt à être envoyé.')];
@@ -467,24 +467,24 @@ function handle_post(): ?array
                 'notes'         => str_cut(trim((string)($_POST['client_notes'] ?? '')), 2000) ?: null,
                 'enabled'       => isset($_POST['client_enabled']) ? 1 : 0,
             ], 'id = :__i', ['__i' => $cid]);
-            $n = Uptimer\Client::setSites($cid, (array)($_POST['sites'] ?? []));
+            $n = Uptimeez\Client::setSites($cid, (array)($_POST['sites'] ?? []));
             return ['ok', tn($n, 'Client enregistré : un site rattaché.',
                                 'Client enregistré : {n} sites rattachés.')];
 
         case 'client_rotate':
             $cid = (int)($_POST['client_id'] ?? 0);
             if (!Db::one('SELECT id FROM clients WHERE id = ?', [$cid])) return ['bad', t('Client inconnu')];
-            Uptimer\Client::rotate($cid);
+            Uptimeez\Client::rotate($cid);
             return ['ok', t('Nouveau lien généré. L\'ancien ne fonctionne plus.')];
 
         case 'client_delete':
             $cid = (int)($_POST['client_id'] ?? 0);
             if (!Db::one('SELECT id FROM clients WHERE id = ?', [$cid])) return ['bad', t('Client inconnu')];
-            Uptimer\Client::delete($cid);
+            Uptimeez\Client::delete($cid);
             return ['ok', t('Client supprimé. Ses sites sont conservés, simplement détachés.')];
 
         case 'client_from_groups':
-            $r = Uptimer\Client::fromGroups();
+            $r = Uptimeez\Client::fromGroups();
             return [$r['created'] || $r['linked'] ? 'ok' : 'warn',
                     t('{c} client(s) créé(s), {l} site(s) rattaché(s) depuis les groupes existants.',
                       ['c' => $r['created'], 'l' => $r['linked']])];
@@ -549,7 +549,7 @@ function export_incidents_csv(): never
                      WHERE ' . implode(' AND ', $where) . ' ORDER BY i.started_at DESC LIMIT 5000', $params);
 
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="uptimer-incidents-' . date('Y-m-d') . '.csv"');
+    header('Content-Disposition: attachment; filename="uptimeez-incidents-' . date('Y-m-d') . '.csv"');
     header('Cache-Control: no-store');
 
     $out = fopen('php://output', 'w');

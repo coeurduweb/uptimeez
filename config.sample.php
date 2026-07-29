@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer - configuration.
+ * Uptimeez - configuration.
  * Copiez ce fichier en config.php (l'installeur le fait pour vous) et adaptez.
  */
 return [
@@ -9,10 +9,10 @@ return [
     // 'mysql'  : si vous surveillez beaucoup de cibles (> 300 checks/min).
     'db' => [
         'driver'   => 'sqlite',
-        'sqlite'   => __DIR__ . '/data/uptimer.sqlite',
+        'sqlite'   => __DIR__ . '/data/uptimeez.sqlite',
         'host'     => 'localhost',
         'port'     => 3306,
-        'name'     => 'uptimer',
+        'name'     => 'uptimeez',
         'user'     => '',
         'pass'     => '',
         'charset'  => 'utf8mb4',
@@ -22,13 +22,13 @@ return [
     'auth' => [
         // Généré par l'installeur : password_hash('...', PASSWORD_DEFAULT)
         'password_hash' => '',
-        'session_name'  => 'uptimer',
+        'session_name'  => 'uptimeez',
         'session_ttl'   => 86400 * 30,
     ],
 
     // --- Application -------------------------------------------------------
     'app' => [
-        'name'      => 'Uptimer',
+        'name'      => 'Uptimeez',
         'base_url'  => '',        // ex: https://monitoring.example.com  (pour les liens dans les alertes)
         'timezone'  => 'Europe/Paris',
         'locale'    => 'fr',
@@ -46,7 +46,7 @@ return [
         'retry_delay_ms' => 1500,
         'ssl_warn_days'  => 14,
         'slow_ms'        => 3000,  // au-delà : "dégradé"
-        'user_agent'     => 'Mozilla/5.0 (compatible; UptimerBot/1.0; +monitoring)',
+        'user_agent'     => 'Mozilla/5.0 (compatible; UptimeezBot/1.0; +monitoring)',
         'css_drop_pct'   => 35,    // chute de poids CSS tolérée avant alerte
         'max_parallel'   => 10,    // requêtes simultanées par passe de cron
         'retention_days' => 60,   // purge des checks unitaires au-delà
@@ -69,7 +69,7 @@ return [
             'enabled' => false,
             'to'      => '',                     // séparés par des virgules
             'from'    => '',
-            'from_name' => 'Uptimer',
+            'from_name' => 'Uptimeez',
             // 'mail' = fonction mail() PHP (o2switch OK), 'smtp' = SMTP direct
             'transport' => 'mail',
             'smtp' => ['host' => '', 'port' => 587, 'user' => '', 'pass' => '', 'secure' => 'tls'],

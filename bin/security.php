@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : audit de sécurité, en trois profondeurs.
+ * Uptimeez : audit de sécurité, en trois profondeurs.
  *
  *   niveau 1 : léger        : configuration, secrets, en-têtes, surface exposée
  *   niveau 2, profond      : OWASP Top 10 en tests actifs sur une instance réelle
@@ -179,7 +179,7 @@ ok('A09', 'aucun secret journalisé',
 // =========================================================================
 $req = null; $APP = ''; $EVIL = ''; $cfgFile = ''; $tmp = '';
 if ($lvl === 0 || $lvl === 2 || $lvl === 3) {
-    $tmp = sys_get_temp_dir() . '/uptimer-sec-' . bin2hex(random_bytes(4));
+    $tmp = sys_get_temp_dir() . '/uptimeez-sec-' . bin2hex(random_bytes(4));
     @mkdir($tmp . '/evil', 0775, true);
 
     $freePort = function (int $from): int {
@@ -233,12 +233,12 @@ if ($lvl === 0 || $lvl === 2 || $lvl === 3) {
     $cfgFile = $tmp . '/config.php';
     file_put_contents($cfgFile, "<?php return " . var_export([
         'db'   => ['driver' => 'sqlite', 'sqlite' => $tmp . '/sec.sqlite'],
-        'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimersec'],
-        'app'  => ['name' => 'Uptimer Sécurité', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+        'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeezsec'],
+        'app'  => ['name' => 'Uptimeez Sécurité', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
                    'public_token' => 'jeton-public-secret', 'cron_key' => 'cle-cron-secrete'],
         'defaults' => ['interval_sec' => 300, 'timeout_sec' => 6, 'retries' => 0, 'slow_ms' => 9000,
                        'max_parallel' => 4, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                       'user_agent' => 'UptimerBot/1.0 (Sec)'],
+                       'user_agent' => 'UptimeezBot/1.0 (Sec)'],
         'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                      'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => ''],
                      'resend_after_min' => 60, 'notify_recovery' => true, 'notify_degraded' => true, 'quiet_hours' => ''],
@@ -249,7 +249,7 @@ if ($lvl === 0 || $lvl === 2 || $lvl === 3) {
                          $pipes, $cwd, $env + ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
     };
     $evilSrv = $spawn([PHP_BINARY, '-S', "127.0.0.1:$evilPort", '-t', "$tmp/evil"], "$tmp/evil");
-    $appSrv  = $spawn([PHP_BINARY, '-S', "127.0.0.1:$appPort", '-t', $ROOT], $ROOT, ['UPTIMER_CONFIG' => $cfgFile]);
+    $appSrv  = $spawn([PHP_BINARY, '-S', "127.0.0.1:$appPort", '-t', $ROOT], $ROOT, ['UPTIMEEZ_CONFIG' => $cfgFile]);
 
     register_shutdown_function(function () use ($evilSrv, $appSrv, $tmp, $appPort, $evilPort): void {
         foreach ([[$appSrv, $appPort], [$evilSrv, $evilPort]] as [$h, $port]) {
@@ -661,7 +661,7 @@ $jar2 = $tmp . '/j2.txt';
 @unlink($jar2);
 $sid = function (string $jarFile): string {
     $c = (string)@file_get_contents($jarFile);
-    return preg_match('~uptimersec\s+(\S+)~', $c, $m) ? $m[1] : '';
+    return preg_match('~uptimeezsec\s+(\S+)~', $c, $m) ? $m[1] : '';
 };
 $reqJ = function (string $path, ?array $post = null) use ($APP, $jar2): array {
     $ch = curl_init();
@@ -754,8 +754,8 @@ ok('A10', 'schémas non HTTP jamais transformés en sonde', $refused === [], imp
 
 // Garde-fou optionnel contre les plages privées : désactivé, puis activé.
 ok('A10', 'garde-fou de plages privées désactivé par défaut',
-   \Uptimer\Http::blockedReason('http://127.0.0.1:22/') === null);
-\Uptimer\Config::set('security.block_private_ranges', true);
+   \Uptimeez\Http::blockedReason('http://127.0.0.1:22/') === null);
+\Uptimeez\Config::set('security.block_private_ranges', true);
 $blocked = [
     'http://127.0.0.1:22/'                      => 'boucle locale',
     'http://10.0.0.5/'                          => 'plage privée 10/8',
@@ -764,12 +764,12 @@ $blocked = [
 ];
 $missed = [];
 foreach ($blocked as $u => $what) {
-    if (\Uptimer\Http::blockedReason($u) === null) $missed[] = $what;
+    if (\Uptimeez\Http::blockedReason($u) === null) $missed[] = $what;
 }
 ok('A10', 'garde-fou activé : cibles internes refusées', $missed === [], implode(' ', $missed));
 ok('A10', 'garde-fou activé : cible publique toujours permise',
-   \Uptimer\Http::blockedReason('https://example.com/') === null);
-\Uptimer\Config::set('security.block_private_ranges', false);
+   \Uptimeez\Http::blockedReason('https://example.com/') === null);
+\Uptimeez\Config::set('security.block_private_ranges', false);
 
 // Une redirection vers file:// ne doit pas être suivie par le collecteur.
 $req('/index.php?p=import', ['csrf' => $csrf, 'action' => 'import',
@@ -812,7 +812,7 @@ title('DoS : bornes de mémoire et de temps sur du contenu hostile');
 $req('/index.php?p=import', ['csrf' => $csrf, 'action' => 'import',
     'list' => $EVIL . '/huge.php', 'run_setup' => '0', 'add_pages' => '0']);
 $t = microtime(true);
-$out = shell_exec('UPTIMER_CONFIG=' . escapeshellarg($cfgFile) . ' '
+$out = shell_exec('UPTIMEEZ_CONFIG=' . escapeshellarg($cfgFile) . ' '
     . escapeshellarg(PHP_BINARY) . ' -d memory_limit=128M '
     . escapeshellarg($ROOT . '/cron.php') . ' --once 2>&1');
 $hugeTime = microtime(true) - $t;
@@ -824,7 +824,7 @@ ok('DoS', 'et sans erreur fatale', !preg_match('~Fatal error|Uncaught~', (string
 $req('/index.php?p=import', ['csrf' => $csrf, 'action' => 'import',
     'list' => $EVIL . '/redos.php', 'run_setup' => '0', 'add_pages' => '0']);
 $t = microtime(true);
-$out = shell_exec('UPTIMER_CONFIG=' . escapeshellarg($cfgFile) . ' '
+$out = shell_exec('UPTIMEEZ_CONFIG=' . escapeshellarg($cfgFile) . ' '
     . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --once 2>&1');
 $redosTime = microtime(true) - $t;
 ok('DoS', 'contenu pathologique analysé en temps borné', $redosTime < 60, round($redosTime, 1) . ' s');

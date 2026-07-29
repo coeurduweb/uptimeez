@@ -1,19 +1,19 @@
 <?php
 /**
- * Uptimer : installeur. Vérifie l'environnement, crée la base et le mot de passe.
+ * Uptimeez : installeur. Vérifie l'environnement, crée la base et le mot de passe.
  * Supprimez ce fichier après l'installation si vous le souhaitez.
  */
 declare(strict_types=1);
 
 require __DIR__ . '/src/bootstrap.php';
 
-\Uptimer\I18n::init();   // l'installeur parle déjà la langue du navigateur
+\Uptimeez\I18n::init();   // l'installeur parle déjà la langue du navigateur
 // L'installeur montre déjà les chemins et les droits : c'est précisément son
 // travail de diagnostic. Une panne y sort donc en clair.
-\Uptimer\Fail::trusted();
+\Uptimeez\Fail::trusted();
 
-use Uptimer\Config;
-use Uptimer\Db;
+use Uptimeez\Config;
+use Uptimeez\Db;
 
 $alreadyInstalled = Config::isInstalled();
 $errors = [];
@@ -30,10 +30,10 @@ $sqliteOk = in_array('sqlite', PDO::getAvailableDrivers(), true);
 $mysqlOk  = in_array('mysql', PDO::getAvailableDrivers(), true);
 $checks[] = ['Pilote SQLite ou MySQL', $sqliteOk || $mysqlOk,
              implode(', ', PDO::getAvailableDrivers()) ?: 'aucun'];
-$dataDir = UPTIMER_ROOT . '/data';
+$dataDir = UPTIMEEZ_ROOT . '/data';
 if (!is_dir($dataDir)) @mkdir($dataDir, 0775, true);
 $checks[] = [t('Dossier data/ accessible en écriture'), is_writable($dataDir), $dataDir];
-$checks[] = [t('Racine accessible en écriture (config.php)'), is_writable(UPTIMER_ROOT), UPTIMER_ROOT];
+$checks[] = [t('Racine accessible en écriture (config.php)'), is_writable(UPTIMEEZ_ROOT), UPTIMEEZ_ROOT];
 $blocking = array_filter($checks, fn($c) => !$c[1]);
 
 // --- Traitement ----------------------------------------------------------
@@ -71,7 +71,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
         ];
         if ($patch['db']['name'] === '') $errors[] = t('Indiquez le nom de la base MySQL.');
     } else {
-        $patch['db']['sqlite'] = $dataDir . '/uptimer.sqlite';
+        $patch['db']['sqlite'] = $dataDir . '/uptimeez.sqlite';
     }
 
     if (!$errors) {
@@ -99,9 +99,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Installation · Uptimer</title>
+<title>Installation · Uptimeez</title>
 <link rel="stylesheet" href="assets/app.css">
-<script>(function(){try{var t=localStorage.getItem('uptimer-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}catch(e){}})();</script>
+<script>(function(){try{var t=localStorage.getItem('uptimeez-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 </head>
 <body>
 <main class="wrap" style="max-width:760px">
@@ -112,7 +112,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
   <p class="center muted small"><?= te('Surveillance de sites : fonctionne sur un hébergement mutualisé, sans Docker.') ?></p>
 
   <?php if ($alreadyInstalled): ?>
-    <div class="alert alert-warn mt">Uptimer est déjà installé : le formulaire est désactivé.
+    <div class="alert alert-warn mt">Uptimeez est déjà installé : le formulaire est désactivé.
       <a href="index.php"><?= te('Accéder à l\'application') ?></a>.
       <?= te('Pour repartir de zéro, supprimez {file} par FTP ou SSH.',
              ['file' => '<span class="mono">config.php</span>']) ?>
@@ -151,7 +151,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
         <input type="password" name="password2" required minlength="8" autocomplete="new-password"></label>
 
       <label class="f"><span><?= te('Adresse publique de {app} (facultatif)') ?></span>
-        <input type="text" name="base_url" placeholder="https://exemple.fr/uptimer"
+        <input type="text" name="base_url" placeholder="https://exemple.fr/uptimeez"
                value="<?= e((($_SERVER['HTTPS'] ?? '') && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://'
                     . ($_SERVER['HTTP_HOST'] ?? '') . rtrim(dirname((string)($_SERVER['SCRIPT_NAME'] ?? '')), '/')) ?>">
         <span class="hint"><?= te('Pour que les alertes contiennent un lien direct vers la fiche concernée.') ?></span></label>
@@ -169,7 +169,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
         <div id="mysql" hidden class="grid-3 mt">
           <label class="f"><span><?= te('Hôte') ?></span><input type="text" name="db_host" value="localhost"></label>
           <label class="f"><span>Port</span><input type="number" name="db_port" value="3306"></label>
-          <label class="f"><span>Base</span><input type="text" name="db_name" placeholder="user_uptimer"></label>
+          <label class="f"><span>Base</span><input type="text" name="db_name" placeholder="user_uptimeez"></label>
           <label class="f"><span>Utilisateur</span><input type="text" name="db_user"></label>
           <label class="f"><span>Mot de passe</span><input type="password" name="db_pass" autocomplete="new-password"></label>
         </div>
@@ -185,7 +185,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
     <div class="panel-head"><h2><?= te('Après l\'installation') ?></h2></div>
     <div class="panel-body small soft">
       <p><strong>1.</strong> <?= te('Ajoutez la tâche planifiée, à lancer chaque minute. Sur cPanel o2switch : « Tâches cron ».') ?></p>
-      <pre class="mono small" style="background:var(--surface-2);padding:10px;border-radius:8px;overflow:auto">* * * * * <?= e(PHP_BINDIR . '/php') ?> <?= e(UPTIMER_ROOT . '/cron.php') ?> &gt;/dev/null 2&gt;&amp;1</pre>
+      <pre class="mono small" style="background:var(--surface-2);padding:10px;border-radius:8px;overflow:auto">* * * * * <?= e(PHP_BINDIR . '/php') ?> <?= e(UPTIMEEZ_ROOT . '/cron.php') ?> &gt;/dev/null 2&gt;&amp;1</pre>
       <p><strong>2.</strong> Collez votre liste de domaines dans « Ajouter des sites » : le CMS, les pages à suivre
         et la chaîne de contrôle sont déduits automatiquement.</p>
       <p><strong>3.</strong> <?= te('Renseignez au moins un canal d\'alerte dans les réglages : Discord, Slack, e-mail ou webhook.') ?></p>

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 /**
  * Mode agence : des clients, et un accès en lecture seule par client.
@@ -119,7 +119,7 @@ final class Client
     public static function url(array $client): string
     {
         $base = rtrim((string)Config::get('app.base_url', ''), '/');
-        return ($base !== '' ? $base : 'https://votre-adresse-uptimer')
+        return ($base !== '' ? $base : 'https://votre-adresse-uptimeez')
              . '/index.php?p=client&k=' . (string)$client['token'];
     }
 

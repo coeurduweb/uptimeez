@@ -1,5 +1,5 @@
 /**
- * Uptimer : captures d'écran pour la documentation.
+ * Uptimeez : captures d'écran pour la documentation.
  *
  * Produit les images du README (deux thèmes, plusieurs langues, mobile) et la
  * séquence d'images qui sert à monter l'animation de démonstration.
@@ -46,9 +46,9 @@ async function session({ width = 1440, height = 950, theme = 'light', scale = 2 
   await page.press('input[type=password]', 'Enter');
   await page.waitForLoadState('networkidle');
   await page.addInitScript(t => {
-    try { localStorage.setItem('uptimer-theme', t); } catch (e) {}
+    try { localStorage.setItem('uptimeez-theme', t); } catch (e) {}
   }, theme);
-  await ctx.addCookies([{ name: 'uptimer-theme', value: theme, url: BASE }]);
+  await ctx.addCookies([{ name: 'uptimeez-theme', value: theme, url: BASE }]);
   return { ctx, page };
 }
 

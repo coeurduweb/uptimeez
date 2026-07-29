@@ -1,8 +1,8 @@
 <?php
 /** Journal : évènements de contenu et alertes envoyées. */
-use Uptimer\Db;
-use Uptimer\Notify\Notifier;
-use Uptimer\Ui;
+use Uptimeez\Db;
+use Uptimeez\Notify\Notifier;
+use Uptimeez\Ui;
 
 $events = Db::all('SELECT e.*, m.name FROM events e LEFT JOIN monitors m ON m.id = e.monitor_id
                    ORDER BY e.ts DESC LIMIT 200');

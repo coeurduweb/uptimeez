@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : banc d'essai de bout en bout.
+ * Uptimeez : banc d'essai de bout en bout.
  *
  * Monte un faux site local qui reproduit chaque panne à détecter, lance de
  * vraies vérifications dessus, et vérifie les verdicts. Utile pour prouver que
@@ -16,13 +16,13 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Importer;
-use Uptimer\Runner;
-use Uptimer\Stats;
-use Uptimer\Vuln;
-use Uptimer\Detect\Stack;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Importer;
+use Uptimeez\Runner;
+use Uptimeez\Stats;
+use Uptimeez\Vuln;
+use Uptimeez\Detect\Stack;
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
@@ -39,7 +39,7 @@ function title(string $s): void { echo "\n── $s " . str_repeat('─', max(0,
 // =========================================================================
 // 1. Faux site local
 // =========================================================================
-$tmp = sys_get_temp_dir() . '/uptimer-bench-' . bin2hex(random_bytes(4));
+$tmp = sys_get_temp_dir() . '/uptimeez-bench-' . bin2hex(random_bytes(4));
 @mkdir($tmp . '/blog', 0775, true);
 $port = 0;
 for ($p = 8770; $p < 8820; $p++) {
@@ -148,7 +148,7 @@ echo '<!doctype html><html><head><title>404 Not Found</title></head><body><h1>No
 return true;
 PHP);
 
-echo "Banc d'essai Uptimer : faux site sur $BASE\n";
+echo "Banc d'essai Uptimeez : faux site sur $BASE\n";
 // Commande passée en tableau : sans cela proc_open lance « sh -c », et l'arrêt
 // ne tuerait que le shell en laissant le serveur derrière lui.
 $cmd = [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', $tmp, $tmp . '/router.php'];
@@ -240,7 +240,7 @@ foreach ($cases as [$name, $path, $want, $reason, $over]) {
     $ids[$name] = $mk(array_merge(['name' => $name, 'url' => $BASE . $path], $over));
 }
 $ids['injoignable'] = $mk(['name' => 'injoignable', 'url' => 'http://127.0.0.1:9/', 'check_css' => 0]);
-$ids['dns']         = $mk(['name' => 'dns', 'url' => 'http://ce-domaine-nexiste-pas-4823uptimer.fr/', 'check_css' => 0]);
+$ids['dns']         = $mk(['name' => 'dns', 'url' => 'http://ce-domaine-nexiste-pas-4823uptimeez.fr/', 'check_css' => 0]);
 
 $t0 = microtime(true);
 $run = Runner::runDue(60, 150);
@@ -366,7 +366,7 @@ $sslCases = [
 $sslReachable = true;
 foreach ($sslCases as [$host, $label, $want]) {
     if (!$sslReachable) break;
-    $r = Uptimer\Check\Ssl::inspect($host, 443, 10);
+    $r = Uptimeez\Check\Ssl::inspect($host, 443, 10);
     if (!$r['checked'] || ($r['code'] === 'SSL_HANDSHAKE' && $r['days_left'] === null)) {
         echo "   (accès sortant HTTPS indisponible : section ignorée)\n";
         $sslReachable = false;
@@ -506,7 +506,7 @@ ok('sans numéro de version, aucune interrogation lancée',
 
 // Partie en ligne : les sources sont publiques et sans clé, mais un hébergement
 // peut bloquer les appels sortants. On le dit au lieu de faire échouer le banc.
-$net = Uptimer\Http::fetch('https://api.wordpress.org/core/version-check/1.7/', ['timeout_sec' => 8]);
+$net = Uptimeez\Http::fetch('https://api.wordpress.org/core/version-check/1.7/', ['timeout_sec' => 8]);
 if ($net->status === 200) {
     $latest = Vuln::lookup('core', 'wordpress', 'WordPress', '5.9');
     ok('dernière version du cœur obtenue auprès de wordpress.org',

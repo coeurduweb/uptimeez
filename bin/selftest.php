@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : autotest. Vérifie la logique de détection sans toucher au réseau
+ * Uptimeez : autotest. Vérifie la logique de détection sans toucher au réseau
  * ni à la base : utile après une mise à jour ou un changement d'hébergement.
  *
  *   php bin/selftest.php
@@ -9,13 +9,13 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-use Uptimer\Check\Css;
-use Uptimer\Check\Database;
-use Uptimer\Detect\Cms;
-use Uptimer\Detect\Discovery;
-use Uptimer\Response;
-use Uptimer\Runner;
-use Uptimer\Ui;
+use Uptimeez\Check\Css;
+use Uptimeez\Check\Database;
+use Uptimeez\Detect\Cms;
+use Uptimeez\Detect\Discovery;
+use Uptimeez\Response;
+use Uptimeez\Runner;
+use Uptimeez\Ui;
 
 $pass = 0; $fail = 0;
 function check(string $label, mixed $got, mixed $want): void
@@ -241,7 +241,7 @@ $c = Runner::contentHash('<html><body><p>Bonsoir</p></body></html>');
 check('le texte influe', $a === $c, false);
 
 section('Analyse d\'une liste d\'import');
-$parsed = Uptimer\Importer::parse("exemple.fr\n# commentaire\nautre.fr | Client | Preuve\nvide\n\nexemple.fr");
+$parsed = Uptimeez\Importer::parse("exemple.fr\n# commentaire\nautre.fr | Client | Preuve\nvide\n\nexemple.fr");
 check('lignes valides', count($parsed['rows']), 2);
 check('doublon ignoré', $parsed['rows'][0]['url'], 'https://exemple.fr/');
 check('colonnes lues', [$parsed['rows'][1]['name'], $parsed['rows'][1]['expect']], ['Client', 'Preuve']);
@@ -323,20 +323,20 @@ check('valeur inconnue → 24 h', Ui::rangeSeconds('nawak'), 86400);
 check('libellé lisible', Ui::rangeLabel('180d'), '6 mois');
 check('une année reste sous 100 points', Ui::rangeBuckets('365d') <= 100, true);
 check('les longues portées passent par les agrégats',
-    Ui::rangeSeconds('180d') > Uptimer\Stats::RAW_WINDOW_SEC, true);
+    Ui::rangeSeconds('180d') > Uptimeez\Stats::RAW_WINDOW_SEC, true);
 check('24 h reste sur les mesures unitaires',
-    Ui::rangeSeconds('24h') <= Uptimer\Stats::RAW_WINDOW_SEC, true);
+    Ui::rangeSeconds('24h') <= Uptimeez\Stats::RAW_WINDOW_SEC, true);
 
 section('Diagnostic : cause, explication, remède');
 foreach (['DNS', 'CONNECT', 'TIMEOUT', 'SSL_EXPIRED', 'SSL_INVALID', 'HTTP_5XX', 'HTTP_404',
           'HTTP_403', 'HTTP_401', 'DB_DOWN', 'APP_ERROR', 'CSS_BROKEN', 'STRING_MISSING',
           'NOINDEX', 'SLOW', 'JSON_VALUE', 'REDIRECT_LOOP'] as $code) {
-    $d = Uptimer\Diagnose::explain($code, ['url' => 'https://exemple.fr/']);
+    $d = Uptimeez\Diagnose::explain($code, ['url' => 'https://exemple.fr/']);
     $ok = $d['title'] !== '' && mb_strlen($d['why']) > 30 && mb_strlen($d['fix']) > 30
         && $d['title'] !== 'Anomalie détectée';
     check('explication utile pour ' . $code, $ok, true);
 }
-$unknown = Uptimer\Diagnose::explain('CODE_INCONNU');
+$unknown = Uptimeez\Diagnose::explain('CODE_INCONNU');
 check('code inconnu : repli neutre', $unknown['title'], 'Anomalie détectée');
 
 section('Icônes et rendu');
@@ -360,7 +360,7 @@ section('Messages console reconstitués');
 $page = '<html><head><link rel="stylesheet" href="/absent.css"></head><body class="page"><div class="hero">x</div></body></html>';
 $res = new Response();
 $res->status = 200; $res->contentType = 'text/html'; $res->body = $page;
-$audit = Css::audit('https://exemple-inexistant-uptimer.fr/', $page, $res, [], ['timeout' => 2, 'check_js' => false]);
+$audit = Css::audit('https://exemple-inexistant-uptimeez.fr/', $page, $res, [], ['timeout' => 2, 'check_js' => false]);
 check('audit conclut à une anomalie', in_array($audit['state'], ['broken', 'warn'], true), true);
 check('messages console produits', count($audit['console']) >= 1, true);
 check('format reconnaissable par un développeur',
@@ -369,39 +369,39 @@ check('format reconnaissable par un développeur',
 
 section('Montée de version du schéma');
 // Une base créée par une version antérieure doit gagner les colonnes manquantes.
-$tmpDb = sys_get_temp_dir() . '/uptimer-selftest-' . bin2hex(random_bytes(3)) . '.sqlite';
-Uptimer\Config::set('db.driver', 'sqlite');
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $tmpDb);
-Uptimer\Db::pdo()->exec("CREATE TABLE monitors (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+$tmpDb = sys_get_temp_dir() . '/uptimeez-selftest-' . bin2hex(random_bytes(3)) . '.sqlite';
+Uptimeez\Config::set('db.driver', 'sqlite');
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpDb);
+Uptimeez\Db::pdo()->exec("CREATE TABLE monitors (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
     url TEXT NOT NULL, kind TEXT, status TEXT, created_at TEXT)");
-Uptimer\Db::pdo()->exec("CREATE TABLE settings (k TEXT PRIMARY KEY, v TEXT)");
-$avant = count(Uptimer\Db::columns('monitors'));
-Uptimer\Db::migrate();
-$cols = Uptimer\Db::columns('monitors');
+Uptimeez\Db::pdo()->exec("CREATE TABLE settings (k TEXT PRIMARY KEY, v TEXT)");
+$avant = count(Uptimeez\Db::columns('monitors'));
+Uptimeez\Db::migrate();
+$cols = Uptimeez\Db::columns('monitors');
 check('colonnes ajoutées automatiquement (' . count($cols) . ')', count($cols) > $avant + 40, true);
 foreach (['last_ip', 'css_detail', 'css_baseline', 'uptime_24h', 'setup_state', 'domain_expires_at'] as $c) {
     check('colonne ' . $c . ' présente', in_array($c, $cols, true), true);
 }
-check('données existantes préservées', Uptimer\Db::tableExists('monitors'), true);
-Uptimer\Db::insert('monitors', ['name' => 'x', 'url' => 'https://x.fr/', 'kind' => 'page',
+check('données existantes préservées', Uptimeez\Db::tableExists('monitors'), true);
+Uptimeez\Db::insert('monitors', ['name' => 'x', 'url' => 'https://x.fr/', 'kind' => 'page',
                               'status' => 'unknown', 'created_at' => now()]);
-Uptimer\Db::update('monitors', ['last_ip' => '203.0.113.9'], 'id = :i', ['i' => 1]);
+Uptimeez\Db::update('monitors', ['last_ip' => '203.0.113.9'], 'id = :i', ['i' => 1]);
 check('écriture possible sur les nouvelles colonnes',
-    Uptimer\Db::val('SELECT last_ip FROM monitors WHERE id = 1'), '203.0.113.9');
-check('deuxième migration sans effet de bord', (function () { Uptimer\Db::migrate(); return true; })(), true);
+    Uptimeez\Db::val('SELECT last_ip FROM monitors WHERE id = 1'), '203.0.113.9');
+check('deuxième migration sans effet de bord', (function () { Uptimeez\Db::migrate(); return true; })(), true);
 @unlink($tmpDb); @unlink($tmpDb . '-wal'); @unlink($tmpDb . '-shm');
 
 section('Corrélation des pannes');
-check('seuil de regroupement raisonnable', Uptimer\Runner::GROUP_THRESHOLD >= 3, true);
+check('seuil de regroupement raisonnable', Uptimeez\Runner::GROUP_THRESHOLD >= 3, true);
 check('libellé d\'évènement groupé',
-    Uptimer\Notify\Notifier::eventLabel('grouped_alert'), 'Panne groupée');
+    Uptimeez\Notify\Notifier::eventLabel('grouped_alert'), 'Panne groupée');
 
 
 section('Extraction depuis un texte libre');
 $mail = "Bonjour, merci de surveiller boutique-dupont.fr et https://cabinet-lefevre.fr/contact.\n"
       . "Le préprod est sur preprod.dupont.fr. Contact : jean@exemple.com. Logo : logo-final.png.";
-$prose = Uptimer\Importer::extractFromProse($mail);
+$prose = Uptimeez\Importer::extractFromProse($mail);
 check('adresses trouvées dans une prose', count($prose), 3);
 check('domaine en fin de phrase accepté',
     (bool)preg_grep('~preprod\.dupont\.fr~', $prose), true);
@@ -409,29 +409,29 @@ check('domaine d\'une adresse e-mail écarté', (bool)preg_grep('~exemple\.com~'
 check('nom de fichier écarté', (bool)preg_grep('~logo-final~', $prose), false);
 check('un seul élément par hôte',
     count($prose) === count(array_unique(array_map(fn($u) => host_of(normalize_url($u) ?? ''), $prose))), true);
-$pl = Uptimer\Importer::parse($mail);
+$pl = Uptimeez\Importer::parse($mail);
 check('la prose alimente l\'import', count($pl['rows']), 3);
-$list = Uptimer\Importer::parse("a-uptimer.fr\nb-uptimer.fr | B\n# note\npas une url");
+$list = Uptimeez\Importer::parse("a-uptimeez.fr\nb-uptimeez.fr | B\n# note\npas une url");
 check('une vraie liste reste traitée comme telle', count($list['rows']), 2);
 
 section('Cadence choisie selon l\'importance de la page');
-check('accueil : cadence de référence', Uptimer\Tune::intervalFor('https://a.fr/', 300), 300);
-check('page principale : cadence de référence', Uptimer\Tune::intervalFor('https://a.fr/x', 300, null, true), 300);
-check('contact : cadence de référence', Uptimer\Tune::intervalFor('https://a.fr/contact', 300, 'contact'), 300);
+check('accueil : cadence de référence', Uptimeez\Tune::intervalFor('https://a.fr/', 300), 300);
+check('page principale : cadence de référence', Uptimeez\Tune::intervalFor('https://a.fr/x', 300, null, true), 300);
+check('contact : cadence de référence', Uptimeez\Tune::intervalFor('https://a.fr/contact', 300, 'contact'), 300);
 check('article de blog : deux fois moins souvent',
-    Uptimer\Tune::intervalFor('https://a.fr/blog/mon-article', 300, 'contenu'), 600);
+    Uptimeez\Tune::intervalFor('https://a.fr/blog/mon-article', 300, 'contenu'), 600);
 check('mentions légales : quatre fois moins souvent',
-    Uptimer\Tune::intervalFor('https://a.fr/mentions-legales', 300, 'legal'), 1200);
-check('plafonné à une journée', Uptimer\Tune::intervalFor('https://a.fr/cgv', 43200, 'legal'), 86400);
+    Uptimeez\Tune::intervalFor('https://a.fr/mentions-legales', 300, 'legal'), 1200);
+check('plafonné à une journée', Uptimeez\Tune::intervalFor('https://a.fr/cgv', 43200, 'legal'), 86400);
 check('seuils de réglage automatique cohérents',
-    Uptimer\Tune::SLOW_FLOOR_MS < Uptimer\Tune::SLOW_CEIL_MS && Uptimer\Tune::SLOW_FACTOR > 1, true);
+    Uptimeez\Tune::SLOW_FLOOR_MS < Uptimeez\Tune::SLOW_CEIL_MS && Uptimeez\Tune::SLOW_FACTOR > 1, true);
 
 section('Seuil de lenteur auto-ajusté');
-$tmpT = sys_get_temp_dir() . '/uptimer-tune-' . bin2hex(random_bytes(3)) . '.sqlite';
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $tmpT);
-Uptimer\Db::migrate();
-$tid = Uptimer\Db::insert('monitors', ['name' => 'lent', 'url' => 'https://a.fr/', 'kind' => 'page',
+$tmpT = sys_get_temp_dir() . '/uptimeez-tune-' . bin2hex(random_bytes(3)) . '.sqlite';
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpT);
+Uptimeez\Db::migrate();
+$tid = Uptimeez\Db::insert('monitors', ['name' => 'lent', 'url' => 'https://a.fr/', 'kind' => 'page',
     'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300, 'timeout_sec' => 15, 'retries' => 0,
     'slow_ms' => 3000, 'expect_status' => '200-299', 'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0,
     'check_noindex' => 0, 'ssl_warn_days' => 14, 'css_drop_pct' => 35, 'enabled' => 1, 'auto_slow' => 1,
@@ -440,65 +440,65 @@ $tid = Uptimer\Db::insert('monitors', ['name' => 'lent', 'url' => 'https://a.fr/
 // Un site lent par nature (4,4 s de façon stable) avec un seuil à 3 s : il
 // alerterait en permanence pour rien. Le seuil doit s'adapter à sa réalité.
 for ($i = 0; $i < 40; $i++) {
-    Uptimer\Db::insert('checks', ['monitor_id' => $tid, 'ts' => date('Y-m-d H:i:s', time() - $i * 600),
+    Uptimeez\Db::insert('checks', ['monitor_id' => $tid, 'ts' => date('Y-m-d H:i:s', time() - $i * 600),
         'state' => 'up', 'status_code' => 200, 'total_ms' => 4400 + ($i % 7) * 30, 'attempts' => 1]);
 }
-$mon = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid]);
-$res = Uptimer\Tune::slowThreshold($mon);
+$mon = Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid]);
+$res = Uptimeez\Tune::slowThreshold($mon);
 check('seuil recalculé', is_array($res) && $res['changed'], true);
-$newSlow = (int)Uptimer\Db::val('SELECT slow_ms FROM monitors WHERE id = ?', [$tid]);
+$newSlow = (int)Uptimeez\Db::val('SELECT slow_ms FROM monitors WHERE id = ?', [$tid]);
 check('seuil placé au-dessus du comportement réel (' . $newSlow . ' ms)',
     $newSlow >= 7500 && $newSlow <= 8800, true);
 check('un écart insignifiant ne déclenche aucun changement', (function () {
-    // Même exercice avec un seuil déjà correct : Uptimer doit rester silencieuse.
-    $id = Uptimer\Db::insert('monitors', ['name' => 'stable', 'url' => 'https://b.fr/', 'kind' => 'page',
+    // Même exercice avec un seuil déjà correct : Uptimeez doit rester silencieuse.
+    $id = Uptimeez\Db::insert('monitors', ['name' => 'stable', 'url' => 'https://b.fr/', 'kind' => 'page',
         'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300, 'timeout_sec' => 15, 'retries' => 0,
         'slow_ms' => 2800, 'expect_status' => '200-299', 'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0,
         'check_noindex' => 0, 'ssl_warn_days' => 14, 'css_drop_pct' => 35, 'enabled' => 1, 'auto_slow' => 1,
         'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'next_check_at' => now(),
         'follow_redirects' => 1]);
     for ($i = 0; $i < 30; $i++) {
-        Uptimer\Db::insert('checks', ['monitor_id' => $id, 'ts' => date('Y-m-d H:i:s', time() - $i * 600),
+        Uptimeez\Db::insert('checks', ['monitor_id' => $id, 'ts' => date('Y-m-d H:i:s', time() - $i * 600),
             'state' => 'up', 'status_code' => 200, 'total_ms' => 1500 + ($i % 5) * 10, 'attempts' => 1]);
     }
-    return Uptimer\Tune::slowThreshold(Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$id])) === null;
+    return Uptimeez\Tune::slowThreshold(Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$id])) === null;
 })(), true);
 check('décision journalisée',
-    count(Uptimer\Tune::decisions(Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid]))) >= 1, true);
-$mon2 = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid]);
-check('pas de réajustement dans la foulée', Uptimer\Tune::slowThreshold($mon2), null);
+    count(Uptimeez\Tune::decisions(Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid]))) >= 1, true);
+$mon2 = Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid]);
+check('pas de réajustement dans la foulée', Uptimeez\Tune::slowThreshold($mon2), null);
 // Réglage manuel : la case décochée doit être respectée
-Uptimer\Db::update('monitors', ['auto_slow' => 0, 'tuned_at' => null], 'id = :i', ['i' => $tid]);
+Uptimeez\Db::update('monitors', ['auto_slow' => 0, 'tuned_at' => null], 'id = :i', ['i' => $tid]);
 check('réglage manuel respecté',
-    Uptimer\Tune::slowThreshold(Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid])), null);
+    Uptimeez\Tune::slowThreshold(Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$tid])), null);
 
 section('Sonde battement');
-$hb = Uptimer\Heartbeat::create('Sauvegarde nocturne', 3600, 300);
+$hb = Uptimeez\Heartbeat::create('Sauvegarde nocturne', 3600, 300);
 check('clé de battement générée', strlen((string)$hb['token']) >= 16, true);
-$hbMon = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$hb['id']]);
+$hbMon = Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$hb['id']]);
 check('type battement', (string)$hbMon['kind'], 'heartbeat');
-check('ligne à coller fournie', str_contains(Uptimer\Heartbeat::snippet($hbMon), 'beat.php?k='), true);
-check('aucun retard à la création', Uptimer\Heartbeat::sweep(), 0);
-check('signal accepté', Uptimer\Heartbeat::beat((string)$hb['token'], '412 fichiers')['ok'], true);
-check('état passé à opérationnel', Uptimer\Db::val('SELECT status FROM monitors WHERE id = ?', [$hb['id']]), 'up');
-Uptimer\Db::q('UPDATE monitors SET heartbeat_at = ? WHERE id = ?',
+check('ligne à coller fournie', str_contains(Uptimeez\Heartbeat::snippet($hbMon), 'beat.php?k='), true);
+check('aucun retard à la création', Uptimeez\Heartbeat::sweep(), 0);
+check('signal accepté', Uptimeez\Heartbeat::beat((string)$hb['token'], '412 fichiers')['ok'], true);
+check('état passé à opérationnel', Uptimeez\Db::val('SELECT status FROM monitors WHERE id = ?', [$hb['id']]), 'up');
+Uptimeez\Db::q('UPDATE monitors SET heartbeat_at = ? WHERE id = ?',
     [date('Y-m-d H:i:s', time() - 7200), $hb['id']]);
-check('silence prolongé détecté', Uptimer\Heartbeat::sweep(), 1);
-check('cause renseignée', Uptimer\Db::val('SELECT reason_code FROM monitors WHERE id = ?', [$hb['id']]), 'HEARTBEAT_LATE');
-check('incident ouvert', (int)Uptimer\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ? AND ended_at IS NULL',
+check('silence prolongé détecté', Uptimeez\Heartbeat::sweep(), 1);
+check('cause renseignée', Uptimeez\Db::val('SELECT reason_code FROM monitors WHERE id = ?', [$hb['id']]), 'HEARTBEAT_LATE');
+check('incident ouvert', (int)Uptimeez\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ? AND ended_at IS NULL',
     [$hb['id']]), 1);
-Uptimer\Heartbeat::beat((string)$hb['token']);
+Uptimeez\Heartbeat::beat((string)$hb['token']);
 check('retour du signal : incident clos',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ? AND ended_at IS NULL', [$hb['id']]), 0);
-check('clé inconnue refusée', Uptimer\Heartbeat::beat('0123456789abcdef0123')['ok'], false);
-check('clé trop courte refusée', Uptimer\Heartbeat::beat('abc')['ok'], false);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ? AND ended_at IS NULL', [$hb['id']]), 0);
+check('clé inconnue refusée', Uptimeez\Heartbeat::beat('0123456789abcdef0123')['ok'], false);
+check('clé trop courte refusée', Uptimeez\Heartbeat::beat('abc')['ok'], false);
 check('diagnostic dédié au battement',
-    Uptimer\Diagnose::explain('HEARTBEAT_LATE')['title'], 'Le signal attendu n\'est pas arrivé');
+    Uptimeez\Diagnose::explain('HEARTBEAT_LATE')['title'], 'Le signal attendu n\'est pas arrivé');
 
 section('Triage : ce qu\'il y a à faire');
-Uptimer\Db::q("UPDATE monitors SET status = 'down', reason_code = 'CSS_BROKEN',
+Uptimeez\Db::q("UPDATE monitors SET status = 'down', reason_code = 'CSS_BROKEN',
              last_message = 'feuille absente', status_since = ? WHERE id = ?", [now(), $tid]);
-$acts = Uptimer\Triage::actions();
+$acts = Uptimeez\Triage::actions();
 check('la sonde en panne remonte dans les tâches', count($acts) >= 1, true);
 $first = $acts[0];
 check('la tâche porte une cause lisible', $first['cause'] !== '' && $first['cause'] !== 'Anomalie détectée', true);
@@ -507,18 +507,18 @@ check('des actions sont proposées', count($first['actions']) >= 3, true);
 $labels = array_column($first['actions'], 0);
 check('réapprentissage proposé sur une panne CSS', in_array('relearn', $labels, true), true);
 check('rapport copiable proposé', in_array('copy', $labels, true), true);
-$rep = Uptimer\Triage::report($tid);
+$rep = Uptimeez\Triage::report($tid);
 check('rapport texte produit', str_contains($rep, '## Diagnostic') && str_contains($rep, '## Conduite à tenir'), true);
 check('rapport sans balise HTML', (bool)preg_match('~<[a-z]~i', $rep), false);
-check('compteurs de triage', is_array(Uptimer\Triage::counts()), true);
+check('compteurs de triage', is_array(Uptimeez\Triage::counts()), true);
 check('seuils d\'anticipation raisonnables',
-    Uptimer\Triage::SSL_SOON_DAYS >= 14 && Uptimer\Triage::DOMAIN_SOON_DAYS >= 30, true);
+    Uptimeez\Triage::SSL_SOON_DAYS >= 14 && Uptimeez\Triage::DOMAIN_SOON_DAYS >= 30, true);
 @unlink($tmpT); @unlink($tmpT . '-wal'); @unlink($tmpT . '-shm');
 
 // =========================================================================
 section('Sécurité : cibles refusées, cellules de tableur');
 // =========================================================================
-use Uptimer\Http;
+use Uptimeez\Http;
 
 // --- Schémas d'URL : seul HTTP(S) devient une sonde ----------------------
 foreach (['file:///etc/passwd', 'gopher://127.0.0.1:70/x', 'dict://127.0.0.1:1/x',
@@ -530,9 +530,9 @@ check('domaine nu accepté', normalize_url('exemple.fr'), 'https://exemple.fr/')
 check('protocole conservé', normalize_url('http://exemple.fr/x'), 'http://exemple.fr/x');
 
 // --- Garde-fou de plages privées : désactivé par défaut ------------------
-Uptimer\Config::set('security.block_private_ranges', false);
+Uptimeez\Config::set('security.block_private_ranges', false);
 check('garde-fou inactif par défaut', Http::blockedReason('http://127.0.0.1:22/'), null);
-Uptimer\Config::set('security.block_private_ranges', true);
+Uptimeez\Config::set('security.block_private_ranges', true);
 foreach (['http://127.0.0.1:22/', 'http://10.0.0.5/', 'http://192.168.1.1/',
           'http://172.16.0.1/', 'http://[::1]/'] as $u) {
     check('cible interne refusée : ' . str_cut($u, 24), Http::blockedReason($u) !== null, true);
@@ -540,7 +540,7 @@ foreach (['http://127.0.0.1:22/', 'http://10.0.0.5/', 'http://192.168.1.1/',
 check('adresse de métadonnées refusée',
     str_contains((string)Http::blockedReason('http://169.254.169.254/'), 'métadonnées'), true);
 check('cible publique permise', Http::blockedReason('https://example.com/'), null);
-Uptimer\Config::set('security.block_private_ranges', false);
+Uptimeez\Config::set('security.block_private_ranges', false);
 
 // --- Cellules de tableur : aucune formule exécutable --------------------
 foreach ([
@@ -559,7 +559,7 @@ foreach ([
 // =========================================================================
 section('Langues : négociation, pluriels, catalogues');
 // =========================================================================
-use Uptimer\I18n;
+use Uptimeez\I18n;
 
 check('dix langues déclarées', count(I18n::LANGS), 10);
 check('anglais par défaut', I18n::DEFAULT, 'en');
@@ -658,11 +658,11 @@ check('aucune traduction anglaise vide', count(array_filter($en, fn($v) => trim(
 
 // --- Format des nombres selon la langue ----------------------------------
 I18n::init('fr');
-$fr = Uptimer\Ui::num(1234.5, 1);
+$fr = Uptimeez\Ui::num(1234.5, 1);
 I18n::init('en');
-$en2 = Uptimer\Ui::num(1234.5, 1);
+$en2 = Uptimeez\Ui::num(1234.5, 1);
 I18n::init('es');
-$es = Uptimer\Ui::num(1234.5, 1);
+$es = Uptimeez\Ui::num(1234.5, 1);
 check('français : virgule décimale', str_contains($fr, ','), true);
 check('anglais : point décimal', str_contains($en2, '.') && str_contains($en2, ','), true);
 check('espagnol : point pour les milliers', str_contains($es, '.') && str_contains($es, ','), true);
@@ -671,15 +671,15 @@ I18n::init('fr');
 // =========================================================================
 section('Niveau de détail de l\'interface');
 // =========================================================================
-unset($_COOKIE['uptimer_mode'], $_SESSION['uptimer_mode']);
-check('deux modes seulement', Uptimer\Ui::MODES, ['simple', 'expert']);
+unset($_COOKIE['uptimeez_mode'], $_SESSION['uptimeez_mode']);
+check('deux modes seulement', Uptimeez\Ui::MODES, ['simple', 'expert']);
 check('un mode inconnu retombe sur simple',
-    in_array('simple', Uptimer\Ui::MODES, true) && !in_array('nawak', Uptimer\Ui::MODES, true), true);
+    in_array('simple', Uptimeez\Ui::MODES, true) && !in_array('nawak', Uptimeez\Ui::MODES, true), true);
 
 // =========================================================================
 section('Inventaire logiciel : lecture des versions');
 // =========================================================================
-use Uptimer\Detect\Stack;
+use Uptimeez\Detect\Stack;
 
 $wpHtml = '<html><head><meta name="generator" content="WordPress 6.4.2">'
     . '<link rel="stylesheet" href="/wp-includes/css/dist/block-library/style.min.css?ver=6.4.2">'
@@ -742,69 +742,69 @@ check('version absente : aucune affirmation', Stack::isBehind('', '6.4.2'), fals
 check('précision comptée correctement', Stack::precision('6.4.2-beta1'), 3);
 
 // Gravité : on ne l'invente pas quand la source ne la donne pas.
-check('gravité absente reste inconnue', Uptimer\Vuln::worstSeverity([['id' => 'X']]), 'unknown');
+check('gravité absente reste inconnue', Uptimeez\Vuln::worstSeverity([['id' => 'X']]), 'unknown');
 check('gravité la pire retenue',
-    Uptimer\Vuln::worstSeverity([['severity' => 'low'], ['severity' => 'high'], ['severity' => 'medium']]), 'high');
-check('aucun avis, aucune gravité', Uptimer\Vuln::worstSeverity([]), null);
-check('libellé de gravité traduit', mb_strlen(Uptimer\Vuln::severityLabel('high')) > 3, true);
+    Uptimeez\Vuln::worstSeverity([['severity' => 'low'], ['severity' => 'high'], ['severity' => 'medium']]), 'high');
+check('aucun avis, aucune gravité', Uptimeez\Vuln::worstSeverity([]), null);
+check('libellé de gravité traduit', mb_strlen(Uptimeez\Vuln::severityLabel('high')) > 3, true);
 
 // --- Enregistrement et remise à zéro sur changement de version ----------
-$tmpV = sys_get_temp_dir() . '/uptimer-vuln-' . bin2hex(random_bytes(3)) . '.sqlite';
-$prevDbV = Uptimer\Config::get('db.sqlite');
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $tmpV);
-Uptimer\Db::migrate();
-$vsid = Uptimer\Db::insert('sites', ['name' => 'Site', 'domain' => 'site.fr', 'created_at' => now()]);
-$vmid = Uptimer\Db::insert('monitors', ['site_id' => $vsid, 'name' => 'Accueil', 'url' => 'https://site.fr/',
+$tmpV = sys_get_temp_dir() . '/uptimeez-vuln-' . bin2hex(random_bytes(3)) . '.sqlite';
+$prevDbV = Uptimeez\Config::get('db.sqlite');
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpV);
+Uptimeez\Db::migrate();
+$vsid = Uptimeez\Db::insert('sites', ['name' => 'Site', 'domain' => 'site.fr', 'created_at' => now()]);
+$vmid = Uptimeez\Db::insert('monitors', ['site_id' => $vsid, 'name' => 'Accueil', 'url' => 'https://site.fr/',
     'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300, 'timeout_sec' => 15,
     'retries' => 0, 'slow_ms' => 3000, 'expect_status' => '200-299', 'check_ssl' => 0, 'check_css' => 0,
     'check_db' => 0, 'check_noindex' => 0, 'ssl_warn_days' => 14, 'css_drop_pct' => 35, 'enabled' => 1,
     'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'follow_redirects' => 1]);
 
-$n = Uptimer\Vuln::record($vmid, $vsid, $wpHtml, 'WordPress');
+$n = Uptimeez\Vuln::record($vmid, $vsid, $wpHtml, 'WordPress');
 check('inventaire enregistré', $n >= 5, true);
 check('un composant par site, sans doublon',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$vsid]), $n);
-Uptimer\Vuln::record($vmid, $vsid, $wpHtml, 'WordPress');
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$vsid]), $n);
+Uptimeez\Vuln::record($vmid, $vsid, $wpHtml, 'WordPress');
 check('une seconde lecture ne duplique rien',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$vsid]), $n);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$vsid]), $n);
 
 // Un verdict de veille, puis une mise à jour du site : le verdict doit tomber.
-Uptimer\Db::update('components', ['vuln_count' => 2, 'worst' => 'high', 'checked_at' => now(),
+Uptimeez\Db::update('components', ['vuln_count' => 2, 'worst' => 'high', 'checked_at' => now(),
     'advisories' => jenc([['id' => 'X-1', 'severity' => 'high']])],
     'site_id = :s AND slug = :g', ['s' => $vsid, 'g' => 'elementor']);
 check('un composant est marqué vulnérable',
-    (int)Uptimer\Db::val('SELECT vuln_count FROM components WHERE site_id = ? AND slug = ?', [$vsid, 'elementor']), 2);
+    (int)Uptimeez\Db::val('SELECT vuln_count FROM components WHERE site_id = ? AND slug = ?', [$vsid, 'elementor']), 2);
 $updated = str_replace('elementor/assets/css/frontend.min.css?ver=3.18.3',
                        'elementor/assets/css/frontend.min.css?ver=3.25.0', $wpHtml);
-Uptimer\Vuln::record($vmid, $vsid, $updated, 'WordPress');
-$after = Uptimer\Db::one('SELECT version, vuln_count, checked_at FROM components
+Uptimeez\Vuln::record($vmid, $vsid, $updated, 'WordPress');
+$after = Uptimeez\Db::one('SELECT version, vuln_count, checked_at FROM components
                           WHERE site_id = ? AND slug = ?', [$vsid, 'elementor']);
 check('la nouvelle version est enregistrée', $after['version'], '3.25.0');
 check('le verdict est remis à zéro après mise à jour', (int)$after['vuln_count'], 0);
 check('et sera revérifié', $after['checked_at'], null);
 
 // Sans version lisible, la veille n'a rien à interroger.
-Uptimer\Db::q('UPDATE components SET version = NULL');
-$sc = Uptimer\Vuln::scan(5);
+Uptimeez\Db::q('UPDATE components SET version = NULL');
+$sc = Uptimeez\Vuln::scan(5);
 check('aucune version : aucune interrogation', $sc['checked'], 0);
 
 // Les compteurs restent cohérents.
-$vc = Uptimer\Vuln::counts();
+$vc = Uptimeez\Vuln::counts();
 check('compteurs disponibles',
     array_keys($vc), ['components', 'with_vuln', 'high', 'outdated', 'unchecked']);
 check('rien de vulnérable dans cette base', $vc['with_vuln'], 0);
-check('aucune trouvaille à signaler', Uptimer\Vuln::findings(), []);
+check('aucune trouvaille à signaler', Uptimeez\Vuln::findings(), []);
 
-Uptimer\Db::disconnect();
+Uptimeez\Db::disconnect();
 
-Uptimer\Config::set('db.sqlite', $prevDbV);
+Uptimeez\Config::set('db.sqlite', $prevDbV);
 @unlink($tmpV); @unlink($tmpV . '-wal'); @unlink($tmpV . '-shm');
 
 // =========================================================================
 section('Rapport mensuel : programmation et composition');
 // =========================================================================
-use Uptimer\Report;
+use Uptimeez\Report;
 
 // --- Le mois couvert est toujours le mois écoulé -------------------------
 check('mois couvert par un envoi du 1er mars', Report::monthKey('2026-03-01'), '2026-02');
@@ -817,7 +817,7 @@ check('fin du mois couvert, année bissextile', $rTo, '2026-02-28 23:59:59');
 check('février 2024 comptait 29 jours', $rTo2, '2024-02-29 23:59:59');
 
 // --- Destinataires -------------------------------------------------------
-Uptimer\Config::set('report.fallback_to', 'secours@agence.fr');
+Uptimeez\Config::set('report.fallback_to', 'secours@agence.fr');
 check('séparateurs variés',
     Report::recipients(['report_to' => 'a@b.fr, c@d.fr; e@f.fr  g@h.fr']),
     ['a@b.fr', 'c@d.fr', 'e@f.fr', 'g@h.fr']);
@@ -828,19 +828,19 @@ check('doublons fusionnés',
     Report::recipients(['report_to' => 'a@b.fr, a@b.fr, A@b.fr']), ['a@b.fr', 'A@b.fr']);
 check('repli sur les destinataires par défaut',
     Report::recipients(['report_to' => '']), ['secours@agence.fr']);
-Uptimer\Config::set('report.fallback_to', '');
+Uptimeez\Config::set('report.fallback_to', '');
 check('sans repli, aucun destinataire', Report::recipients(['report_to' => '']), []);
 
 // --- Base isolée pour la programmation et les chiffres ------------------
-$tmpR = sys_get_temp_dir() . '/uptimer-report-' . bin2hex(random_bytes(3)) . '.sqlite';
-$prevDb = Uptimer\Config::get('db.sqlite');
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $tmpR);
-Uptimer\Db::migrate();
+$tmpR = sys_get_temp_dir() . '/uptimeez-report-' . bin2hex(random_bytes(3)) . '.sqlite';
+$prevDb = Uptimeez\Config::get('db.sqlite');
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpR);
+Uptimeez\Db::migrate();
 
-$rsid = Uptimer\Db::insert('sites', ['name' => 'Client Témoin', 'domain' => 'temoin.fr',
+$rsid = Uptimeez\Db::insert('sites', ['name' => 'Client Témoin', 'domain' => 'temoin.fr',
     'report_enabled' => 1, 'report_to' => 'client@temoin.fr', 'created_at' => now()]);
-$rmid = Uptimer\Db::insert('monitors', ['site_id' => $rsid, 'name' => 'Accueil',
+$rmid = Uptimeez\Db::insert('monitors', ['site_id' => $rsid, 'name' => 'Accueil',
     'url' => 'https://temoin.fr/', 'kind' => 'page', 'role' => 'primary', 'method' => 'GET',
     'interval_sec' => 300, 'timeout_sec' => 15, 'retries' => 0, 'slow_ms' => 3000,
     'expect_status' => '200-299', 'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0,
@@ -850,12 +850,12 @@ $rmid = Uptimer\Db::insert('monitors', ['site_id' => $rsid, 'name' => 'Accueil',
 [$mFrom] = Report::monthRange('2026-03-10');
 for ($d = 1; $d <= 28; $d++) {
     $day = sprintf('2026-02-%02d', $d);
-    Uptimer\Db::insert('daily_stats', ['monitor_id' => $rmid, 'day' => $day,
+    Uptimeez\Db::insert('daily_stats', ['monitor_id' => $rmid, 'day' => $day,
         'checks' => 288, 'fails' => $d === 12 ? 6 : 0, 'degraded' => 0,
         'downtime_sec' => $d === 12 ? 1800 : 0, 'avg_ms' => 420.0, 'p95_ms' => 700,
         'min_ms' => 300, 'max_ms' => 900]);
 }
-Uptimer\Db::insert('incidents', ['monitor_id' => $rmid, 'started_at' => '2026-02-12 04:10:00',
+Uptimeez\Db::insert('incidents', ['monitor_id' => $rmid, 'started_at' => '2026-02-12 04:10:00',
     'ended_at' => '2026-02-12 04:40:00', 'duration_sec' => 1800, 'severity' => 'down',
     'reason_code' => 'HTTP_5XX', 'message' => 'Le serveur renvoie une erreur',
     'checks_failed' => 6, 'notify_count' => 1]);
@@ -869,30 +869,30 @@ check('une interruption listée', count($rdata['incidents']), 1);
 check('temps de réponse moyen', $rdata['avg_ms'], 420);
 
 // --- Programmation ------------------------------------------------------
-Uptimer\Config::set('report.enabled', false);
+Uptimeez\Config::set('report.enabled', false);
 check('envoi désactivé : rien n\'est dû', Report::dueSites('2026-03-01'), []);
-Uptimer\Config::set('report.enabled', true);
-Uptimer\Config::set('report.day', 5);
+Uptimeez\Config::set('report.enabled', true);
+Uptimeez\Config::set('report.day', 5);
 check('avant le jour programmé : rien n\'est dû', Report::dueSites('2026-03-03'), []);
 check('le jour programmé : le site est dû', count(Report::dueSites('2026-03-05')), 1);
 check('après le jour programmé : encore dû', count(Report::dueSites('2026-03-19')), 1);
 // Une programmation au 31 doit tomber le dernier jour d'un mois plus court.
-Uptimer\Config::set('report.day', 31);
+Uptimeez\Config::set('report.day', 31);
 check('programmation au 31, dernier jour de février', count(Report::dueSites('2026-02-28')), 1);
-Uptimer\Config::set('report.day', 1);
+Uptimeez\Config::set('report.day', 1);
 
 // Un rapport déjà parti ce mois-là ne repart pas.
-Uptimer\Db::update('sites', ['report_sent_key' => '2026-02'], 'id = :i', ['i' => $rsid]);
+Uptimeez\Db::update('sites', ['report_sent_key' => '2026-02'], 'id = :i', ['i' => $rsid]);
 check('déjà envoyé ce mois : rien n\'est dû', Report::dueSites('2026-03-10'), []);
-Uptimer\Db::update('sites', ['report_sent_key' => null], 'id = :i', ['i' => $rsid]);
+Uptimeez\Db::update('sites', ['report_sent_key' => null], 'id = :i', ['i' => $rsid]);
 check('mois suivant : de nouveau dû', count(Report::dueSites('2026-03-10')), 1);
 // Sans destinataire, rien n'est dû non plus.
-Uptimer\Db::update('sites', ['report_to' => null], 'id = :i', ['i' => $rsid]);
+Uptimeez\Db::update('sites', ['report_to' => null], 'id = :i', ['i' => $rsid]);
 check('sans destinataire : rien n\'est dû', Report::dueSites('2026-03-10'), []);
-Uptimer\Db::update('sites', ['report_to' => 'client@temoin.fr'], 'id = :i', ['i' => $rsid]);
+Uptimeez\Db::update('sites', ['report_to' => 'client@temoin.fr'], 'id = :i', ['i' => $rsid]);
 
 // --- Composition du courrier -------------------------------------------
-$rsite = Uptimer\Db::one('SELECT * FROM sites WHERE id = ?', [$rsid]);
+$rsite = Uptimeez\Db::one('SELECT * FROM sites WHERE id = ?', [$rsid]);
 $rhtml = Report::html($rsite, $rdata, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
 $rtext = Report::text($rsite, $rdata, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
 check('le courrier porte le nom du client', str_contains($rhtml, 'Client Témoin'), true);
@@ -908,40 +908,40 @@ check('version texte sans balise', (bool)preg_match('~<[a-z]~i', $rtext), false)
 check('version texte avec les chiffres', str_contains($rtext, '99,93'), true);
 
 // Le nom d'un site vient de l'utilisateur : il doit être échappé dans le courrier.
-Uptimer\Db::update('sites', ['name' => '<script>alert(1)</script> & Cie'], 'id = :i', ['i' => $rsid]);
-$hostileSite = Uptimer\Db::one('SELECT * FROM sites WHERE id = ?', [$rsid]);
+Uptimeez\Db::update('sites', ['name' => '<script>alert(1)</script> & Cie'], 'id = :i', ['i' => $rsid]);
+$hostileSite = Uptimeez\Db::one('SELECT * FROM sites WHERE id = ?', [$rsid]);
 $hh = Report::html($hostileSite, $rdata, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
 check('nom de site échappé dans le courrier', str_contains($hh, '<script>alert(1)</script>'), false);
 check('nom de site présent sous forme échappée', str_contains($hh, '&lt;script&gt;'), true);
-Uptimer\Db::update('sites', ['name' => 'Client Témoin'], 'id = :i', ['i' => $rsid]);
+Uptimeez\Db::update('sites', ['name' => 'Client Témoin'], 'id = :i', ['i' => $rsid]);
 
 // --- Objet du message ---------------------------------------------------
-Uptimer\Config::set('report.subject', '');
+Uptimeez\Config::set('report.subject', '');
 $r1 = Report::sendFor($rsid, '2026-03-10');
 check('sans canal e-mail, l\'envoi échoue proprement', $r1['ok'], false);
 check('et le motif est explicite', mb_strlen((string)$r1['info']) > 10, true);
 check('objet composé avec le site et le mois',
     str_contains((string)$r1['subject'], 'Client Témoin') && str_contains((string)$r1['subject'], 'février'), true);
-Uptimer\Config::set('report.subject', 'Suivi {site} - {month} - {app}');
+Uptimeez\Config::set('report.subject', 'Suivi {site} - {month} - {app}');
 $r2 = Report::sendFor($rsid, '2026-03-10');
 check('gabarit d\'objet respecté',
-    str_contains((string)$r2['subject'], 'Suivi Client Témoin - février 2026 - ' . Uptimer\I18n::APP), true);
+    str_contains((string)$r2['subject'], 'Suivi Client Témoin - février 2026 - ' . Uptimeez\I18n::APP), true);
 // Un échec ne doit pas marquer le mois comme envoyé.
 check('un échec ne consomme pas le mois',
-    (string)Uptimer\Db::val('SELECT report_sent_key FROM sites WHERE id = ?', [$rsid]), '');
+    (string)Uptimeez\Db::val('SELECT report_sent_key FROM sites WHERE id = ?', [$rsid]), '');
 check('un échec laisse le site dû', count(Report::dueSites('2026-03-10')), 1);
 
 // Un mois sans aucune mesure ne produit pas de rapport vide.
-$emptySid = Uptimer\Db::insert('sites', ['name' => 'Sans mesure', 'domain' => 'vide.fr',
+$emptySid = Uptimeez\Db::insert('sites', ['name' => 'Sans mesure', 'domain' => 'vide.fr',
     'report_enabled' => 1, 'report_to' => 'x@vide.fr', 'created_at' => now()]);
 $r3 = Report::sendFor($emptySid, '2026-03-10');
 check('aucune mesure : rapport non envoyé', $r3['ok'], false);
 check('et le motif le dit', str_contains((string)$r3['info'], 'esure'), true);
 
-Uptimer\Config::set('report.enabled', false);
-Uptimer\Config::set('report.subject', '');
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $prevDb);
+Uptimeez\Config::set('report.enabled', false);
+Uptimeez\Config::set('report.subject', '');
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $prevDb);
 @unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
 
 // =========================================================================
@@ -953,15 +953,15 @@ section('Solidité : suppressions, volumes, saisies absurdes');
 // sonde hors service pour toujours.
 
 // --- Supprimer une sonde ne doit rien laisser derrière -------------------
-$prevDbS = Uptimer\Config::get('db.sqlite');
+$prevDbS = Uptimeez\Config::get('db.sqlite');
 $tmpS = sys_get_temp_dir() . '/self-solid-' . bin2hex(random_bytes(4)) . '.sqlite';
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $tmpS);
-Uptimer\Db::migrate();
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpS);
+Uptimeez\Db::migrate();
 
-$sidS = Uptimer\Db::insert('sites', ['name' => 'Site', 'domain' => 'solid.test', 'created_at' => now()]);
+$sidS = Uptimeez\Db::insert('sites', ['name' => 'Site', 'domain' => 'solid.test', 'created_at' => now()]);
 $mkMon = function (string $name, string $role) use ($sidS): int {
-    return Uptimer\Db::insert('monitors', ['site_id' => $sidS, 'name' => $name,
+    return Uptimeez\Db::insert('monitors', ['site_id' => $sidS, 'name' => $name,
         'url' => 'https://solid.test/' . $name, 'kind' => 'page', 'role' => $role, 'method' => 'GET',
         'interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299',
         'enabled' => 1, 'status' => 'up', 'setup_state' => 'done',
@@ -970,58 +970,58 @@ $mkMon = function (string $name, string $role) use ($sidS): int {
 $mA = $mkMon('a', 'primary');
 $mB = $mkMon('b', 'page');
 foreach ([$mA, $mB] as $mid) {
-    Uptimer\Db::insert('checks', ['monitor_id' => $mid, 'ts' => now(), 'state' => 'up',
+    Uptimeez\Db::insert('checks', ['monitor_id' => $mid, 'ts' => now(), 'state' => 'up',
                                   'total_ms' => 10, 'attempts' => 1]);
-    Uptimer\Db::insert('incidents', ['monitor_id' => $mid, 'severity' => 'down',
+    Uptimeez\Db::insert('incidents', ['monitor_id' => $mid, 'severity' => 'down',
                                      'started_at' => now(), 'checks_failed' => 1]);
-    Uptimer\Db::insert('events', ['monitor_id' => $mid, 'ts' => now(), 'kind' => 'x',
+    Uptimeez\Db::insert('events', ['monitor_id' => $mid, 'ts' => now(), 'kind' => 'x',
                                   'message' => 'm', 'seen' => 0]);
-    Uptimer\Db::insert('daily_stats', ['monitor_id' => $mid, 'day' => date('Y-m-d'),
+    Uptimeez\Db::insert('daily_stats', ['monitor_id' => $mid, 'day' => date('Y-m-d'),
                                        'checks' => 1, 'fails' => 0]);
-    Uptimer\Db::insert('notifications', ['monitor_id' => $mid, 'ts' => now(), 'channel' => 'mail',
+    Uptimeez\Db::insert('notifications', ['monitor_id' => $mid, 'ts' => now(), 'channel' => 'mail',
                                          'kind' => 'down', 'ok' => 1]);
 }
-Uptimer\Db::insert('components', ['site_id' => $sidS, 'kind' => 'core', 'slug' => 'wp',
+Uptimeez\Db::insert('components', ['site_id' => $sidS, 'kind' => 'core', 'slug' => 'wp',
                                   'name' => 'WordPress', 'seen_at' => now(), 'first_seen_at' => now()]);
 
-$delB = Uptimer\Db::deleteMonitors([$mB]);
+$delB = Uptimeez\Db::deleteMonitors([$mB]);
 check('une page supprimée : la sonde part', $delB['monitors'], 1);
 check('supprimer une page ne touche pas le site', $delB['sites'], 0);
 check('ses mesures partent avec elle',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks WHERE monitor_id = ?', [$mB]), 0);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks WHERE monitor_id = ?', [$mB]), 0);
 // C'est la table oubliée : elle grossissait sans fin.
 check('ses alertes envoyées partent aussi',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM notifications WHERE monitor_id = ?', [$mB]), 0);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM notifications WHERE monitor_id = ?', [$mB]), 0);
 check('la sonde principale est intacte',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM monitors WHERE id = ?', [$mA]), 1);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM monitors WHERE id = ?', [$mA]), 1);
 check('l\'inventaire du site est intact',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$sidS]), 1);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$sidS]), 1);
 
-$delA = Uptimer\Db::deleteMonitors([$mA]);
+$delA = Uptimeez\Db::deleteMonitors([$mA]);
 check('la dernière sonde emporte le site', $delA['sites'], 1);
 check('et son inventaire logiciel', $delA['components'], 1);
 check('plus aucun composant orphelin',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components'), 0);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM components'), 0);
 check('plus aucune mesure orpheline',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks'), 0);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks'), 0);
 check('supprimer une sonde inconnue ne fait rien',
-    Uptimer\Db::deleteMonitors([999999])['monitors'], 0);
-check('liste vide : aucune requête, aucun dégât', Uptimer\Db::deleteMonitors([])['monitors'], 0);
+    Uptimeez\Db::deleteMonitors([999999])['monitors'], 0);
+check('liste vide : aucune requête, aucun dégât', Uptimeez\Db::deleteMonitors([])['monitors'], 0);
 
 // --- La réparation rattrape ce qu'une version antérieure a laissé -------
-Uptimer\Db::insert('checks', ['monitor_id' => 4242, 'ts' => now(), 'state' => 'up',
+Uptimeez\Db::insert('checks', ['monitor_id' => 4242, 'ts' => now(), 'state' => 'up',
                               'total_ms' => 1, 'attempts' => 1]);
-Uptimer\Db::insert('notifications', ['monitor_id' => 4242, 'ts' => now(), 'channel' => 'mail',
+Uptimeez\Db::insert('notifications', ['monitor_id' => 4242, 'ts' => now(), 'channel' => 'mail',
                                      'kind' => 'down', 'ok' => 1]);
-$sidGhost = Uptimer\Db::insert('sites', ['name' => 'Fantôme', 'domain' => 'ghost.test', 'created_at' => now()]);
-Uptimer\Db::insert('components', ['site_id' => $sidGhost, 'kind' => 'core', 'slug' => 'x',
+$sidGhost = Uptimeez\Db::insert('sites', ['name' => 'Fantôme', 'domain' => 'ghost.test', 'created_at' => now()]);
+Uptimeez\Db::insert('components', ['site_id' => $sidGhost, 'kind' => 'core', 'slug' => 'x',
                                   'name' => 'X', 'seen_at' => now(), 'first_seen_at' => now()]);
-$rep = Uptimer\Db::repairOrphans();
+$rep = Uptimeez\Db::repairOrphans();
 check('les orphelins d\'une ancienne version sont nettoyés', $rep['orphans'] >= 2, true);
 check('un site sans aucune sonde est retiré', $rep['sites'], 1);
 check('et son inventaire avec lui', $rep['components'], 1);
 check('une base saine ne bouge plus',
-    array_sum(Uptimer\Db::repairOrphans()), 0);
+    array_sum(Uptimeez\Db::repairOrphans()), 0);
 
 // --- Les requêtes de masse tiennent au-delà de 999 paramètres -----------
 // SQLite compilé avant 3.32 refuse plus de 999 paramètres liés, et c'est celui
@@ -1029,24 +1029,24 @@ check('une base saine ne bouge plus',
 $many = [];
 for ($i = 0; $i < 1500; $i++) $many[] = $mkMon('vol' . $i, 'page');
 check('1500 sondes créées', count($many), 1500);
-$batch = Uptimer\Stats::sparkBatch($many, 86400, 24);
+$batch = Uptimeez\Stats::sparkBatch($many, 86400, 24);
 check('les courbes groupées les couvrent toutes', count($batch), 1500);
-$pulse = Uptimer\Stats::pulse(86400, 24);
+$pulse = Uptimeez\Stats::pulse(86400, 24);
 check('le pouls du parc tient sur un gros parc', count($pulse), 24);
 check('découpage : un paquet par tranche de 400',
-    count(Uptimer\Db::chunk(range(1, 1500), fn(array $p): array => [count($p)])), 4);
+    count(Uptimeez\Db::chunk(range(1, 1500), fn(array $p): array => [count($p)])), 4);
 check('sous le seuil, un seul paquet',
-    Uptimer\Db::chunk(range(1, 10), fn(array $p): array => [count($p)]), [10]);
-check('liste vide : aucun paquet', Uptimer\Db::chunk([], fn(array $p): array => [1]), []);
-$delMany = Uptimer\Db::deleteMonitors($many);
+    Uptimeez\Db::chunk(range(1, 10), fn(array $p): array => [count($p)]), [10]);
+check('liste vide : aucun paquet', Uptimeez\Db::chunk([], fn(array $p): array => [1]), []);
+$delMany = Uptimeez\Db::deleteMonitors($many);
 check('et la suppression de masse aussi', $delMany['monitors'], 1500);
 
-Uptimer\Db::disconnect();
+Uptimeez\Db::disconnect();
 
-Uptimer\Config::set('db.sqlite', $prevDbS);
+Uptimeez\Config::set('db.sqlite', $prevDbS);
 // Le chemin restauré peut désigner une base supprimée par une section
 // précédente : on s'assure que le schéma existe pour la suite.
-Uptimer\Db::migrate();
+Uptimeez\Db::migrate();
 @unlink($tmpS);
 
 // --- Les heures calmes à cheval sur minuit ------------------------------
@@ -1063,27 +1063,27 @@ foreach ([['23:00-07:00', 23 * 60 + 30, true], ['23:00-07:00', 6 * 60 + 59, true
           ['25:00-99:00', 3 * 60, false],     ['absurde', 3 * 60, false],
           ['', 3 * 60, false]] as [$spec, $min, $want]) {
     check(sprintf('heures calmes [%s] à %02d:%02d', $spec ?: 'vide', intdiv($min, 60), $min % 60),
-          Uptimer\Notify\Notifier::quietHoursCover($spec, $min), $want);
+          Uptimeez\Notify\Notifier::quietHoursCover($spec, $min), $want);
 }
 foreach ([['23:00-07:00', true], ['09:00-18:00', true], ['0:00-6:00', true],
           ['25:00-99:00', false], ['23:60-07:00', false], ['absurde', false],
           ['', false], ['23:00', false], ['23:00-', false]] as [$spec, $valid]) {
     check('plage [' . ($spec ?: 'vide') . '] acceptée à la saisie',
-          Uptimer\Notify\Notifier::validQuietHours($spec), $valid);
+          Uptimeez\Notify\Notifier::validQuietHours($spec), $valid);
 }
 
 // --- Une spécification de codes attendus illisible ne casse plus rien ---
 foreach ([['200-299', true], ['200', true], ['2xx', true], ['200,301,404', true], ['', true],
           ['DROP TABLE', false], ['200 OK', false], ['abc', false], ['20', false],
           ['1000', false], ['200-', false]] as [$spec, $valid]) {
-    check('spécification « ' . ($spec ?: 'vide') . ' »', Uptimer\Runner::validStatusSpec($spec), $valid);
+    check('spécification « ' . ($spec ?: 'vide') . ' »', Uptimeez\Runner::validStatusSpec($spec), $valid);
 }
 // Le point qui compte : une valeur invalide retombe sur le comportement par
 // défaut au lieu de déclarer le site hors service pour toujours.
 check('une spécification cassée n\'invente pas une panne',
-    Uptimer\Runner::statusMatches(200, 'n\'importe quoi'), true);
+    Uptimeez\Runner::statusMatches(200, 'n\'importe quoi'), true);
 check('et ne cache pas une vraie panne',
-    Uptimer\Runner::statusMatches(503, 'n\'importe quoi'), false);
+    Uptimeez\Runner::statusMatches(503, 'n\'importe quoi'), false);
 
 // =========================================================================
 section('Incident en cours : motif, message et variables vont ensemble');
@@ -1096,45 +1096,45 @@ section('Incident en cours : motif, message et variables vont ensemble');
 // valeurs de l'ancien, d'où des verdicts faux comme « Erreur serveur 404 »
 // quand le serveur avait répondu 503.
 
-$prevDbI = Uptimer\Config::get('db.sqlite');
+$prevDbI = Uptimeez\Config::get('db.sqlite');
 $tmpI = sys_get_temp_dir() . '/self-incident-' . bin2hex(random_bytes(4)) . '.sqlite';
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $tmpI);
-Uptimer\Db::migrate();
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpI);
+Uptimeez\Db::migrate();
 
-$midI = Uptimer\Db::insert('monitors', ['name' => 'Incident', 'url' => 'https://incident.test/',
+$midI = Uptimeez\Db::insert('monitors', ['name' => 'Incident', 'url' => 'https://incident.test/',
     'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300,
     'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299', 'enabled' => 1,
     'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'next_check_at' => now(),
     'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0, 'check_noindex' => 0,
     'check_content' => 0, 'slow_ms' => 0]);
-$monI = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
+$monI = Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
 
 $resI = function (int $status, string $body = '<!doctype html><html><body>ok</body></html>') {
-    $r = new Uptimer\Response();
+    $r = new Uptimeez\Response();
     $r->ok = true; $r->status = $status; $r->body = $body; $r->contentType = 'text/html';
     $r->totalMs = 120; $r->finalUrl = 'https://incident.test/';
     return $r;
 };
-$incI = fn() => Uptimer\Db::one('SELECT * FROM incidents WHERE monitor_id = ? ORDER BY id DESC LIMIT 1', [$midI]);
+$incI = fn() => Uptimeez\Db::one('SELECT * FROM incidents WHERE monitor_id = ? ORDER BY id DESC LIMIT 1', [$midI]);
 
 // 1. Ouverture sur une erreur 503.
-Uptimer\Runner::runBatch([$monI], true);
-$monI = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
+Uptimeez\Runner::runBatch([$monI], true);
+$monI = Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
 // On force le verdict en passant par evaluate + persist via une réponse fabriquée.
-$vI = Uptimer\Runner::evaluate($monI, $resI(503));
+$vI = Uptimeez\Runner::evaluate($monI, $resI(503));
 check('un 503 ouvre bien une panne', $vI['reason'], 'HTTP_5XX');
 check('et le code mesuré est dans les variables', $vI['vars']['code'] ?? null, 503);
 
 // 2. Puis la même gravité avec une autre cause : chaîne de contrôle absente.
-Uptimer\Db::q('UPDATE monitors SET expect_string = ? WHERE id = ?', ['Mentions légales', $midI]);
-$monI = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
-$vI2 = Uptimer\Runner::evaluate($monI, $resI(200));
+Uptimeez\Db::q('UPDATE monitors SET expect_string = ? WHERE id = ?', ['Mentions légales', $midI]);
+$monI = Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
+$vI2 = Uptimeez\Runner::evaluate($monI, $resI(200));
 check('la nouvelle cause est bien la chaîne absente', $vI2['reason'], 'STRING_MISSING');
 
 // Le moteur d'incidents est privé : on l'exerce par le chemin public, en
 // écrivant les deux verdicts à la suite sur la même sonde.
-$refl = new ReflectionMethod(Uptimer\Runner::class, 'applyIncident');
+$refl = new ReflectionMethod(Uptimeez\Runner::class, 'applyIncident');
 $refl->setAccessible(true);
 $refl->invoke(null, $monI, 'down', $vI);
 $openI = $incI();
@@ -1145,7 +1145,7 @@ check('et ses variables portent le 503', jdec($openI['message_vars'] ?? null)['c
 $refl->invoke(null, $monI, 'down', $vI2);
 $openI = $incI();
 check('un seul incident, pas deux',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ?', [$midI]), 1);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ?', [$midI]), 1);
 check('le motif a suivi le message', $openI['reason_code'] ?? null, 'STRING_MISSING');
 check('le message aussi', str_contains((string)$openI['message'], 'chaîne de contrôle'), true);
 // Le point qui faisait faux : les variables de l'ancien verdict remplissaient
@@ -1165,9 +1165,9 @@ check('une gravité en baisse ne change pas le motif', $openI['reason_code'] ?? 
 check('ni la gravité de l\'incident', $openI['severity'] ?? null, 'down');
 check('mais le compteur d\'échecs monte', (int)($openI['checks_failed'] ?? 0) >= 3, true);
 
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $prevDbI);
-Uptimer\Db::migrate();
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $prevDbI);
+Uptimeez\Db::migrate();
 foreach ([$tmpI, $tmpI . '-wal', $tmpI . '-shm'] as $f) @unlink($f);
 
 // =========================================================================
@@ -1191,7 +1191,7 @@ $monT = ['id' => 0, 'url' => 'https://tronque.test/', 'kind' => 'page', 'method'
     'content_hash' => null, 'follow_redirects' => 1, 'ignore_ssl_errors' => 0];
 
 $mkRes = function (string $body, bool $cut) {
-    $r = new Uptimer\Response();
+    $r = new Uptimeez\Response();
     $r->ok = true; $r->status = 200; $r->body = $body; $r->contentType = 'text/html';
     $r->truncated = $cut; $r->totalMs = 200; $r->finalUrl = 'https://tronque.test/';
     return $r;
@@ -1199,36 +1199,36 @@ $mkRes = function (string $body, bool $cut) {
 $page = '<!doctype html><html><body><p>' . str_repeat('contenu ', 200) . '</p>';
 
 // Page complète, chaîne absente : c\'est une vraie panne, elle doit sortir.
-$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . '</body></html>', false));
+$vT = Uptimeez\Runner::evaluate($monT, $mkRes($page . '</body></html>', false));
 check('page complète sans la chaîne : panne déclarée', $vT['state'], 'down');
 check('et le motif est bien la chaîne absente', $vT['reason'], 'STRING_MISSING');
 
 // Même page, mais coupée : on ne sait pas, et on le dit.
-$vT = Uptimer\Runner::evaluate($monT, $mkRes($page, true));
+$vT = Uptimeez\Runner::evaluate($monT, $mkRes($page, true));
 check('page coupée : pas de panne inventée', $vT['state'], 'degraded');
 check('le motif dit que la page est trop grosse', $vT['reason'], 'BODY_TRUNCATED');
 check('et le verdict explique pourquoi',
     str_contains($vT['message'], 'trop volumineuse'), true);
 
 // Une chaîne présente reste une certitude, coupure ou pas.
-$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
+$vT = Uptimeez\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
 check('la chaîne trouvée avant la coupure suffit', $vT['state'], 'up');
 
 // Une chaîne INTERDITE présente est une certitude elle aussi.
-$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026 Fatal error', true));
+$vT = Uptimeez\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026 Fatal error', true));
 check('une chaîne interdite reste une panne sur page coupée', $vT['reason'], 'STRING_FORBIDDEN');
 
 // L\'empreinte de contenu ne se calcule pas sur un corps incomplet.
-$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
+$vT = Uptimeez\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
 check('aucune empreinte de contenu sur page coupée',
     isset($vT['details']['content_hash']), false);
-$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026</body></html>', false));
+$vT = Uptimeez\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026</body></html>', false));
 check('mais elle se calcule sur une page complète',
     isset($vT['details']['content_hash']), true);
 
 // Le mot surveillé ne bascule pas sur une lecture partielle : « En stock »
 // disparu de la fin d\'une page coupée n\'est pas une disparition.
-$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
+$vT = Uptimeez\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
 check('aucune bascule du mot surveillé sur page coupée', $vT['events'], []);
 
 // La coupure elle-même — la même page lue deux fois doit donner le même corps,
@@ -1242,32 +1242,32 @@ section('Durée : un an d\'historique, et la place rendue');
 // Aucun n'était visible sur une base neuve, et les trois avaient des
 // conséquences en exploitation réelle.
 
-$prevDbV = Uptimer\Config::get('db.sqlite');
+$prevDbV = Uptimeez\Config::get('db.sqlite');
 $tmpV = sys_get_temp_dir() . '/self-duree-' . bin2hex(random_bytes(4)) . '.sqlite';
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $tmpV);
-Uptimer\Db::migrate();
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpV);
+Uptimeez\Db::migrate();
 
 // --- 1. L'ordre des PRAGMA de connexion ----------------------------------
 // « auto_vacuum » ne se règle qu'avant la première écriture de l'en-tête, et
 // « journal_mode = WAL » écrit cet en-tête. Placé après lui, le réglage était
-// accepté sans effet : aucune base créée par Uptimer ne rendait jamais l'espace
+// accepté sans effet : aucune base créée par Uptimeez ne rendait jamais l'espace
 // d'une purge. Une ligne de contrôle l'aurait vu dès le premier jour.
 check('une base neuve est en vacuum incrémental',
-    (int)Uptimer\Db::pdo()->query('PRAGMA auto_vacuum')->fetchColumn(), 2);
+    (int)Uptimeez\Db::pdo()->query('PRAGMA auto_vacuum')->fetchColumn(), 2);
 check('et en mode WAL',
-    strtolower((string)Uptimer\Db::pdo()->query('PRAGMA journal_mode')->fetchColumn()), 'wal');
+    strtolower((string)Uptimeez\Db::pdo()->query('PRAGMA journal_mode')->fetchColumn()), 'wal');
 
 // --- 2. Une purge ne tient jamais le verrou longtemps --------------------
 // Ramener la conservation de 60 à 7 jours supprimait des millions de lignes en
 // une seule requête : 51 secondes de verrou d'écriture mesurées, pendant
 // lesquelles chaque page échouait sur « database is locked » (busy_timeout vaut
 // 8 secondes). La purge travaille donc par tranches et note ce qui reste.
-$midV = Uptimer\Db::insert('monitors', ['name' => 'Durée', 'url' => 'https://duree.test/',
+$midV = Uptimeez\Db::insert('monitors', ['name' => 'Durée', 'url' => 'https://duree.test/',
     'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300,
     'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299', 'enabled' => 1,
     'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'next_check_at' => now()]);
-$pdoV = Uptimer\Db::pdo();
+$pdoV = Uptimeez\Db::pdo();
 $pdoV->beginTransaction();
 $insV = $pdoV->prepare('INSERT INTO checks (monitor_id, ts, state, total_ms) VALUES (?,?,?,?)');
 // 60 jours à raison de 24 mesures par jour : assez pour dépasser une tranche.
@@ -1277,35 +1277,35 @@ for ($d = 60; $d >= 0; $d--) {
     }
 }
 $pdoV->commit();
-$totalV = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks');
+$totalV = (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks');
 check('mesures en place pour la mesure', $totalV > 1400, true);
 
 // Budget volontairement minuscule et tranche forcée : la purge doit rendre la
 // main avant d'avoir fini, et le dire.
 // Tranche réduite : la reprise s'éprouve sans fabriquer vingt mille mesures.
-$firstV = Uptimer\Stats::purge(7, 0.0, 300);
+$firstV = Uptimeez\Stats::purge(7, 0.0, 300);
 check('un budget nul supprime quand même une tranche', $firstV, 300);
-check('et signale qu\'il reste du travail', Uptimer\Stats::purgePending(), true);
+check('et signale qu\'il reste du travail', Uptimeez\Stats::purgePending(), true);
 $roundsV = 0;
-while (Uptimer\Stats::purgePending() && $roundsV < 50) { Uptimer\Stats::purge(7, 0.0, 300); $roundsV++; }
-check('les passes suivantes la terminent', Uptimer\Stats::purgePending(), false);
+while (Uptimeez\Stats::purgePending() && $roundsV < 50) { Uptimeez\Stats::purge(7, 0.0, 300); $roundsV++; }
+check('les passes suivantes la terminent', Uptimeez\Stats::purgePending(), false);
 check('et il en a fallu plusieurs', $roundsV > 1, true);
-$leftV = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks WHERE ts < ?',
+$leftV = (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks WHERE ts < ?',
     [date('Y-m-d H:i:s', time() - 7 * 86400)]);
 check('plus une mesure au-delà de la conservation', $leftV, 0);
 check('les mesures récentes sont intactes',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks') > 100, true);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks') > 100, true);
 // Conservation illimitée : rien ne doit disparaître, et rien ne reste en attente.
-$keptV = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks');
-check('conservation illimitée ne purge rien', Uptimer\Stats::purge(0), 0);
-check('et ne laisse pas de travail en attente', Uptimer\Stats::purgePending(), false);
-check('les mesures sont toujours là', (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks'), $keptV);
+$keptV = (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks');
+check('conservation illimitée ne purge rien', Uptimeez\Stats::purge(0), 0);
+check('et ne laisse pas de travail en attente', Uptimeez\Stats::purgePending(), false);
+check('les mesures sont toujours là', (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks'), $keptV);
 
 // --- 3. Un entretien manqué se rattrape ---------------------------------
 // La consolidation ne portait que sur la veille, et ne tournait qu'à 3 h du
 // matin. Une machine éteinte la nuit laissait donc des trous définitifs dans la
 // frise 30 jours, puisque les mesures unitaires finissaient purgées.
-Uptimer\Db::q('DELETE FROM daily_stats');
+Uptimeez\Db::q('DELETE FROM daily_stats');
 $pdoV->beginTransaction();
 for ($d = 5; $d >= 1; $d--) {
     for ($h = 0; $h < 24; $h++) {
@@ -1313,34 +1313,34 @@ for ($d = 5; $d >= 1; $d--) {
     }
 }
 $pdoV->commit();
-check('aucun jour consolidé au départ', (int)Uptimer\Db::val('SELECT COUNT(*) FROM daily_stats'), 0);
+check('aucun jour consolidé au départ', (int)Uptimeez\Db::val('SELECT COUNT(*) FROM daily_stats'), 0);
 // Le rattrapage est borné par appel : il ne monopolise pas une passe de cron.
-check('le rattrapage est plafonné à ce qu\'on lui demande', Uptimer\Stats::rollupMissing(2), 2);
+check('le rattrapage est plafonné à ce qu\'on lui demande', Uptimeez\Stats::rollupMissing(2), 2);
 check('et il converge en quelques passes', (function () {
     $tours = 0;
-    while (Uptimer\Stats::rollupMissing(5) > 0 && $tours < 30) $tours++;
+    while (Uptimeez\Stats::rollupMissing(5) > 0 && $tours < 30) $tours++;
     return $tours < 30;
 })(), true);
 check('tous les jours mesurés ont leur résumé',
-    (int)Uptimer\Db::val('SELECT COUNT(DISTINCT day) FROM daily_stats') >= 5, true);
-check('un passage de plus ne refait pas le travail', Uptimer\Stats::rollupMissing(5), 0);
+    (int)Uptimeez\Db::val('SELECT COUNT(DISTINCT day) FROM daily_stats') >= 5, true);
+check('un passage de plus ne refait pas le travail', Uptimeez\Stats::rollupMissing(5), 0);
 // Un jour sans aucune mesure n'a rien à consolider : il ne doit pas produire
 // une ligne à zéro, qui se lirait comme « ce jour-là le site était injoignable ».
 $holeV = date('Y-m-d', time() - 40 * 86400);
 check('un jour sans mesure ne fabrique pas un faux zéro',
-    Uptimer\Db::val('SELECT 1 FROM daily_stats WHERE day = ?', [$holeV]), null);
+    Uptimeez\Db::val('SELECT 1 FROM daily_stats WHERE day = ?', [$holeV]), null);
 
 // --- 4. La place revient au disque --------------------------------------
-$cmpV = Uptimer\Db::compact(1.0);
+$cmpV = Uptimeez\Db::compact(1.0);
 check('le compactage ne réclame pas de VACUUM sur une base neuve', $cmpV['needs_vacuum'], false);
-$vacV = Uptimer\Db::vacuum();
+$vacV = Uptimeez\Db::vacuum();
 check('le VACUUM complet aboutit', $vacV['ok'], true);
 check('et laisse la base en vacuum incrémental',
-    (int)Uptimer\Db::pdo()->query('PRAGMA auto_vacuum')->fetchColumn(), 2);
+    (int)Uptimeez\Db::pdo()->query('PRAGMA auto_vacuum')->fetchColumn(), 2);
 
-Uptimer\Db::disconnect();
-Uptimer\Config::set('db.sqlite', $prevDbV);
-Uptimer\Db::migrate();
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $prevDbV);
+Uptimeez\Db::migrate();
 foreach ([$tmpV, $tmpV . '-wal', $tmpV . '-shm'] as $f) @unlink($f);
 
 // =========================================================================
@@ -1350,40 +1350,40 @@ section('Traductions : aucune phrase laissée en arrière');
 // français est un défaut, pas un détail. Ces deux contrôles interrogent l'outil
 // d'audit lui-même, pour que la dette ne revienne pas au premier écran ajouté.
 $auditJson = shell_exec(escapeshellarg(PHP_BINARY) . ' '
-    . escapeshellarg(UPTIMER_ROOT . '/bin/i18n-audit.php') . ' --json 2>/dev/null');
+    . escapeshellarg(UPTIMEEZ_ROOT . '/bin/i18n-audit.php') . ' --json 2>/dev/null');
 $audit = jdec((string)$auditJson);
 check('l\'audit de traduction répond', isset($audit['msgids']), true);
 // Le JSON rend une liste de msgid, pas un tableau associatif.
 $ids = array_values((array)($audit['msgids'] ?? []));
 check('le catalogue anglais couvre chaque phrase',
-    count(array_diff($ids, array_keys(Uptimer\I18n::catalogue('en')))), 0);
+    count(array_diff($ids, array_keys(Uptimeez\I18n::catalogue('en')))), 0);
 $bare = (int)($audit['bare'] ?? 0);
 check('aucun texte d\'interface laissé en français dans le code', $bare, 0);
 check('aucun msgid coupé en morceaux', count((array)($audit['fragments'] ?? [])), 0);
 
 // Un verdict enregistré par le collecteur se relit dans la langue du lecteur.
-$vid = Uptimer\Db::insert('monitors', ['name' => 'Verdict i18n', 'url' => 'https://verdict.test/',
+$vid = Uptimeez\Db::insert('monitors', ['name' => 'Verdict i18n', 'url' => 'https://verdict.test/',
     'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300,
     'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299', 'enabled' => 1,
     'status' => 'degraded', 'setup_state' => 'done', 'created_at' => now(), 'next_check_at' => now(),
     'last_message' => 'Certificat SSL expire dans {n} jours',
     'last_message_vars' => jenc(['n' => 9])]);
-$row = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$vid]);
-Uptimer\I18n::init('fr');
+$row = Uptimeez\Db::one('SELECT * FROM monitors WHERE id = ?', [$vid]);
+Uptimeez\I18n::init('fr');
 check('verdict rendu en français', verdict_text($row), 'Certificat SSL expire dans 9 jours');
-Uptimer\I18n::init('en');
+Uptimeez\I18n::init('en');
 check('le même verdict rendu en anglais', verdict_text($row), 'SSL certificate expires in 9 days');
 check('un verdict sans variable reste lisible',
     verdict_text(['last_message' => 'Tout va bien', 'last_message_vars' => null]),
-    Uptimer\I18n::catalogue('en')['Tout va bien']);
+    Uptimeez\I18n::catalogue('en')['Tout va bien']);
 check('aucun verdict : chaîne vide, pas de « — »', verdict_text(null), '');
-Uptimer\I18n::init('fr');
-Uptimer\Db::q('DELETE FROM monitors WHERE id = ?', [$vid]);
+Uptimeez\I18n::init('fr');
+Uptimeez\Db::q('DELETE FROM monitors WHERE id = ?', [$vid]);
 
 // =========================================================================
 section('Reprise d\'un parc surveillé ailleurs');
 // =========================================================================
-use Uptimer\Import\Foreign;
+use Uptimeez\Import\Foreign;
 
 // Les cinq exports, dans la forme que les outils produisent réellement.
 $exp = [];
@@ -1538,36 +1538,36 @@ check('source inconnue : message d\'aide', count(Foreign::parse('nawak')['errors
 
 // --- Reprise complète en base -------------------------------------------
 // Le contrat : la configuration passe, l'historique non.
-$before = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks');
+$before = (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks');
 $rows = Foreign::parse($exp['uptimerobot'])['rows'];
-$res = Uptimer\Importer::createMonitors($rows, ['group' => 'Reprise UR']);
+$res = Uptimeez\Importer::createMonitors($rows, ['group' => 'Reprise UR']);
 check('trois sondes créées', $res['created'], 3);
-$m = Uptimer\Db::one('SELECT * FROM monitors WHERE url = ?', ['https://vitrine.test/b']);
+$m = Uptimeez\Db::one('SELECT * FROM monitors WHERE url = ?', ['https://vitrine.test/b']);
 check('la chaîne interdite est enregistrée', $m['forbid_string'], 'Erreur');
 check('la sonde importée en pause est bien en pause', (int)$m['enabled'], 0);
 check('la cadence de l\'export est appliquée', (int)$m['interval_sec'], 900);
 check('aucune mesure historique inventée',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks'), $before);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM checks'), $before);
 check('aucun incident historique inventé',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ?', [(int)$m['id']]), 0);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ?', [(int)$m['id']]), 0);
 check('la disponibilité repart de zéro', $m['uptime_30d'], null);
 // Un deuxième import du même export ne duplique rien.
-$res2 = Uptimer\Importer::createMonitors($rows, ['group' => 'Reprise UR']);
+$res2 = Uptimeez\Importer::createMonitors($rows, ['group' => 'Reprise UR']);
 check('deuxième import : rien de dupliqué', $res2['created'], 0);
 check('et les sondes déjà présentes sont comptées', $res2['skipped'], 3);
 
 // Nettoyage.
 foreach (['https://vitrine.test/', 'https://vitrine.test/a', 'https://vitrine.test/b'] as $u) {
-    Uptimer\Db::q('DELETE FROM monitors WHERE url = ?', [$u]);
+    Uptimeez\Db::q('DELETE FROM monitors WHERE url = ?', [$u]);
 }
-Uptimer\Db::q('DELETE FROM sites WHERE domain = ?', ['vitrine.test']);
+Uptimeez\Db::q('DELETE FROM sites WHERE domain = ?', ['vitrine.test']);
 
 // =========================================================================
 section('Le pouls du parc : le pire cas décide');
 // =========================================================================
 // Une tranche est rouge dès qu'un seul site était hors service pendant cette
 // tranche : c'est le pire cas qui a fait sonner le téléphone, pas la moyenne.
-$pulse = Uptimer\Stats::pulse(86400, 48);
+$pulse = Uptimeez\Stats::pulse(86400, 48);
 check('une tranche par intervalle demandé', count($pulse), 48);
 check('chaque tranche porte un horodatage',
     count(array_filter($pulse, fn($b) => (int)$b['t'] > 0)), 48);
@@ -1578,39 +1578,39 @@ $first = $pulse[0];
 check('les tranches vont du plus ancien au plus récent', $first['t'] < $last['t'], true);
 check('la dernière tranche est proche de maintenant', time() - (int)$last['t'] < 3600, true);
 // Un parc vide ne doit pas produire d'erreur, seulement des tranches vides.
-check('découpage respecté même sur peu de tranches', count(Uptimer\Stats::pulse(3600, 6)), 6);
+check('découpage respecté même sur peu de tranches', count(Uptimeez\Stats::pulse(3600, 6)), 6);
 check('une tranche sans mesure est annoncée comme telle',
-    in_array('none', array_column(Uptimer\Stats::pulse(86400 * 30, 30), 'state'), true)
-      || count(Uptimer\Stats::pulse(86400 * 30, 30)) === 30, true);
+    in_array('none', array_column(Uptimeez\Stats::pulse(86400 * 30, 30), 'state'), true)
+      || count(Uptimeez\Stats::pulse(86400 * 30, 30)) === 30, true);
 
 // Le rendu : autant de rectangles que de tranches, chacun avec son explication.
-$svg = Uptimer\Ui::pulse($pulse);
+$svg = Uptimeez\Ui::pulse($pulse);
 check('un rectangle par tranche', substr_count($svg, '<rect'), 48);
 check('chaque rectangle porte son détail', substr_count($svg, '<title>'), 48);
 check('la bande est décrite pour un lecteur d\'écran', str_contains($svg, 'aria-label'), true);
 check('aucune tranche vide ne produit de rectangle sans classe',
     substr_count($svg, 'class="pl-'), 48);
-check('bande vide : rien de rendu', Uptimer\Ui::pulse([]), '');
+check('bande vide : rien de rendu', Uptimeez\Ui::pulse([]), '');
 
 // =========================================================================
 section('Vitesse ressentie : mesures et causes, jamais mélangées');
 // =========================================================================
-use Uptimer\Check\Vitals as VitalsCheck;
-use Uptimer\Vitals;
+use Uptimeez\Check\Vitals as VitalsCheck;
+use Uptimeez\Vitals;
 
 // --- Le TTFB est une mesure : les seuils officiels s'appliquent tels quels
 foreach ([[120, 'good'], [800, 'good'], [801, 'improve'], [1800, 'improve'],
           [1801, 'poor'], [9000, 'poor']] as [$ms, $want]) {
-    $r = new Uptimer\Response(); $r->ttfbMs = $ms;
+    $r = new Uptimeez\Response(); $r->ttfbMs = $ms;
     $v = VitalsCheck::analyse('https://x.fr/', '<html><body>x</body></html>', [], $r, ['head' => false]);
     check('TTFB ' . $ms . ' ms', $v['ttfb_verdict'], $want);
 }
-$r = new Uptimer\Response();   // aucune mesure disponible
+$r = new Uptimeez\Response();   // aucune mesure disponible
 $v = VitalsCheck::analyse('https://x.fr/', '<html><body>x</body></html>', [], $r, ['head' => false]);
 check('sans mesure de TTFB, aucun verdict inventé', $v['ttfb_verdict'], 'unknown');
 check('et aucune valeur affichée', $v['ttfb_ms'], null);
 // Un serveur qui répond en moins d'une milliseconde a bien été mesuré.
-$fast = new Uptimer\Response(); $fast->status = 200; $fast->ttfbMs = 0; $fast->totalMs = 1;
+$fast = new Uptimeez\Response(); $fast->status = 200; $fast->ttfbMs = 0; $fast->totalMs = 1;
 $vf = VitalsCheck::analyse('https://x.fr/', '<html><body>x</body></html>', [], $fast, ['head' => false]);
 check('0 ms est une mesure, pas une absence', $vf['ttfb_ms'], 0);
 check('et le verdict est bon', $vf['ttfb_verdict'], 'good');
@@ -1632,7 +1632,7 @@ $assets = ['assets' => [
     ['url' => 'https://x.fr/bloque.js', 'bytes' => 90000, 'ms' => 100],
     ['url' => 'https://x.fr/ok.js', 'bytes' => 40000, 'ms' => 60],
 ]];
-$rr = new Uptimer\Response(); $rr->ttfbMs = 200;
+$rr = new Uptimeez\Response(); $rr->ttfbMs = 200;
 $v = VitalsCheck::analyse('https://x.fr/', $html, $assets, $rr, ['head' => false]);
 check('media="print" ne bloque pas le rendu', $v['blocking']['css'], 2);
 check('defer et async ne bloquent pas', $v['blocking']['js'], 1);
@@ -1731,23 +1731,23 @@ check('réponse sans aucune métrique : rien de lu',
     Vitals::parse(jenc(['record' => ['metrics' => []]])), null);
 
 // --- Sans clé, rien n'est ni demandé ni affiché -------------------------
-Uptimer\Config::set('vitals.crux_key', '');
+Uptimeez\Config::set('vitals.crux_key', '');
 check('sans clé, la veille de terrain est inactive', Vitals::enabled(), false);
 check('sans clé, aucune interrogation n\'est lancée', Vitals::fetch('https://exemple.fr/'), null);
 check('sans clé, aucune passe d\'entretien', Vitals::refresh(5), ['checked' => 0, 'measured' => 0, 'poor' => 0]);
-Uptimer\Config::set('vitals.crux_key', 'cle-de-test');
+Uptimeez\Config::set('vitals.crux_key', 'cle-de-test');
 check('avec une clé, la veille devient active', Vitals::enabled(), true);
-Uptimer\Config::set('vitals.enabled', false);
+Uptimeez\Config::set('vitals.enabled', false);
 check('coupée dans les réglages, elle reste inactive malgré la clé', Vitals::enabled(), false);
-Uptimer\Config::set('vitals.enabled', true);
-Uptimer\Config::set('vitals.crux_key', '');
+Uptimeez\Config::set('vitals.enabled', true);
+Uptimeez\Config::set('vitals.crux_key', '');
 
 // --- Appareil de référence ---------------------------------------------
-Uptimer\Config::set('vitals.form_factor', 'DESKTOP');
+Uptimeez\Config::set('vitals.form_factor', 'DESKTOP');
 check('appareil de référence respecté', Vitals::formFactor(), 'DESKTOP');
-Uptimer\Config::set('vitals.form_factor', 'n\'importe quoi');
+Uptimeez\Config::set('vitals.form_factor', 'n\'importe quoi');
 check('appareil inconnu : téléphone par défaut', Vitals::formFactor(), 'PHONE');
-Uptimer\Config::set('vitals.form_factor', 'PHONE');
+Uptimeez\Config::set('vitals.form_factor', 'PHONE');
 
 // --- Mise en forme des valeurs -----------------------------------------
 check('un temps long s\'écrit en secondes', Vitals::format('lcp', 4820.0), '4,8 s');
@@ -1766,22 +1766,22 @@ check('libellé de métrique traduit', mb_strlen(Vitals::metricLabel('lcp')) > 5
 // =========================================================================
 section('Mode agence : cloisonnement et révocation');
 // =========================================================================
-use Uptimer\Client;
+use Uptimeez\Client;
 
 // Un client, deux clients, et des sites qui n'appartiennent qu'à l'un d'eux.
 $cA = Client::create('Agence Alpha', 'alpha@exemple.fr');
 $cB = Client::create('Agence Beta');
 check('deux clients distincts', $cA > 0 && $cB > 0 && $cA !== $cB, true);
-$rowA = Uptimer\Db::one('SELECT * FROM clients WHERE id = ?', [$cA]);
-$rowB = Uptimer\Db::one('SELECT * FROM clients WHERE id = ?', [$cB]);
+$rowA = Uptimeez\Db::one('SELECT * FROM clients WHERE id = ?', [$cA]);
+$rowB = Uptimeez\Db::one('SELECT * FROM clients WHERE id = ?', [$cB]);
 check('jeton en 32 hexadécimaux', (bool)preg_match('~^[0-9a-f]{32}$~', (string)$rowA['token']), true);
 check('deux jetons différents', $rowA['token'] !== $rowB['token'], true);
 check('nom vide remplacé, pas refusé',
-    trim((string)Uptimer\Db::val('SELECT name FROM clients WHERE id = ?', [Client::create('   ')])) !== '', true);
+    trim((string)Uptimeez\Db::val('SELECT name FROM clients WHERE id = ?', [Client::create('   ')])) !== '', true);
 
-$sA1 = Uptimer\Db::insert('sites', ['name' => 'Alpha un', 'domain' => 'a1.test', 'created_at' => now()]);
-$sA2 = Uptimer\Db::insert('sites', ['name' => 'Alpha deux', 'domain' => 'a2.test', 'created_at' => now()]);
-$sB1 = Uptimer\Db::insert('sites', ['name' => 'Beta un', 'domain' => 'b1.test', 'created_at' => now()]);
+$sA1 = Uptimeez\Db::insert('sites', ['name' => 'Alpha un', 'domain' => 'a1.test', 'created_at' => now()]);
+$sA2 = Uptimeez\Db::insert('sites', ['name' => 'Alpha deux', 'domain' => 'a2.test', 'created_at' => now()]);
+$sB1 = Uptimeez\Db::insert('sites', ['name' => 'Beta un', 'domain' => 'b1.test', 'created_at' => now()]);
 check('rattachement de deux sites', Client::setSites($cA, [$sA1, $sA2]), 2);
 Client::setSites($cB, [$sB1]);
 
@@ -1796,7 +1796,7 @@ check('les identifiants de sondes sont ceux du client', Client::monitorIds($cB),
 // --- Un site n'appartient qu'à un client ---------------------------------
 Client::setSites($cB, [$sB1, $sA1]);
 check('rattacher ailleurs déplace, sans dupliquer',
-    (int)Uptimer\Db::val('SELECT client_id FROM sites WHERE id = ?', [$sA1]), $cB);
+    (int)Uptimeez\Db::val('SELECT client_id FROM sites WHERE id = ?', [$sA1]), $cB);
 check('l\'ancien client ne le voit plus',
     in_array('Alpha un', array_column(Client::sites($cA), 'name'), true), false);
 Client::setSites($cB, [$sB1]);
@@ -1815,17 +1815,17 @@ check('changer le jeton coupe l\'ancien', Client::byToken($old), null);
 check('le nouveau jeton ouvre le même client', (int)(Client::byToken($new)['id'] ?? 0), $cA);
 check('changer le jeton ne détache aucun site', count(Client::sites($cA)), 2);
 
-Uptimer\Db::update('clients', ['enabled' => 0], 'id = :__i', ['__i' => $cA]);
+Uptimeez\Db::update('clients', ['enabled' => 0], 'id = :__i', ['__i' => $cA]);
 check('accès fermé : jeton valide mais refusé', Client::byToken($new), null);
-Uptimer\Db::update('clients', ['enabled' => 1], 'id = :__i', ['__i' => $cA]);
+Uptimeez\Db::update('clients', ['enabled' => 1], 'id = :__i', ['__i' => $cA]);
 check('accès réouvert avec le même jeton', (int)(Client::byToken($new)['id'] ?? 0), $cA);
 
 // --- Consultation ---------------------------------------------------------
 Client::touch($cA);
 Client::touch($cA);
-check('visites comptées', (int)Uptimer\Db::val('SELECT views FROM clients WHERE id = ?', [$cA]), 2);
+check('visites comptées', (int)Uptimeez\Db::val('SELECT views FROM clients WHERE id = ?', [$cA]), 2);
 check('dernière consultation datée',
-    Uptimer\Db::val('SELECT last_seen_at FROM clients WHERE id = ?', [$cA]) !== null, true);
+    Uptimeez\Db::val('SELECT last_seen_at FROM clients WHERE id = ?', [$cA]) !== null, true);
 
 // --- Synthèse ------------------------------------------------------------
 $ov = Client::overview($cA);
@@ -1835,24 +1835,24 @@ check('client sans site : synthèse vide, pas d\'erreur', Client::overview(99999
 
 // --- Suppression : réversible, sans perte -------------------------------
 Client::delete($cB);
-check('client supprimé', Uptimer\Db::one('SELECT id FROM clients WHERE id = ?', [$cB]), null);
+check('client supprimé', Uptimeez\Db::one('SELECT id FROM clients WHERE id = ?', [$cB]), null);
 check('son site existe toujours',
-    (string)Uptimer\Db::val('SELECT name FROM sites WHERE id = ?', [$sB1]), 'Beta un');
+    (string)Uptimeez\Db::val('SELECT name FROM sites WHERE id = ?', [$sB1]), 'Beta un');
 check('son site est simplement détaché',
-    Uptimer\Db::val('SELECT client_id FROM sites WHERE id = ?', [$sB1]), null);
+    Uptimeez\Db::val('SELECT client_id FROM sites WHERE id = ?', [$sB1]), null);
 
 // --- Reprise des groupes -------------------------------------------------
-Uptimer\Db::update('sites', ['group_name' => 'Mairie de Fréjus'], 'id = :__i', ['__i' => $sB1]);
+Uptimeez\Db::update('sites', ['group_name' => 'Mairie de Fréjus'], 'id = :__i', ['__i' => $sB1]);
 $fg = Client::fromGroups();
 check('un client créé depuis le groupe', $fg['created'], 1);
 check('le site du groupe est rattaché', $fg['linked'], 1);
 $fg2 = Client::fromGroups();
 check('deuxième passage : rien de plus', $fg2['created'] + $fg2['linked'], 0);
 check('aucun client en double',
-    (int)Uptimer\Db::val('SELECT COUNT(*) FROM clients WHERE name = ?', ['Mairie de Fréjus']), 1);
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM clients WHERE name = ?', ['Mairie de Fréjus']), 1);
 
 // --- Destinataires hérités ----------------------------------------------
-$siteA = Uptimer\Db::one('SELECT * FROM sites WHERE id = ?', [$sA1]);
+$siteA = Uptimeez\Db::one('SELECT * FROM sites WHERE id = ?', [$sA1]);
 check('adresse du client utilisée à défaut', Client::reportRecipients($siteA), 'alpha@exemple.fr');
 $siteA['report_to'] = 'propre@exemple.fr';
 check('adresse propre au site prioritaire',
@@ -1861,19 +1861,19 @@ check('site sans client : aucune adresse inventée',
     Client::reportRecipients(['report_to' => '', 'client_id' => null]), '');
 
 // --- L'URL de l'espace ---------------------------------------------------
-Uptimer\Config::set('app.base_url', 'https://suivi.agence.fr/');
-$url = Client::url(Uptimer\Db::one('SELECT * FROM clients WHERE id = ?', [$cA]));
+Uptimeez\Config::set('app.base_url', 'https://suivi.agence.fr/');
+$url = Client::url(Uptimeez\Db::one('SELECT * FROM clients WHERE id = ?', [$cA]));
 check('URL sans double barre oblique', substr_count($url, '//'), 1);
 check('URL portant le jeton', str_contains($url, $new), true);
 
 // Nettoyage : ces enregistrements ne doivent pas peser sur les tests suivants.
-foreach (Uptimer\Db::all('SELECT id FROM clients') as $c) Client::delete((int)$c['id']);
-Uptimer\Db::q('DELETE FROM sites WHERE domain IN (?, ?, ?)', ['a1.test', 'a2.test', 'b1.test']);
+foreach (Uptimeez\Db::all('SELECT id FROM clients') as $c) Client::delete((int)$c['id']);
+Uptimeez\Db::q('DELETE FROM sites WHERE domain IN (?, ?, ?)', ['a1.test', 'a2.test', 'b1.test']);
 
 // =========================================================================
 section('Silhouette : ce que le visiteur verrait');
 // =========================================================================
-use Uptimer\Check\Silhouette;
+use Uptimeez\Check\Silhouette;
 
 $pageHtml = '<!doctype html><html><head><title>T</title><style>.x{color:red}</style></head><body>'
     . '<header class="site-header"><nav class="nav-main"><a href="/">Accueil</a><a href="/c">Contact</a></nav></header>'
@@ -1966,9 +1966,9 @@ check('page énorme : analysée en moins de 500 ms', $ms < 500, true);
 check('SVG de taille raisonnable', strlen($r['svg']) < 40000, true);
 
 // --- La silhouette entre bien dans le résultat de l'audit ---------------
-$audit = Uptimer\Check\Css::audit('https://exemple.fr/', $pageHtml, null, [], ['silhouette' => true]);
+$audit = Uptimeez\Check\Css::audit('https://exemple.fr/', $pageHtml, null, [], ['silhouette' => true]);
 check('l\'audit CSS renvoie une silhouette', isset($audit['silhouette'], $audit['silhouette_sig']), true);
-$audit2 = Uptimer\Check\Css::audit('https://exemple.fr/', $pageHtml, null, [], ['silhouette' => false]);
+$audit2 = Uptimeez\Check\Css::audit('https://exemple.fr/', $pageHtml, null, [], ['silhouette' => false]);
 check('la silhouette peut être désactivée', isset($audit2['silhouette']), false);
 
 // =========================================================================
@@ -1980,10 +1980,10 @@ section('Serveur MCP : protocole et outils');
  * pourra s'y connecter.
  */
 $mcpAsk = function (array $messages, bool $write = false) : array {
-    $cmd = [PHP_BINARY, UPTIMER_ROOT . '/bin/mcp.php'];
+    $cmd = [PHP_BINARY, UPTIMEEZ_ROOT . '/bin/mcp.php'];
     if ($write) $cmd[] = '--write';
     $proc = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']],
-                      $pipes, UPTIMER_ROOT, ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+                      $pipes, UPTIMEEZ_ROOT, ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
     if (!is_resource($proc)) return [];
     foreach ($messages as $m) fwrite($pipes[0], json_encode($m) . "\n");
     fclose($pipes[0]);
@@ -2004,7 +2004,7 @@ $hello = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize',
 // --- Poignée de main -----------------------------------------------------
 $r = $mcpAsk([$hello]);
 check('MCP répond à initialize', isset($r[0]['result']['serverInfo']['name']), true);
-check('MCP s\'annonce sous son nom', $r[0]['result']['serverInfo']['name'] ?? '', 'uptimer');
+check('MCP s\'annonce sous son nom', $r[0]['result']['serverInfo']['name'] ?? '', 'uptimeez');
 check('MCP annonce une version de protocole',
     (bool)preg_match('~^\d{4}-\d{2}-\d{2}$~', (string)($r[0]['result']['protocolVersion'] ?? '')), true);
 check('MCP déclare la capacité outils', isset($r[0]['result']['capabilities']['tools']), true);
@@ -2070,16 +2070,16 @@ check('outil inconnu : erreur JSON-RPC', isset($r[1]['error']['code']), true);
 $r = $mcpAsk([$hello, ['jsonrpc' => '2.0', 'id' => 4, 'method' => 'methode/inconnue']]);
 check('méthode inconnue : erreur JSON-RPC', ($r[1]['error']['code'] ?? 0), -32601);
 // Une ligne illisible ne doit pas interrompre la conversation.
-$proc = proc_open([PHP_BINARY, UPTIMER_ROOT . '/bin/mcp.php'],
+$proc = proc_open([PHP_BINARY, UPTIMEEZ_ROOT . '/bin/mcp.php'],
                   [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']],
-                  $pipes, UPTIMER_ROOT, ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+                  $pipes, UPTIMEEZ_ROOT, ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
 fwrite($pipes[0], "ceci n'est pas du JSON\n");
 fwrite($pipes[0], json_encode($hello) . "\n");
 fclose($pipes[0]);
 $out = (string)stream_get_contents($pipes[1]);
 fclose($pipes[1]); proc_close($proc);
 check('ligne illisible : le serveur survit et répond ensuite',
-    str_contains($out, '-32700') && str_contains($out, 'uptimer'), true);
+    str_contains($out, '-32700') && str_contains($out, 'uptimeez'), true);
 
 echo "\n" . str_repeat('─', 68) . "\n";
 printf("%d test(s) réussi(s), %d échec(s)\n", $pass, $fail);

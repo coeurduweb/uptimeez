@@ -68,7 +68,7 @@ mise en page a dérivé.
 Le courrier est composé pour des clients de messagerie et non pour un navigateur :
 tableaux et styles en ligne, aucune feuille externe, aucune image distante, aucun SVG.
 La comparaison visuelle d'une mise en page cassée reste sur le rapport en ligne, vers
-lequel le courrier renvoie quand une page d'état publique est activée. Uptimer ne met
+lequel le courrier renvoie quand une page d'état publique est activée. Uptimeez ne met
 jamais dans la boîte d'un client un lien qui demande le mot de passe de l'agence.
 
 Forcer un envoi à la main :
@@ -84,7 +84,7 @@ php cron.php --report      # envoie tous les rapports dus, tout de suite
 **Réglages → Jeton de la page d'état publique.** Renseignez une chaîne aléatoire ; la page devient accessible à :
 
 ```
-https://votredomaine.fr/uptimer/index.php?p=status&token=VOTRE_JETON
+https://votredomaine.fr/uptimeez/index.php?p=status&token=VOTRE_JETON
 ```
 
 Aucune session, aucun mot de passe, aucun accès au reste. Vous donnez ce lien à un client pour qu'il voie ses sites
@@ -132,7 +132,7 @@ Vérifications en échec : 8
 24 heures : 97,58 % (35 min hors service)
 Temps de réponse moyen : 334 ms · p95 512 ms
 
-Rapport produit par Uptimer
+Rapport produit par Uptimeez
 ```
 
 Aucun HTML, aucun balisage à nettoyer. Ça part dans un ticket, un e-mail ou un message Slack tel quel : avec la

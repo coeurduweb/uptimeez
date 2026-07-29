@@ -5,10 +5,10 @@
  * Un écran, une idée : à qui appartient quoi, et quel lien envoyer. Tout le
  * reste (états, incidents, rapports) vit déjà ailleurs et n'est pas redit ici.
  */
-use Uptimer\Auth;
-use Uptimer\Client;
-use Uptimer\Db;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Client;
+use Uptimeez\Db;
+use Uptimeez\Ui;
 
 $csrf    = Auth::csrf();
 $clients = Client::all();

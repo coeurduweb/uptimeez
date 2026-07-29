@@ -14,7 +14,7 @@ n'a à voir les vingt-neuf autres.
 Les outils du marché répondent à ça par des comptes utilisateurs, des rôles et des permissions : trois écrans de
 configuration, un mot de passe à transmettre par client, et un « j'ai perdu mon mot de passe » un dimanche soir.
 
-Uptimer répond autrement. Vous créez un client, vous cochez ses sites, vous copiez son lien. C'est fini.
+Uptimeez répond autrement. Vous créez un client, vous cochez ses sites, vous copiez son lien. C'est fini.
 
 ![Écran des clients](../img/clients.png)
 
@@ -87,7 +87,7 @@ est, un client du même nom est réutilisé plutôt que dupliqué, et repasser l
 ### Envoyer le lien
 
 Le champ *Lien à envoyer au client* se sélectionne d'un clic. Renseignez d'abord **Réglages → Adresse de cette
-installation**, sinon le lien commencera par `https://votre-adresse-uptimer`.
+installation**, sinon le lien commencera par `https://votre-adresse-uptimeez`.
 
 ---
 
@@ -141,7 +141,7 @@ recréer un client prend dix secondes.
 faux, il a été changé, ou l'accès est fermé. Vérifiez la case *Accès ouvert* et recopiez le lien depuis l'écran
 Clients.
 
-**Le lien commence par `https://votre-adresse-uptimer`.** L'adresse de l'installation n'est pas renseignée :
+**Le lien commence par `https://votre-adresse-uptimeez`.** L'adresse de l'installation n'est pas renseignée :
 **Réglages → Application et accès → Adresse de cette installation**.
 
 **Le client dit qu'il voit un site qui n'est pas à lui.** Cela n'est pas possible par construction, mais c'est un

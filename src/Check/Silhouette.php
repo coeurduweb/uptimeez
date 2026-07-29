@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Check;
+namespace Uptimeez\Check;
 
 /**
  * Silhouette d'une page : ce qu'un visiteur verrait, reconstruit sans navigateur.
  *
- * Le problème que ça résout. Uptimer sait déjà dire « la feuille de style est en
+ * Le problème que ça résout. Uptimeez sait déjà dire « la feuille de style est en
  * 404 ». Mais un client ne discute pas un chiffre, il discute une image. Il faut
  * donc montrer la page telle qu'elle est devenue, à côté de ce qu'elle était.
  *

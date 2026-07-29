@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
-use Uptimer\Detect\Stack;
+use Uptimeez\Detect\Stack;
 
 /**
  * Veille de sécurité sur les versions détectées.

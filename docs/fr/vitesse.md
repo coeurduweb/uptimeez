@@ -1,6 +1,6 @@
 # Vitesse ressentie par les visiteurs
 
-**Uptimer ne devine pas vos Core Web Vitals. Il mesure ce qu'il peut mesurer, il lit dans vos pages ce qui les
+**Uptimeez ne devine pas vos Core Web Vitals. Il mesure ce qu'il peut mesurer, il lit dans vos pages ce qui les
 dégrade, et il dit lequel des deux il vous montre.**
 
 [← Documentation](README.md) · [English version](../en/speed.md)
@@ -13,7 +13,7 @@ Les trois mesures officielles de Google (LCP, INP, CLS) viennent de vrais naviga
 visiteurs. Il n'existe aucun calcul honnête qui les remplace sans navigateur. Un outil en PHP qui afficherait
 « LCP : 2,1 s » sans avoir lancé Chrome inventerait un chiffre, et vous le croiriez.
 
-Uptimer fait donc deux choses distinctes, avec deux vocabulaires distincts :
+Uptimeez fait donc deux choses distinctes, avec deux vocabulaires distincts :
 
 | Ce que c'est | Ce que ça vaut | Clé nécessaire |
 |---|---|---|
@@ -31,14 +31,14 @@ causes probables, rien ici n'est une mesure de navigateur ».
 
 ### Le temps de réponse du serveur
 
-Mesuré par Uptimer à chaque vérification, en millisecondes, sur le vrai réseau. C'est une mesure, pas une
+Mesuré par Uptimeez à chaque vérification, en millisecondes, sur le vrai réseau. C'est une mesure, pas une
 estimation, et c'est le plancher de tout le reste : **le LCP ne sera jamais meilleur que le temps de réponse du
 serveur.** Le seuil visé est 800 ms, au-delà de 1,8 s c'est mauvais.
 
 ### Ce qui bloque le premier affichage
 
 L'audit des ressources télécharge déjà chaque feuille de style et chaque script de la page, avec leur poids exact.
-Uptimer en déduit ce qui bloque réellement le rendu :
+Uptimeez en déduit ce qui bloque réellement le rendu :
 
 - une feuille de style dans l'en-tête bloque le rendu, par construction ;
 - une feuille en `media="print"` ne le bloque pas, et n'est donc pas comptée ;
@@ -49,7 +49,7 @@ Le poids est compté par nature : « trois feuilles de style pèsent 203 Ko » n
 
 ### L'image du haut de page
 
-C'est presque toujours elle que le LCP mesure. Uptimer identifie la première image du corps qui n'est ni une
+C'est presque toujours elle que le LCP mesure. Uptimeez identifie la première image du corps qui n'est ni une
 icône, ni un logo, ni un pixel de suivi, puis fait **une seule requête HEAD** dessus pour connaître son poids
 réel, qui ne se lit nulle part dans le HTML.
 
@@ -102,7 +102,7 @@ une page dont la mise en page saute dans tous les sens n'est pas « globalement 
 
 ### Quand il n'y a pas de données
 
-Le Chrome UX Report exige un échantillon suffisant. Une page peu visitée n'y figure pas. Dans ce cas, Uptimer
+Le Chrome UX Report exige un échantillon suffisant. Une page peu visitée n'y figure pas. Dans ce cas, Uptimeez
 interroge l'origine du site et vous le dit explicitement : « cette page n'a pas assez de trafic pour être mesurée
 seule, les chiffres portent sur l'ensemble du site ». Si l'origine non plus n'a pas de données, aucun chiffre n'est
 affiché. C'est une réponse, pas un échec.
@@ -163,12 +163,12 @@ Voir [Serveur MCP](mcp.md).
 ## Ce que cette fonction ne fait pas
 
 - **Elle ne lance pas de navigateur.** Pas de Chrome sans tête, pas de Lighthouse, pas de Node. C'est ce qui
-  permet à Uptimer de tourner sur un hébergement mutualisé, et c'est aussi ce qui limite ce qu'il peut mesurer.
+  permet à Uptimeez de tourner sur un hébergement mutualisé, et c'est aussi ce qui limite ce qu'il peut mesurer.
   Le choix est assumé.
 - **Elle ne remplace pas PageSpeed Insights.** Pour auditer une page en profondeur avant une refonte, lancez
-  Lighthouse. Uptimer surveille en continu et vous prévient quand ça se dégrade, ce que Lighthouse ne fait pas.
+  Lighthouse. Uptimeez surveille en continu et vous prévient quand ça se dégrade, ce que Lighthouse ne fait pas.
 - **Elle ne devine pas l'élément LCP exact.** Sans navigateur, on ne sait pas quel élément occupe le plus de
-  place à l'écran. Uptimer prend la première grande image du haut de page, ce qui est la bonne réponse dans la
+  place à l'écran. Uptimeez prend la première grande image du haut de page, ce qui est la bonne réponse dans la
   très grande majorité des pages, et il écrit « très probablement » plutôt que « c'est ».
 
 ---
@@ -184,7 +184,7 @@ n'est pas activée sur le projet Google Cloud, ou la page et son origine n'ont p
 « mesuré » n'apparaît que quand une réponse a été obtenue, donc son absence est une information.
 
 **Le poids de l'image du haut de page reste vide.** Le serveur ne renvoie pas d'en-tête `Content-Length` sur cette
-image, ou la requête HEAD est refusée. Uptimer n'invente pas le poids dans ce cas.
+image, ou la requête HEAD est refusée. Uptimeez n'invente pas le poids dans ce cas.
 
 ---
 

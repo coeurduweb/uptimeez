@@ -1,9 +1,9 @@
-/* Uptimer : interactions. Aucune dépendance, aucun appel externe.
+/* Uptimeez : interactions. Aucune dépendance, aucun appel externe.
    Tout fonctionne sans JavaScript ; le script ne fait qu'éviter des rechargements. */
 (function () {
   'use strict';
 
-  var V = window.UPTIMER || {};
+  var V = window.UPTIMEEZ || {};
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var isTyping = function () {
@@ -48,13 +48,13 @@
     toggle.addEventListener('click', function () {
       var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
-      try { localStorage.setItem('uptimer-theme', next); } catch (e) {}
+      try { localStorage.setItem('uptimeez-theme', next); } catch (e) {}
     });
   }
 
   // ---------- Accordéons : on retient ce que l'utilisateur a ouvert ----------
   $$('details[data-acc]').forEach(function (d) {
-    var key = 'uptimer-acc-' + V.view + '-' + d.dataset.acc;
+    var key = 'uptimeez-acc-' + V.view + '-' + d.dataset.acc;
     try {
       var saved = localStorage.getItem(key);
       if (saved === '1') d.open = true;
@@ -212,11 +212,11 @@
     }
     if (timer) clearInterval(timer);
     if (on) timer = setInterval(function () { if (!document.hidden) refresh(); }, 30000);
-    try { localStorage.setItem('uptimer-auto', on ? '1' : '0'); } catch (e) {}
+    try { localStorage.setItem('uptimeez-auto', on ? '1' : '0'); } catch (e) {}
   }
   if (auto) {
     var pref = '1';
-    try { pref = localStorage.getItem('uptimer-auto') || '1'; } catch (e) {}
+    try { pref = localStorage.getItem('uptimeez-auto') || '1'; } catch (e) {}
     setAuto(pref !== '0');
     auto.addEventListener('click', function () { setAuto(!autoOn); if (autoOn) refresh(); });
   }
@@ -325,7 +325,7 @@
     });
     updateSel();
   }
-  window.UptimerConfirmBulk = function (form) {
+  window.UptimeezConfirmBulk = function (form) {
     var n = $$('.row-check:checked').length;
     if (!n) { toast('Cochez au moins une sonde', 'warn'); return false; }
     if (form.bulk_action.value === 'delete') {
@@ -361,7 +361,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  var V = window.UPTIMER || {};
+  var V = window.UPTIMEEZ || {};
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var isTyping = function () {

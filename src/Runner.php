@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
-use Uptimer\Check\Css;
-use Uptimer\Check\Database;
-use Uptimer\Check\DomainExpiry;
-use Uptimer\Check\Silhouette;
-use Uptimer\Check\Ssl;
-use Uptimer\Check\Vitals;
-use Uptimer\Detect\Discovery;
-use Uptimer\Notify\Notifier;
-use Uptimer\Vuln;
+use Uptimeez\Check\Css;
+use Uptimeez\Check\Database;
+use Uptimeez\Check\DomainExpiry;
+use Uptimeez\Check\Silhouette;
+use Uptimeez\Check\Ssl;
+use Uptimeez\Check\Vitals;
+use Uptimeez\Detect\Discovery;
+use Uptimeez\Notify\Notifier;
+use Uptimeez\Vuln;
 
 /**
  * Orchestration d'une passe de surveillance.

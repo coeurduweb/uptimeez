@@ -6,8 +6,8 @@
  * visible et une explication en clair : jamais de réglage sans mode d'emploi.
  * Attend $mon (tableau, éventuellement vide pour une création).
  */
-use Uptimer\Config;
-use Uptimer\Ui;
+use Uptimeez\Config;
+use Uptimeez\Ui;
 
 $mon = $mon ?? [];
 $v = function (string $k, $def = '') use ($mon) {

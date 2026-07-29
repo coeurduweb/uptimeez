@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : traduction de l'interface.
+ * Uptimeez : traduction de l'interface.
  *
  * Choix d'architecture : la clé de traduction est la phrase française du code
  * source (msgid), comme le fait gettext. Deux avantages concrets :
@@ -12,7 +12,7 @@
  */
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 final class I18n
 {
@@ -48,7 +48,7 @@ final class I18n
      * phrases écrivent « {app} », substitué ici. Un renommage du produit ne
      * périme donc aucun catalogue : la leçon de deux renommages successifs.
      */
-    public const APP = 'Uptimer';
+    public const APP = 'Uptimeez';
 
     /** Le français est la langue des msgid : son catalogue est l'identité. */
     public const SOURCE = 'fr';
@@ -216,8 +216,8 @@ final class I18n
             self::remember($l);
             return $l;
         }
-        if (!empty($_SESSION['uptimer_lang'])) return self::normalize((string)$_SESSION['uptimer_lang']);
-        if (!empty($_COOKIE['uptimer_lang']))  return self::normalize((string)$_COOKIE['uptimer_lang']);
+        if (!empty($_SESSION['uptimeez_lang'])) return self::normalize((string)$_SESSION['uptimeez_lang']);
+        if (!empty($_COOKIE['uptimeez_lang']))  return self::normalize((string)$_COOKIE['uptimeez_lang']);
 
         $configured = (string)Config::get('app.locale', '');
         if ($configured !== '' && $configured !== 'auto') return self::normalize($configured);
@@ -250,21 +250,21 @@ final class I18n
     public static function remember(string $lang): void
     {
         $lang = self::normalize($lang);
-        if (session_status() === PHP_SESSION_ACTIVE) $_SESSION['uptimer_lang'] = $lang;
+        if (session_status() === PHP_SESSION_ACTIVE) $_SESSION['uptimeez_lang'] = $lang;
         if (PHP_SAPI !== 'cli' && !headers_sent()) {
-            setcookie('uptimer_lang', $lang, [
+            setcookie('uptimeez_lang', $lang, [
                 'expires'  => time() + 86400 * 365,
                 'path'     => '/',
                 'httponly' => false,
                 'samesite' => 'Lax',
             ]);
         }
-        $_COOKIE['uptimer_lang'] = $lang;
+        $_COOKIE['uptimeez_lang'] = $lang;
     }
 
     private static function load(string $lang): array
     {
-        $file = \UPTIMER_ROOT . '/lang/' . $lang . '.php';
+        $file = \UPTIMEEZ_ROOT . '/lang/' . $lang . '.php';
         if (!is_file($file)) return [];
         $cat = require $file;
         return is_array($cat) ? $cat : [];

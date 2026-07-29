@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Notify;
+namespace Uptimeez\Notify;
 
-use Uptimer\Config;
-use Uptimer\Http;
+use Uptimeez\Config;
+use Uptimeez\Http;
 
 final class Slack
 {

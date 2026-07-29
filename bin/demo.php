@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : jeu de démonstration.
+ * Uptimeez : jeu de démonstration.
  *
  * Monte un parc d'agence fictif (9 sites, 30 jours d'historique) sur un faux
  * site local, pour visiter l'interface avant de brancher de vrais domaines.
@@ -13,10 +13,10 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Runner;
-use Uptimer\Stats;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Runner;
+use Uptimeez\Stats;
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
@@ -26,7 +26,7 @@ $marker = $root . '/data/.demo';
 
 if ($purge) {
     if (!is_file($marker)) exit("Aucune démonstration installée.\n");
-    foreach (['/config.php', '/data/uptimer.sqlite', '/data/uptimer.sqlite-wal', '/data/uptimer.sqlite-shm', '/data/.demo'] as $f) {
+    foreach (['/config.php', '/data/uptimeez.sqlite', '/data/uptimeez.sqlite-wal', '/data/uptimeez.sqlite-shm', '/data/.demo'] as $f) {
         @unlink($root . $f);
     }
     foreach (glob($root . '/data/demo-site/*') ?: [] as $f) @unlink($f);
@@ -35,7 +35,7 @@ if ($purge) {
 }
 
 if (is_file($root . '/config.php') && !is_file($marker)) {
-    exit("Uptimer est déjà installé pour de vrai : la démonstration écraserait votre configuration.\n"
+    exit("Uptimeez est déjà installé pour de vrai : la démonstration écraserait votre configuration.\n"
        . "Supprimez config.php si vous voulez malgré tout repartir de la démo.\n");
 }
 
@@ -129,13 +129,13 @@ echo "Faux site généré dans data/demo-site.\n";
 echo "Pour que les sondes interrogent réellement quelque chose, laissez tourner\n";
 echo "dans un autre terminal :\n";
 echo "   php -S 127.0.0.1:$port -t " . $fixtures . " " . $fixtures . "/router.php\n\n";
-@unlink($root . '/data/uptimer.sqlite');
-@unlink($root . '/data/uptimer.sqlite-wal');
-@unlink($root . '/data/uptimer.sqlite-shm');
+@unlink($root . '/data/uptimeez.sqlite');
+@unlink($root . '/data/uptimeez.sqlite-wal');
+@unlink($root . '/data/uptimeez.sqlite-shm');
 Config::save([
-    'db'   => ['driver' => 'sqlite', 'sqlite' => $root . '/data/uptimer.sqlite'],
+    'db'   => ['driver' => 'sqlite', 'sqlite' => $root . '/data/uptimeez.sqlite'],
     'auth' => ['password_hash' => password_hash('demo1234', PASSWORD_DEFAULT)],
-    'app'  => ['name' => 'Uptimer', 'demo' => true, 'base_url' => '', 'cron_key' => bin2hex(random_bytes(12)),
+    'app'  => ['name' => 'Uptimeez', 'demo' => true, 'base_url' => '', 'cron_key' => bin2hex(random_bytes(12)),
                'public_token' => 'demo', 'timezone' => 'Europe/Paris'],
     'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                  'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => '']],
@@ -300,11 +300,11 @@ if ($probe) {
         . '.card{background:#fff;border-radius:14px;padding:18px}'
         . '.btn{background:#3b5bdb;border-radius:8px;padding:12px 22px}'
         . '.footer-main{background:#f1f5f9;padding:28px;text-align:center}';
-    $sOk = Uptimer\Check\Silhouette::build($demoHtml, $demoCss);
-    $sKo = Uptimer\Check\Silhouette::build($demoHtml, '');
+    $sOk = Uptimeez\Check\Silhouette::build($demoHtml, $demoCss);
+    $sKo = Uptimeez\Check\Silhouette::build($demoHtml, '');
     $silRef = $sOk['svg']; $silRefSig = $sOk['signature'];
     $silKo  = $sKo['svg'];  $silKoSig  = $sKo['signature'];
-    $silDrift = (int)round(Uptimer\Check\Silhouette::distance($silRefSig, $silKoSig) * 100);
+    $silDrift = (int)round(Uptimeez\Check\Silhouette::distance($silRefSig, $silKoSig) * 100);
 
     // Rapport de ressources réaliste, pour que l'accordéon « Ressources de la
     // page » montre à quoi ressemble un vrai diagnostic.
@@ -355,6 +355,57 @@ if ($probe) {
                     'css_bytes' => 135782, 'rules' => 1487, 'media_queries' => 14, 'layout_score' => 88,
                     'coverage' => 0.96, 'inline_bytes' => 2140, 'fingerprint' => [], 'built_at' => now()]);
 
+    /**
+     * Mesures de vitesse ressentie, à la forme exacte de ce que Vitals::analyse
+     * produit. Sans elles, le bloc « Vitesse ressentie » n'apparaissait pas sur
+     * une démo fraîche : une fonction du produit restait invisible, et la suite
+     * navigateur dépendait d'une passe de cron pour passer.
+     */
+    $vitalsFor = function (string $name, string $st, ?string $reason): array {
+        // La sonde lente porte le cas intéressant : mauvais TTFB, fichiers
+        // bloquants, image de haut de page trop lourde et en chargement différé.
+        $slow = $reason === 'SLOW';
+        $ttfb = $slow ? random_int(1800, 2400) : random_int(120, 620);
+        $level = $slow ? 'bad' : ($ttfb > 500 ? 'watch' : 'ok');
+        $findings = [];
+        if ($slow) {
+            $findings = [
+                ['id' => 'ttfb', 'level' => 'high',
+                 'label' => 'Le serveur met plus de 1,5 s à répondre'],
+                ['id' => 'lcp_lazy', 'level' => 'high',
+                 'label' => 'L\'image du haut de page est en chargement différé'],
+                ['id' => 'blocking_css', 'level' => 'medium',
+                 'label' => 'Trois feuilles de style bloquent le premier affichage'],
+            ];
+        } elseif ($level === 'watch') {
+            $findings = [['id' => 'blocking_js', 'level' => 'medium',
+                          'label' => 'Un script bloque le premier affichage']];
+        }
+        return [
+            'vitals_level' => $level,
+            'vitals_at'    => date('Y-m-d H:i:s', time() - random_int(120, 3000)),
+            'vitals_detail' => jenc([
+                'ttfb_ms'      => $ttfb,
+                'ttfb_verdict' => $ttfb > 1500 ? 'bad' : ($ttfb > 800 ? 'watch' : 'good'),
+                'blocking' => [
+                    'css'   => $slow ? 3 : 1,
+                    'js'    => $slow ? 5 : 0,
+                    'bytes' => $slow ? 412_880 : 28_714,
+                    'items' => $slow
+                        ? [['url' => '/wp-content/themes/demo/style.css', 'kind' => 'css', 'bytes' => 135_782],
+                           ['url' => '/wp-content/plugins/slider/slider.css', 'kind' => 'css', 'bytes' => 92_410],
+                           ['url' => '/wp-content/plugins/slider/slider.js', 'kind' => 'js', 'bytes' => 184_688]]
+                        : [['url' => '/assets/app.css', 'kind' => 'css', 'bytes' => 28_714]],
+                ],
+                'lcp_image' => $slow
+                    ? ['url' => '/wp-content/uploads/2026/05/hero-4000x2200.jpg',
+                       'bytes' => 1_284_112, 'lazy' => true]
+                    : null,
+                'findings' => $findings,
+            ]),
+        ];
+    };
+
     foreach (Db::all('SELECT id, name FROM monitors') as $m) {
         [$st, $reason, $msg] = $states[$m['name']] ?? ['up', null, 'Tout va bien'];
         Db::update('monitors', [
@@ -364,18 +415,18 @@ if ($probe) {
             'last_status_code' => $st === 'down' && $reason === 'HTTP_5XX' ? 500 : 200,
             'last_ms' => $st === 'degraded' && $reason === 'SLOW' ? random_int(2600, 3200) : random_int(180, 900),
             'silhouette_ref'     => $silRef,
-        'silhouette_ref_sig' => jenc($silRefSig),
-        'silhouette_ref_at'  => date('Y-m-d H:i:s', time() - 9 * 86400),
-        'silhouette_now'     => $reason === 'CSS_BROKEN' ? $silKo : $silRef,
-        'silhouette_now_sig' => jenc($reason === 'CSS_BROKEN' ? $silKoSig : $silRefSig),
-        'silhouette_at'      => date('Y-m-d H:i:s', time() - 120),
-        'silhouette_drift'   => $reason === 'CSS_BROKEN' ? $silDrift : 0,
-        'css_state' => $reason === 'CSS_BROKEN' ? 'broken' : 'ok',
+            'silhouette_ref_sig' => jenc($silRefSig),
+            'silhouette_ref_at'  => date('Y-m-d H:i:s', time() - 9 * 86400),
+            'silhouette_now'     => $reason === 'CSS_BROKEN' ? $silKo : $silRef,
+            'silhouette_now_sig' => jenc($reason === 'CSS_BROKEN' ? $silKoSig : $silRefSig),
+            'silhouette_at'      => date('Y-m-d H:i:s', time() - 120),
+            'silhouette_drift'   => $reason === 'CSS_BROKEN' ? $silDrift : 0,
+            'css_state' => $reason === 'CSS_BROKEN' ? 'broken' : 'ok',
             'css_checked_at' => now(),
             'css_detail' => $reason === 'CSS_BROKEN' ? $cssBroken : null,
             'css_baseline' => $reason === 'CSS_BROKEN' ? $cssRef : null,
             'css_baseline_at' => $reason === 'CSS_BROKEN' ? date('Y-m-d H:i:s', time() - 9 * 86400) : null,
-        ], 'id = :__i', ['__i' => (int)$m['id']]);
+        ] + $vitalsFor($m['name'], $st, $reason), 'id = :__i', ['__i' => (int)$m['id']]);
         if ($st === 'down') {
             Db::insert('incidents', ['monitor_id' => (int)$m['id'], 'severity' => 'down',
                 'reason_code' => $reason, 'message' => $msg,
@@ -436,9 +487,9 @@ foreach (Db::all('SELECT id, name, cms FROM sites') as $st) {
             'kind' => $kind, 'slug' => $slug, 'name' => $name, 'version' => $ver,
             'source' => $kind === 'core' ? 'generator' : 'asset',
             'latest' => $latest,
-            'outdated' => Uptimer\Detect\Stack::compare($ver, $latest) < 0 ? 1 : 0,
+            'outdated' => Uptimeez\Detect\Stack::compare($ver, $latest) < 0 ? 1 : 0,
             'vuln_count' => count($adv),
-            'worst' => $adv ? Uptimer\Vuln::worstSeverity($adv) : null,
+            'worst' => $adv ? Uptimeez\Vuln::worstSeverity($adv) : null,
             'advisories' => $adv ? jenc($adv) : null,
             'checked_at' => date('Y-m-d H:i:s', time() - random_int(1, 20) * 3600),
             'first_seen_at' => date('Y-m-d H:i:s', time() - 30 * 86400),
@@ -452,10 +503,10 @@ echo 'inventaire : ' . Db::val('SELECT COUNT(*) FROM components') . " composant(
 // --- Clients de l'agence --------------------------------------------------
 // Les groupes saisis plus haut font déjà le classement : on montre la reprise
 // automatique plutôt que de saisir une deuxième fois la même chose.
-$cl = Uptimer\Client::fromGroups();
+$cl = Uptimeez\Client::fromGroups();
 foreach (Db::all('SELECT id, name FROM clients') as $c) {
     Db::update('clients', [
-        'contact_email' => 'contact@' . Uptimer\Detect\Stack::slug((string)$c['name']) . '.exemple.fr',
+        'contact_email' => 'contact@' . Uptimeez\Detect\Stack::slug((string)$c['name']) . '.exemple.fr',
         // Un client consulte son lien de temps en temps : sans cette trace, la
         // colonne « lien consulté » de la démonstration serait toujours vide.
         'last_seen_at'  => date('Y-m-d H:i:s', time() - random_int(2, 96) * 3600),

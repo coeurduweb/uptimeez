@@ -1,12 +1,12 @@
 <?php
 /**
- * Uptimer : passe de surveillance. À exécuter chaque minute :
- *   * * * * * /usr/bin/php /home/user/uptimer/cron.php >/dev/null 2>&1
+ * Uptimeez : passe de surveillance. À exécuter chaque minute :
+ *   * * * * * /usr/bin/php /home/user/uptimeez/cron.php >/dev/null 2>&1
  *
  * Ou par URL si crontab n'est pas accessible (clé à définir dans les réglages) :
- *   https://exemple.fr/uptimer/cron.php?key=VOTRECLE
+ *   https://exemple.fr/uptimeez/cron.php?key=VOTRECLE
  *
- * Uptimer choisit elle-même les sondes dues : une exécution par minute suffit
+ * Uptimeez choisit elle-même les sondes dues : une exécution par minute suffit
  * quels que soient les intervalles configurés.
  */
 declare(strict_types=1);
@@ -17,18 +17,18 @@ require __DIR__ . '/src/bootstrap.php';
 // langue de l'installation (réglage « Langue »), pas dans celle d'un visiteur
 // qui n'existe pas ici. Les verdicts, eux, sont stockés en phrase source et
 // traduits à l'affichage : voir verdict_text().
-Uptimer\I18n::init();
+Uptimeez\I18n::init();
 
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Importer;
-use Uptimer\Runner;
-use Uptimer\Stats;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Importer;
+use Uptimeez\Runner;
+use Uptimeez\Stats;
 
 $isCli = PHP_SAPI === 'cli';
 // La passe rend du texte : une erreur fatale doit rester lisible dans le mail
 // que le planificateur envoie.
-Uptimer\Fail::asText();
+Uptimeez\Fail::asText();
 
 if (!$isCli) {
     header('Content-Type: text/plain; charset=utf-8');
@@ -38,7 +38,7 @@ if (!$isCli) {
         exit("Accès refusé. Définissez une clé de cron dans les réglages, puis appelez cron.php?key=...\n");
     }
     // La clé de cron est un secret d'exploitation : le détail technique peut sortir.
-    Uptimer\Fail::trusted();
+    Uptimeez\Fail::trusted();
     ignore_user_abort(true);
     // La sortie est mise en tampon pour pouvoir répondre 500 sur échec : sinon
     // le premier octet écrit fige le code à 200 et la supervision de la
@@ -48,7 +48,7 @@ if (!$isCli) {
 }
 
 if (!Config::isInstalled()) {
-    exit("Uptimer n'est pas installé : ouvrez install.php dans votre navigateur.\n");
+    exit("Uptimeez n'est pas installé : ouvrez install.php dans votre navigateur.\n");
 }
 
 $t0   = microtime(true);
@@ -87,7 +87,7 @@ foreach ($args as $a) {
 }
 
 // --- Verrou : jamais deux passes en parallèle -----------------------------
-$lockFile = UPTIMER_ROOT . '/data/cron.lock';
+$lockFile = UPTIMEEZ_ROOT . '/data/cron.lock';
 if (!is_dir(dirname($lockFile))) @mkdir(dirname($lockFile), 0775, true);
 $lock = @fopen($lockFile, 'c');
 if ($lock === false) {
@@ -144,7 +144,7 @@ try {
 
     // --- 2 bis. Sondes battement : c'est l'absence de signal qui alerte -----
     if ($doWatch) {
-        $hb = Uptimer\Heartbeat::sweep();
+        $hb = Uptimeez\Heartbeat::sweep();
         if ($hb) $out('  ' . $hb . ' sonde(s) battement sans signal');
     }
 
@@ -157,15 +157,15 @@ try {
 
     // --- 3 bis. Veille de sécurité forcée (php cron.php --vuln) ----------
     if ($flag('--vuln')) {
-        $vs = Uptimer\Vuln::scan(60);
+        $vs = Uptimeez\Vuln::scan(60);
         $out(sprintf('  veille : %d composant(s) vérifié(s), %d avec faille publiée, %d en retard',
             $vs['checked'], $vs['vulnerable'], $vs['outdated']));
     }
 
     // --- 3 quater. Mesures de terrain forcées (php cron.php --vitals) ----
     if ($flag('--vitals')) {
-        $vt = Uptimer\Vitals::refresh(60);
-        $out(Uptimer\Vitals::enabled()
+        $vt = Uptimeez\Vitals::refresh(60);
+        $out(Uptimeez\Vitals::enabled()
             ? sprintf('  vitesse : %d page(s) interrogée(s), %d mesurée(s), %d en échec',
                       $vt['checked'], $vt['measured'], $vt['poor'])
             : '  vitesse : aucune clé CrUX configurée, mesures de terrain désactivées');
@@ -173,7 +173,7 @@ try {
 
     // --- 3 ter. Rapports mensuels forcés (php cron.php --report) ---------
     if ($flag('--report')) {
-        $rep = Uptimer\Report::runMonthly();
+        $rep = Uptimeez\Report::runMonthly();
         $out(sprintf('  rapport mensuel : %d envoyé(s), %d en échec, %d ignoré(s)',
             $rep['sent'], $rep['failed'], $rep['skipped']));
         foreach ($rep['detail'] as $d) $out('    ' . $d['site'] . ' : ' . $d['info']);
@@ -205,7 +205,7 @@ try {
     // de conservation.
     if ($doMaint || ($last !== $today && ((int)date('G') === 3 || $late))) {
         Db::setSetting('daily_done', $today);
-        $tuned = Uptimer\Tune::run(40);
+        $tuned = Uptimeez\Tune::run(40);
         if ($tuned) $out('  ' . $tuned . ' seuil(s) de lenteur réajusté(s)');
         $roll = Stats::rollup(date('Y-m-d', time() - 86400));
         // Puis les jours qu'un entretien manqué avait laissés sans résumé : sans
@@ -238,7 +238,7 @@ try {
 
         // Veille de sécurité : une interrogation par composant et par version,
         // mise en cache sept jours, plafonnée pour ne pas charger le mutualisé.
-        $vs = Uptimer\Vuln::scan();
+        $vs = Uptimeez\Vuln::scan();
         if ($vs['checked']) {
             $out(sprintf('  veille : %d composant(s) vérifié(s), %d avec faille publiée, %d en retard',
                 $vs['checked'], $vs['vulnerable'], $vs['outdated']));
@@ -246,7 +246,7 @@ try {
 
         // Mesures de terrain : une interrogation par page et par jour, et
         // seulement si une clé CrUX est configurée.
-        $vt = Uptimer\Vitals::refresh();
+        $vt = Uptimeez\Vitals::refresh();
         if ($vt['checked']) {
             $out(sprintf('  vitesse : %d page(s) interrogée(s), %d mesurée(s), %d en échec',
                 $vt['checked'], $vt['measured'], $vt['poor']));
@@ -254,7 +254,7 @@ try {
 
         // Rapports mensuels : l'envoi est marqué par une clé de mois, donc le
         // repasser ici chaque jour ne peut pas produire de doublon.
-        $rep = Uptimer\Report::runMonthly();
+        $rep = Uptimeez\Report::runMonthly();
         if ($rep['sent'] || $rep['failed']) {
             $out(sprintf('  rapport mensuel : %d envoyé(s), %d en échec', $rep['sent'], $rep['failed']));
             foreach ($rep['detail'] as $d) {

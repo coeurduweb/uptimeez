@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : serveur MCP (Model Context Protocol).
+ * Uptimeez : serveur MCP (Model Context Protocol).
  *
  * Permet à un agent (Claude Code, Claude Desktop, tout client MCP) d'interroger
  * la surveillance et d'agir dessus : « qu'est-ce qui est cassé ce matin ? »,
@@ -18,10 +18,10 @@
  *
  *   {
  *     "mcpServers": {
- *       "uptimer": {
+ *       "uptimeez": {
  *         "command": "php",
- *         "args": ["/chemin/vers/uptimer/bin/mcp.php"],
- *         "env": { "UPTIMER_CONFIG": "/chemin/vers/uptimer/config.php" }
+ *         "args": ["/chemin/vers/uptimeez/bin/mcp.php"],
+ *         "env": { "UPTIMEEZ_CONFIG": "/chemin/vers/uptimeez/config.php" }
  *       }
  *     }
  *   }
@@ -34,32 +34,32 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Diagnose;
-use Uptimer\Http;
-use Uptimer\Importer;
-use Uptimer\Runner;
-use Uptimer\Stats;
-use Uptimer\Triage;
-use Uptimer\Ui;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Diagnose;
+use Uptimeez\Http;
+use Uptimeez\Importer;
+use Uptimeez\Runner;
+use Uptimeez\Stats;
+use Uptimeez\Triage;
+use Uptimeez\Ui;
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
 const MCP_PROTOCOL = '2024-11-05';
-const MCP_VERSION  = UPTIMER_VERSION;
+const MCP_VERSION  = UPTIMEEZ_VERSION;
 
 $WRITE = in_array('--write', $argv, true);
 
 if (!Config::isInstalled()) {
-    fwrite(STDERR, "Uptimer n'est pas installé : ouvrez install.php d'abord.\n");
+    fwrite(STDERR, "Uptimeez n'est pas installé : ouvrez install.php d'abord.\n");
     exit(1);
 }
 Db::migrate();
 
 // Les réponses d'un serveur MCP sont lues par une machine : les descriptions
 // sont en anglais, langue par défaut du produit et des clients MCP.
-\Uptimer\I18n::init('en');
+\Uptimeez\I18n::init('en');
 
 // =========================================================================
 // Catalogue d'outils
@@ -186,7 +186,7 @@ function mcp_tools(): array
             'desc'  => 'Full picture for a single monitor: diagnosis with remedy, availability over several '
                      . 'ranges, timings broken down (DNS, TLS, first byte), certificate and domain expiry, '
                      . 'the page-resource audit that detects a broken layout, recent incidents, and what '
-                     . 'Uptimer decided on its own. Use it to explain a problem in depth.',
+                     . 'Uptimeez decided on its own. Use it to explain a problem in depth.',
             'schema' => ['type' => 'object', 'properties' => [
                 'monitor_id' => ['type' => 'integer', 'description' => 'Identifier returned by list_monitors'],
             ], 'required' => ['monitor_id'], 'additionalProperties' => false],
@@ -260,9 +260,9 @@ function mcp_tools(): array
                             'summary' => $a['summary'] ?? null,
                         ], jdec($c['advisories'] ?? null)),
                         'checked_at' => $c['checked_at'],
-                    ], !empty($m['site_id']) ? \Uptimer\Vuln::forSite((int)$m['site_id']) : []),
+                    ], !empty($m['site_id']) ? \Uptimeez\Vuln::forSite((int)$m['site_id']) : []),
                     'recent_incidents' => $inc,
-                    'automatic_decisions' => \Uptimer\Tune::decisions($m),
+                    'automatic_decisions' => \Uptimeez\Tune::decisions($m),
                 ];
             },
         ],
@@ -302,7 +302,7 @@ function mcp_tools(): array
                         'advisories' => jdec($c['advisories'] ?? null),
                     ];
                 }
-                $c = \Uptimer\Vuln::counts();
+                $c = \Uptimeez\Vuln::counts();
                 return ['summary' => $c, 'count' => count($out), 'components' => $out];
             },
         ],
@@ -311,7 +311,7 @@ function mcp_tools(): array
             'title' => 'Perceived speed, measured and explained',
             'desc'  => 'How fast the monitored pages feel, and why. Two clearly separated layers: field '
                      . 'measurements from real Chrome users (LCP, INP, CLS from the Chrome UX Report, only '
-                     . 'when an API key is configured), and causes read from the HTML and files Uptimer '
+                     . 'when an API key is configured), and causes read from the HTML and files Uptimeez '
                      . 'already downloaded (server response time, render-blocking files, the top image and '
                      . 'its weight, images without dimensions, fonts without font-display, third-party '
                      . 'scripts). Nothing is estimated: if there is no field data, none is reported, and the '
@@ -378,9 +378,9 @@ function mcp_tools(): array
                     ];
                 }
                 return [
-                    'field_data_available' => \Uptimer\Vitals::enabled(),
-                    'thresholds' => \Uptimer\Vitals::THRESHOLDS,
-                    'summary' => \Uptimer\Vitals::counts(),
+                    'field_data_available' => \Uptimeez\Vitals::enabled(),
+                    'thresholds' => \Uptimeez\Vitals::THRESHOLDS,
+                    'summary' => \Uptimeez\Vitals::counts(),
                     'count' => count($out), 'pages' => $out,
                 ];
             },
@@ -402,7 +402,7 @@ function mcp_tools(): array
             'run' => function (array $a): array {
                 $withSites = (bool)($a['with_sites'] ?? false);
                 $out = [];
-                foreach (\Uptimer\Client::all() as $c) {
+                foreach (\Uptimeez\Client::all() as $c) {
                     $ov  = $c['overview'];
                     $row = [
                         'id' => (int)$c['id'],
@@ -422,11 +422,11 @@ function mcp_tools(): array
                             'name' => $s['name'], 'domain' => $s['domain'],
                             'state' => $s['status'] ?? 'unknown',
                             'uptime_30d' => $s['uptime_30d'] !== null ? round((float)$s['uptime_30d'], 3) : null,
-                        ], \Uptimer\Client::sites((int)$c['id']));
+                        ], \Uptimeez\Client::sites((int)$c['id']));
                     }
                     $out[] = $row;
                 }
-                $orphans = \Uptimer\Client::orphanSites();
+                $orphans = \Uptimeez\Client::orphanSites();
                 return ['count' => count($out), 'clients' => $out,
                         'sites_without_client' => count($orphans)];
             },
@@ -624,7 +624,7 @@ function mcp_tools(): array
         'add_sites' => [
             'title' => 'Add sites from a pasted list',
             'desc'  => 'Accepts anything: a list of domains, a spreadsheet column, an e-mail with addresses in '
-                     . 'it. Uptimer extracts the addresses, drops duplicates, then detects the technology, picks '
+                     . 'it. Uptimeez extracts the addresses, drops duplicates, then detects the technology, picks '
                      . 'representative pages, infers the proof string and tunes the thresholds by itself. '
                      . 'Call it with dry_run first: it returns exactly what would be created without creating it.',
             'schema' => ['type' => 'object', 'properties' => [
@@ -744,9 +744,9 @@ while (($line = fgets(STDIN)) !== false) {
             mcp_result($id, [
                 'protocolVersion' => MCP_PROTOCOL,
                 'capabilities' => ['tools' => ['listChanged' => false]],
-                'serverInfo' => ['name' => 'uptimer', 'version' => MCP_VERSION],
+                'serverInfo' => ['name' => 'uptimeez', 'version' => MCP_VERSION],
                 'instructions' =>
-                    "Uptimer watches websites and says what to do about them.\n"
+                    "Uptimeez watches websites and says what to do about them.\n"
                   . "Call \"tasks\" first: it returns the to-do list with, for each problem, the cause in plain "
                   . "words, why it matters, what to do, and the evidence.\n"
                   . "\"status\" answers \"is everything fine?\" in one call. \"monitor_detail\" explains one site "

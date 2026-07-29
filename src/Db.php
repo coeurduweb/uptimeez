@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 use PDO;
 use PDOException;
@@ -43,7 +43,7 @@ final class Db
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
         } else {
-            $path = $cfg['sqlite'] ?: (UPTIMER_ROOT . '/data/uptimer.sqlite');
+            $path = $cfg['sqlite'] ?: (UPTIMEEZ_ROOT . '/data/uptimeez.sqlite');
             $dir  = dirname($path);
             if (!is_dir($dir)) @mkdir($dir, 0775, true);
             self::$pdo = new PDO('sqlite:' . $path, null, null, [
@@ -56,7 +56,7 @@ final class Db
             // soit écrit : sur une base déjà créée, le PRAGMA est accepté sans
             // effet et sans erreur. Or « journal_mode = WAL » écrit justement
             // cet en-tête. Placé après lui, auto_vacuum restait donc à 0 sur
-            // TOUTES les bases jamais créées par Uptimer, et compact() ne
+            // TOUTES les bases jamais créées par Uptimeez, et compact() ne
             // rendait pas un octet : après une purge de 4,5 millions de mesures,
             // le fichier gardait 585 Mo de pages libres. Il passe donc en
             // premier, avant toute écriture.
@@ -257,7 +257,7 @@ final class Db
             css_drop_pct {$int} NOT NULL DEFAULT 35,
             auto_slow {$bool} NOT NULL DEFAULT 1,          /* seuil de lenteur auto-ajusté */
             tuned_at {$ts} DEFAULT NULL,
-            decisions {$txt},                              /* journal des décisions de Uptimer */
+            decisions {$txt},                              /* journal des décisions de Uptimeez */
             heartbeat_token {$str(40)} DEFAULT NULL,       /* sonde battement : clé du signal */
             heartbeat_at {$ts} DEFAULT NULL,               /* dernier signal reçu */
             heartbeat_grace {$int} NOT NULL DEFAULT 300,   /* tolérance avant alerte */
@@ -641,7 +641,7 @@ final class Db
         $out = ['freed_bytes' => 0, 'free_pages' => 0, 'needs_vacuum' => false];
         if (self::driver() !== 'sqlite') return $out;
 
-        $file   = (string)(Config::get('db.sqlite') ?: UPTIMER_ROOT . '/data/uptimer.sqlite');
+        $file   = (string)(Config::get('db.sqlite') ?: UPTIMEEZ_ROOT . '/data/uptimeez.sqlite');
         $weight = function () use ($file): int {
             clearstatcache(true, $file);
             clearstatcache(true, $file . '-wal');
@@ -703,7 +703,7 @@ final class Db
         $out = ['ok' => false, 'freed_bytes' => 0, 'seconds' => 0.0, 'error' => ''];
         if (self::driver() !== 'sqlite') { $out['ok'] = true; return $out; }
 
-        $file   = (string)(Config::get('db.sqlite') ?: UPTIMER_ROOT . '/data/uptimer.sqlite');
+        $file   = (string)(Config::get('db.sqlite') ?: UPTIMEEZ_ROOT . '/data/uptimeez.sqlite');
         $weight = function () use ($file): int {
             clearstatcache(true, $file);
             clearstatcache(true, $file . '-wal');

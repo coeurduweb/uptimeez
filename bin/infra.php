@@ -1,8 +1,8 @@
 <?php
 /**
- * Uptimer : ce qu'on voit quand Uptimer lui-même est en panne.
+ * Uptimeez : ce qu'on voit quand Uptimeez lui-même est en panne.
  *
- * Les autres suites vérifient qu'Uptimer marche. Celle-ci vérifie qu'il sait
+ * Les autres suites vérifient qu'Uptimeez marche. Celle-ci vérifie qu'il sait
  * tomber. La distinction n'est pas rhétorique : l'audit a mesuré huit pannes
  * d'infrastructure distinctes qui rendaient toutes exactement la même chose,
  * un HTTP 500 sans un octet de corps. Sur un hébergement mutualisé,
@@ -28,7 +28,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-use Uptimer\Fail;
+use Uptimeez\Fail;
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
@@ -43,7 +43,7 @@ function ok(string $label, bool $good, string $detail = ''): void
 function title(string $s): void { echo "\n── $s " . str_repeat('─', max(0, 56 - mb_strlen($s))) . "\n"; }
 
 $ROOT = dirname(__DIR__);
-$tmp  = sys_get_temp_dir() . '/uptimer-infra-' . bin2hex(random_bytes(4));
+$tmp  = sys_get_temp_dir() . '/uptimeez-infra-' . bin2hex(random_bytes(4));
 mkdir($tmp, 0775, true);
 
 // Un port libre plutôt qu'un port choisi au hasard : deux exécutions
@@ -60,12 +60,12 @@ $PASS  = 'mot-de-passe-infra';
 $writeCfg = function (array $db) use ($cfg, $PASS): void {
     file_put_contents($cfg, "<?php return " . var_export([
         'db'   => $db,
-        'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimerinfra'],
-        'app'  => ['name' => 'Uptimer Infra', 'base_url' => 'http://127.0.0.1', 'timezone' => 'Europe/Paris',
+        'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeezinfra'],
+        'app'  => ['name' => 'Uptimeez Infra', 'base_url' => 'http://127.0.0.1', 'timezone' => 'Europe/Paris',
                    'public_token' => 'jeton-infra', 'cron_key' => 'cle-infra'],
         'defaults' => ['interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'slow_ms' => 9000,
                        'max_parallel' => 6, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                       'user_agent' => 'UptimerBot/1.0 (Infra)'],
+                       'user_agent' => 'UptimeezBot/1.0 (Infra)'],
         'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                      'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => ''],
                      'resend_after_min' => 60, 'notify_recovery' => true, 'notify_degraded' => true, 'quiet_hours' => ''],
@@ -76,7 +76,7 @@ $srv = null;
 $up = function () use (&$srv, $ROOT, $port, $cfg, $APP): bool {
     $srv = proc_open([PHP_BINARY, '-S', "127.0.0.1:$port", '-t', $ROOT],
         [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes, $ROOT,
-        ['UPTIMER_CONFIG' => $cfg, 'PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+        ['UPTIMEEZ_CONFIG' => $cfg, 'PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
     for ($i = 0; $i < 60; $i++) {
         $s = @stream_socket_client("tcp://127.0.0.1:$port", $a, $b, 0.3);
         if ($s) { fclose($s); return true; }
@@ -286,7 +286,7 @@ $cases = [
     ['SQLSTATE[HY000] [2002] Connection refused',                        'db_down',    503],
     ["SQLSTATE[HY000] [2002] Can't connect to local MySQL server through socket", 'db_down', 503],
     ["SQLSTATE[28000] [1045] Access denied for user 'x'@'localhost'",     'db_auth',    503],
-    ["SQLSTATE[HY000] [1049] Unknown database 'uptimer'",                'db_missing', 503],
+    ["SQLSTATE[HY000] [1049] Unknown database 'uptimeez'",                'db_missing', 503],
     ['SQLSTATE[08004] [1040] Too many connections',                      'db_busy',    503],
     ['SQLSTATE[HY000]: General error: 2006 MySQL server has gone away',  'db_busy',    503],
     ['Appel d\'une fonction inexistante',                                'internal',   500],
@@ -312,6 +312,6 @@ ok('chaque cause propose un geste', $sansRemede === [], implode(', ', $sansRemed
 echo "\n" . str_repeat('═', 68) . "\n";
 echo "$pass contrôle(s) réussi(s), $fail échec(s)\n";
 echo $fail === 0
-    ? "✅ Une panne d'Uptimer s'explique, et ne s'échappe jamais côté public.\n"
+    ? "✅ Une panne d'Uptimeez s'explique, et ne s'échappe jamais côté public.\n"
     : "⚠️  Une panne d'infrastructure reste muette ou trop bavarde.\n";
 exit($fail === 0 ? 0 : 1);

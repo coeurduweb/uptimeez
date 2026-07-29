@@ -5,12 +5,12 @@
  * Volontairement sobre : un client n'a pas besoin de nos réglages, il veut savoir
  * si son site a été disponible, combien de temps il ne l'a pas été, et pourquoi.
  */
-use Uptimer\Auth;
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Notify\Notifier;
-use Uptimer\Stats;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Notify\Notifier;
+use Uptimeez\Stats;
+use Uptimeez\Ui;
 
 $csrf = Auth::csrf();
 

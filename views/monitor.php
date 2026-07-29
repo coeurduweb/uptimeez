@@ -6,14 +6,14 @@
  * et la courbe, puis le détail, replié dans des accordéons pour que la page
  * reste courte tant qu'on n'a rien à y chercher.
  */
-use Uptimer\Auth;
-use Uptimer\Db;
-use Uptimer\Diagnose;
-use Uptimer\Notify\Notifier;
-use Uptimer\Heartbeat;
-use Uptimer\Stats;
-use Uptimer\Tune;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Db;
+use Uptimeez\Diagnose;
+use Uptimeez\Notify\Notifier;
+use Uptimeez\Heartbeat;
+use Uptimeez\Stats;
+use Uptimeez\Tune;
+use Uptimeez\Ui;
 
 $id  = (int)($_GET['id'] ?? 0);
 $mon = Db::one('SELECT m.*, s.domain AS site_domain, s.name AS site_name, s.cms AS site_cms, s.cms_detail
@@ -360,7 +360,7 @@ $drift   = (int)($mon['silhouette_drift'] ?? 0);
 <?= Ui::accClose() ?>
 <?php endif; ?>
 
-<!-- ====================== CE QUE UPTIMER A DÉCIDÉ ====================== -->
+<!-- ====================== CE QUE UPTIMEEZ A DÉCIDÉ ====================== -->
 <?php $decisions = Tune::decisions($mon);
 if ($decisions && expert()):
   echo Ui::accOpen('decisions', 'info', t('Ce que {app} a décidé toute seule'),
@@ -391,8 +391,8 @@ if ($vit || $fieldVerdict !== null):
     // Le badge porte la mesure de terrain quand elle existe, sinon le TTFB
     // mesuré : dans les deux cas un chiffre réel, jamais une estimation.
     if ($fieldVerdict !== null) {
-        [$wMetric, $wValue] = Uptimer\Vitals::worstOf($mon);
-        $vBadge = Ui::badge(Uptimer\Vitals::format((string)$wMetric, $wValue),
+        [$wMetric, $wValue] = Uptimeez\Vitals::worstOf($mon);
+        $vBadge = Ui::badge(Uptimeez\Vitals::format((string)$wMetric, $wValue),
             $fieldVerdict === 'poor' ? 'bad' : ($fieldVerdict === 'improve' ? 'warn' : 'ok'));
     } else {
         $tv = (string)($vit['ttfb_verdict'] ?? 'unknown');
@@ -426,17 +426,17 @@ if ($vit || $fieldVerdict !== null):
         <dd>
           <?php if ($value === null): ?>
             <span class="muted"><?= te('pas assez de données') ?></span>
-          <?php else: $r = Uptimer\Vitals::rate($key, $value); ?>
-            <?= Ui::badge(Uptimer\Vitals::format($key, $value),
+          <?php else: $r = Uptimeez\Vitals::rate($key, $value); ?>
+            <?= Ui::badge(Uptimeez\Vitals::format($key, $value),
                   $r === 'good' ? 'ok' : ($r === 'improve' ? 'warn' : 'bad')) ?>
             <span class="muted small"><?= te('seuil visé {v}',
-                  ['v' => Uptimer\Vitals::format($key, (float)Uptimer\Vitals::THRESHOLDS[$key][0])]) ?></span>
+                  ['v' => Uptimeez\Vitals::format($key, (float)Uptimeez\Vitals::THRESHOLDS[$key][0])]) ?></span>
           <?php endif; ?>
           <span class="hint"><?= e($help) ?></span>
         </dd>
       <?php endforeach; ?>
     </dl>
-  <?php elseif (Uptimer\Vitals::key() === ''): ?>
+  <?php elseif (Uptimeez\Vitals::key() === ''): ?>
     <p class="small soft prose"><?= te('Les trois mesures officielles (LCP, INP, CLS) ne peuvent venir que de vrais navigateurs. Sans clé du Chrome UX Report, {app} n\'affiche aucun chiffre plutôt que d\'en inventer un. Ce qui suit est mesuré sur cette page, et suffit pour agir.') ?>
       <a href="<?= e(u('settings')) ?>#speed"><?= te('Ajouter une clé') ?></a></p>
   <?php endif; ?>
@@ -458,14 +458,14 @@ if ($vit || $fieldVerdict !== null):
           <?php endif; ?>
           <?php if (!empty($vit['blocking']['items'])): ?>
             <span class="hint"><?php
-              $names = array_map(fn($i) => Uptimer\Check\Vitals::shortUrl((string)$i['url']),
+              $names = array_map(fn($i) => Uptimeez\Check\Vitals::shortUrl((string)$i['url']),
                                  array_slice((array)$vit['blocking']['items'], 0, 4));
               echo e(implode(' · ', $names)); ?></span>
           <?php endif; ?></dd>
       <?php endif; ?>
       <?php if (!empty($vit['lcp_image']['url'])): ?>
         <dt><?= te('Image du haut de page') ?></dt>
-        <dd><?= e(Uptimer\Check\Vitals::shortUrl((string)$vit['lcp_image']['url'])) ?>
+        <dd><?= e(Uptimeez\Check\Vitals::shortUrl((string)$vit['lcp_image']['url'])) ?>
           <?php if (!empty($vit['lcp_image']['bytes'])): ?>
             · <?= e(human_bytes((int)$vit['lcp_image']['bytes'])) ?>
           <?php endif; ?>
@@ -500,7 +500,7 @@ endif;
 
 <!-- ====================== INVENTAIRE ET FAILLES ====================== -->
 <?php
-$comps = !empty($mon['site_id']) ? Uptimer\Vuln::forSite((int)$mon['site_id']) : [];
+$comps = !empty($mon['site_id']) ? Uptimeez\Vuln::forSite((int)$mon['site_id']) : [];
 if ($comps):
     $nVuln = 0; $nOld = 0; $worst = null;
     foreach ($comps as $c) {
@@ -548,7 +548,7 @@ if ($comps):
           <?php $adv = jdec($c['advisories'] ?? null);
           if ($adv): ?>
             <?= Ui::badge(tn((int)$c['vuln_count'], 'une faille', '{n} failles')
-                  . ' · ' . Uptimer\Vuln::severityLabel($c['worst'] !== null ? (string)$c['worst'] : null),
+                  . ' · ' . Uptimeez\Vuln::severityLabel($c['worst'] !== null ? (string)$c['worst'] : null),
                   ($c['worst'] ?? '') === 'high' ? 'bad' : 'warn') ?>
             <ul class="adv-list">
               <?php foreach (array_slice($adv, 0, 4) as $a): ?>

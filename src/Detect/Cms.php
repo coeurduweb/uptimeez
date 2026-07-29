@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Detect;
+namespace Uptimeez\Detect;
 
-use Uptimer\Response;
+use Uptimeez\Response;
 
 /**
  * Identification du CMS / stack à partir d'une réponse HTML.

@@ -1,4 +1,4 @@
-# Uptimer : analyse concurrentielle et backlog
+# Uptimeez : analyse concurrentielle et backlog
 
 Document de travail. Il sert de brief de conception : chaque décision d'interface renvoie à un
 constat vérifié sur les produits concurrents.
@@ -29,7 +29,7 @@ constat vérifié sur les produits concurrents.
 
 ### Positionnement retenu
 
-> Les autres montrent **des états**. Uptimer donne **une liste de choses à faire**, et devine tout le reste.
+> Les autres montrent **des états**. Uptimeez donne **une liste de choses à faire**, et devine tout le reste.
 
 Trois règles de conception, opposables à chaque écran :
 
@@ -50,7 +50,7 @@ Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spéci
 **A1 ✅ En tant que gérant d'agence, je colle une liste de domaines et je n'ai rien d'autre à faire.**
 - Étant donné un texte quelconque (domaines, URLs, lignes `client | domaine`, adresses noyées dans de la prose)
 - Quand je le colle et que je valide
-- Alors Uptimer extrait les candidats, écarte les doublons, détecte la technologie, choisit les pages
+- Alors Uptimeez extrait les candidats, écarte les doublons, détecte la technologie, choisit les pages
   représentatives, déduit la chaîne de preuve et crée les sondes : sans autre saisie.
 
 **A2 ✅ En tant qu'utilisateur, je vois ce qui va être créé avant de valider.**
@@ -62,7 +62,7 @@ Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spéci
 - La cadence dépend de l'importance de la page : accueil plus souvent que mentions légales.
 - Critère : après 20 mesures, le seuil est recalculé automatiquement et l'ancien est journalisé.
 
-**A4 ✅ En tant qu'utilisateur, je peux savoir *pourquoi* Uptimer a choisi ces réglages.**
+**A4 ✅ En tant qu'utilisateur, je peux savoir *pourquoi* Uptimeez a choisi ces réglages.**
 - Chaque sonde affiche en clair les décisions prises et leur justification.
 - Critère : une ligne par décision, en français, sans jargon.
 
@@ -105,7 +105,7 @@ Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spéci
 - Heures calmes (les pannes réelles passent), fenêtres de maintenance, « pris en compte ».
 
 **C3 ▶︎ En tant qu'utilisateur, une alerte récurrente me propose de s'auto-régler.**
-- Après 3 alertes de lenteur en 7 jours sur la même sonde, Uptimer propose de relever le seuil (un clic).
+- Après 3 alertes de lenteur en 7 jours sur la même sonde, Uptimeez propose de relever le seuil (un clic).
 
 **C4 ▶︎ En tant qu'astreinte, je reçois un résumé quotidien au lieu d'alertes unitaires pour le non-urgent.**
 - Digest de 8 h : ce qui a été détecté, ce qui est réparé, ce qui arrive.
@@ -134,7 +134,7 @@ avec extraction de jeton, pour valider un tunnel de contact sans Playwright.
 **F1 ✅ 300 sondes sur un mutualisé** : agrégation SQL, plafond d'analyses coûteuses par passe, purge.
 **F2 ✅ Mise à jour sans intervention** : le schéma se complète tout seul.
 **F3 ▶︎ Vue « mur »** pour écran d'agence, sans authentification, jeton dédié.
-**F5 ✅ Renommage en Uptimer** : nom, dossier, base, catalogues, documentation.
+**F5 ✅ Renommage en Uptimeez** : nom, dossier, base, catalogues, documentation.
 **F4 ◻︎ Multi-utilisateur et accès client en lecture seule.**
 
 ### Épopée G : Internationalisation

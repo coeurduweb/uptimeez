@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 /**
  * Core Web Vitals mesurés sur de vrais visiteurs.
@@ -12,7 +12,7 @@ namespace Uptimer;
  * calcul honnête qui les remplace. Deux conséquences assumées :
  *
  *   1. **Cette partie demande une clé d'API.** Elle est gratuite, elle se crée
- *      en deux minutes, et elle reste optionnelle : sans clé, Uptimer n'affiche
+ *      en deux minutes, et elle reste optionnelle : sans clé, Uptimeez n'affiche
  *      aucun LCP plutôt qu'un LCP inventé. Ce qu'il continue de donner sans
  *      clé, c'est le TTFB mesuré et les causes lues dans la page, ce qui est
  *      déjà ce dont on a besoin pour agir (voir Check\Vitals).

@@ -1,20 +1,20 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
-use Uptimer\Notify\Notifier;
+use Uptimeez\Notify\Notifier;
 
 /**
  * Sonde « battement » (dead-man switch).
  *
- * Le principe est inversé : ce n'est pas Uptimer qui interroge le site, c'est le
+ * Le principe est inversé : ce n'est pas Uptimeez qui interroge le site, c'est le
  * site qui doit se signaler. On surveille ainsi ce qu'aucune requête HTTP ne peut
  * voir : un cron WordPress qui ne tourne plus, une sauvegarde qui ne s'exécute
  * plus, un import nocturne silencieux. L'alerte part quand le signal n'arrive pas.
  *
  * Côté client, une ligne suffit à la fin du script à surveiller :
- *   curl -fsS https://uptimer.exemple.fr/beat.php?k=LACLE > /dev/null
+ *   curl -fsS https://uptimeez.exemple.fr/beat.php?k=LACLE > /dev/null
  */
 final class Heartbeat
 {
@@ -158,7 +158,7 @@ final class Heartbeat
     public static function url(array $mon): string
     {
         $base = rtrim((string)Config::get('app.base_url', ''), '/');
-        return ($base !== '' ? $base : 'https://votre-adresse-uptimer') . '/beat.php?k=' . (string)$mon['heartbeat_token'];
+        return ($base !== '' ? $base : 'https://votre-adresse-uptimeez') . '/beat.php?k=' . (string)$mon['heartbeat_token'];
     }
 
     /** Ligne prête à coller à la fin d'un script surveillé. */

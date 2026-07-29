@@ -2,7 +2,7 @@
 
 [← Documentation](README.md) · [Prise en main →](prise-en-main.md)
 
-Uptimer est une application PHP simple. Aucune compilation, aucun gestionnaire de paquets, aucun conteneur. Si vous
+Uptimeez est une application PHP simple. Aucune compilation, aucun gestionnaire de paquets, aucun conteneur. Si vous
 savez envoyer des fichiers par FTP et ajouter une tâche cron, vous savez l'installer.
 
 ---
@@ -28,8 +28,8 @@ Rien d'autre. L'installeur vérifie tout cela et vous dit ce qui manque avant d'
 ## Installation classique
 
 ```bash
-git clone https://github.com/loran750/uptimer.git
-cd uptimer
+git clone https://github.com/loran750/uptimeez.git
+cd uptimeez
 chmod -R 775 data
 ```
 
@@ -48,26 +48,26 @@ Enfin, ajoutez la tâche cron (voir plus bas) et ouvrez les réglages pour confi
 
 C'est la cible principale, pas un cas dégradé.
 
-1. Envoyez le dossier dans `public_html/uptimer/` (ou là où vous servez vos pages).
+1. Envoyez le dossier dans `public_html/uptimeez/` (ou là où vous servez vos pages).
 2. Passez `data/` en `775` dans le gestionnaire de fichiers.
-3. Visitez `https://votredomaine.fr/uptimer/install.php`.
+3. Visitez `https://votredomaine.fr/uptimeez/install.php`.
 4. Dans cPanel → **Tâches cron**, fréquence **chaque minute** :
 
    ```
-   * * * * * /usr/local/bin/php /home/VOTRECOMPTE/public_html/uptimer/cron.php >/dev/null 2>&1
+   * * * * * /usr/local/bin/php /home/VOTRECOMPTE/public_html/uptimeez/cron.php >/dev/null 2>&1
    ```
 
    La ligne exacte, avec le bon chemin PHP pour votre compte, est affichée dans **Réglages → Tâche planifiée** :
    copiez-la de là plutôt que de la deviner.
 
 **Spécificités o2switch.** Le binaire PHP est en général `/usr/local/bin/php`. LiteSpeed ignore certains drapeaux
-de réécriture d'`.htaccess`, raison pour laquelle Uptimer ne dépend d'aucune réécriture d'URL : chaque adresse est
+de réécriture d'`.htaccess`, raison pour laquelle Uptimeez ne dépend d'aucune réécriture d'URL : chaque adresse est
 un simple `index.php?p=…`. Rien à configurer.
 
 **Pas de crontab du tout ?** Réglages → *Déclenchement par URL* vous donne une adresse secrète :
 
 ```
-https://votredomaine.fr/uptimer/cron.php?key=VOTRE_CLE
+https://votredomaine.fr/uptimeez/cron.php?key=VOTRE_CLE
 ```
 
 Appelez-la chaque minute depuis n'importe quel service externe (cron-job.org, EasyCron, une GitHub Action, le
@@ -77,7 +77,7 @@ crontab d'un autre serveur). Sans la bonne clé, le point d'entrée répond 403 
 
 ## Protéger l'installation
 
-Uptimer est protégé par mot de passe et envoie `noindex, nofollow` sur chaque page. Pour une ceinture et des
+Uptimeez est protégé par mot de passe et envoie `noindex, nofollow` sur chaque page. Pour une ceinture et des
 bretelles :
 
 - Placez-le sur un sous-domaine que vous ne communiquez pas, ou dans un dossier au nom peu évident.
@@ -101,8 +101,8 @@ Modifiez `config.php` :
     'driver'  => 'mysql',
     'host'    => 'localhost',
     'port'    => 3306,
-    'name'    => 'uptimer',
-    'user'    => 'uptimer',
+    'name'    => 'uptimeez',
+    'user'    => 'uptimeez',
     'pass'    => '…',
     'charset' => 'utf8mb4',
 ],

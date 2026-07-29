@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 final class Config
 {
@@ -15,11 +15,11 @@ final class Config
         if (self::$loaded) return;
         self::$loaded = true;
 
-        $sample = UPTIMER_ROOT . '/config.sample.php';
-        // UPTIMER_CONFIG permet de faire tourner une instance isolée (tests E2E,
+        $sample = UPTIMEEZ_ROOT . '/config.sample.php';
+        // UPTIMEEZ_CONFIG permet de faire tourner une instance isolée (tests E2E,
         // seconde installation) sans toucher au config.php de production.
-        $env    = getenv('UPTIMER_CONFIG');
-        $file   = ($env && is_file($env)) ? $env : UPTIMER_ROOT . '/config.php';
+        $env    = getenv('UPTIMEEZ_CONFIG');
+        $file   = ($env && is_file($env)) ? $env : UPTIMEEZ_ROOT . '/config.php';
         self::$file = $file;
 
         self::$data = is_file($sample) ? (require $sample) : [];
@@ -83,7 +83,7 @@ final class Config
     public static function file(): string
     {
         self::load();
-        return self::$file !== '' ? self::$file : UPTIMER_ROOT . '/config.php';
+        return self::$file !== '' ? self::$file : UPTIMEEZ_ROOT . '/config.php';
     }
 
     public static function save(array $patch): bool
@@ -92,7 +92,7 @@ final class Config
         $current = is_file($file) ? (require $file) : [];
         $merged  = self::merge(is_array($current) ? $current : [], $patch);
 
-        $php = "<?php\n// Uptimer - configuration générée le " . date('Y-m-d H:i:s') . "\n"
+        $php = "<?php\n// Uptimeez - configuration générée le " . date('Y-m-d H:i:s') . "\n"
              . "// Ne pas versionner ce fichier.\nreturn " . self::export($merged) . ";\n";
 
         $ok = @file_put_contents($file, $php, LOCK_EX) !== false;

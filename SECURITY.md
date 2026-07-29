@@ -32,7 +32,7 @@ php bin/infra.php                 # a broken install must not leak paths or cred
 Levels 2 and 3 build an isolated instance and a deliberately hostile local site. Nothing touches your
 installation and nothing leaves your machine.
 
-**A failure of Uptimer itself discloses nothing publicly.** When the storage layer is down, the status page, the
+**A failure of Uptimeez itself discloses nothing publicly.** When the storage layer is down, the status page, the
 client space and the heartbeat endpoint answer 503 with a neutral sentence: no file path, no database engine, no
 database user name, and no PHP stack trace. The cause, the remedy and the trace are shown to the signed-in
 operator only, and written to `data/erreurs.log`. `bin/infra.php` provokes eight real infrastructure failures and

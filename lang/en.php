@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer, English catalogue (default language).
+ * Uptimeez, English catalogue (default language).
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which
@@ -1189,7 +1189,7 @@ return [
     'https://discord.com/api/webhooks/…' => 'https://discord.com/api/webhooks/…',
     'https://hooks.slack.com/services/…' => 'https://hooks.slack.com/services/…',
     'https://monitoring.votredomaine.fr' => 'https://monitoring.yourdomain.com',
-    'https://n8n.exemple.fr/webhook/uptimer' => 'https://n8n.example.com/webhook/uptimer',
+    'https://n8n.exemple.fr/webhook/uptimeez' => 'https://n8n.example.com/webhook/uptimeez',
     'https://…' => 'https://…',
     'il y a 24 h' => '24 h ago',
     'inactif' => 'inactive',
@@ -1360,7 +1360,7 @@ return [
     'une visite' => 'one visit',
     'uptime et temps de réponse des dernières 24 h' => 'uptime and response time over the last 24 hours',
     'uptime moyen {pct}' => 'average uptime {pct}',
-    'uptimer@votredomaine.fr' => 'uptimer@yourdomain.com',
+    'uptimeez@votredomaine.fr' => 'uptimeez@yourdomain.com',
     'utile après chaque changement' => 'useful after every change',
     'utile pour vérifier qu\'un canal fonctionne vraiment' => 'useful to check that a channel really works',
     'version en retard' => 'behind latest',

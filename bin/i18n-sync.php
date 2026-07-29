@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer, synchronisation des catalogues de traduction.
+ * Uptimeez, synchronisation des catalogues de traduction.
  *
  * Les catalogues du dépôt sont la source de vérité. Ce script les remet en
  * phase avec le code après une modification de texte :
@@ -25,7 +25,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
-use Uptimer\I18n;
+use Uptimeez\I18n;
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
@@ -86,7 +86,7 @@ foreach (array_keys(I18n::LANGS) as $lang) {
     $title = I18n::LANGS[$lang][0] . ' catalogue'
            . (I18n::dir($lang) === 'rtl' ? ' (right-to-left)' : '')
            . ($lang === I18n::DEFAULT ? ' (default language)' : '');
-    $php = ["<?php", "/**", " * Uptimer, " . $title . ".", " *",
+    $php = ["<?php", "/**", " * Uptimeez, " . $title . ".", " *",
             " * Keys are the French source sentences (msgid), the way gettext does it.",
             " * The product name never appears in a key: sentences write {app}, which",
             " * I18n substitutes, so renaming the product never invalidates a catalogue.",

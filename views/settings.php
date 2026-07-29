@@ -5,13 +5,13 @@
  * Un accordéon par domaine, dans l'ordre d'importance réelle : sans tâche
  * planifiée rien ne fonctionne, sans canal d'alerte personne n'est prévenu.
  */
-use Uptimer\Auth;
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Ui;
 
 $csrf      = Auth::csrf();
-$cronPath  = UPTIMER_ROOT . '/cron.php';
+$cronPath  = UPTIMEEZ_ROOT . '/cron.php';
 $phpBin    = PHP_BINDIR . '/php';
 $lastRun   = Db::setting('last_run_at');
 $lastStats = jdec(Db::setting('last_run_stats'));
@@ -25,7 +25,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
 ?>
 <div class="row-between mt">
   <h1><?= te('Réglages') ?></h1>
-  <span class="muted small">Uptimer <?= UPTIMER_VERSION ?> · PHP <?= PHP_VERSION ?>
+  <span class="muted small">Uptimeez <?= UPTIMEEZ_VERSION ?> · PHP <?= PHP_VERSION ?>
     · <?= te('base {driver}', ['driver' => Db::driver()]) ?></span>
 </div>
 
@@ -53,7 +53,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
     <div class="field">
       <label for="cronurl"><?= te('Déclenchement par URL') ?></label>
       <input id="cronurl" type="text" readonly onclick="this.select()"
-             value="<?= e(($baseUrl ?: 'https://votre-adresse-uptimer') . '/cron.php?key=' . $cronKey) ?>">
+             value="<?= e(($baseUrl ?: 'https://votre-adresse-uptimeez') . '/cron.php?key=' . $cronKey) ?>">
       <span class="hint"><?= te('Solution de repli si l\'hébergement n\'expose pas crontab : à appeler chaque minute depuis un service externe.') ?><?php if ($baseUrl === ''): ?> <?= te('Renseignez d\'abord l\'adresse de l\'installation ci-dessous pour obtenir l\'URL complète.') ?><?php endif; ?></span>
     </div>
   <?php endif; ?>
@@ -118,7 +118,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
         <div class="field" style="flex:1 1 200px">
           <label for="mfrom"><?= te('Expéditeur') ?></label>
           <input id="mfrom" type="text" name="mail_from" value="<?= e((string)Config::get('notify.mail.from', '')) ?>"
-                 placeholder="<?= te('uptimer@votredomaine.fr') ?>" inputmode="email">
+                 placeholder="<?= te('uptimeez@votredomaine.fr') ?>" inputmode="email">
           <span class="hint"><?= te('Une adresse de votre domaine hébergé passe mieux les filtres.') ?></span>
         </div>
         <div class="field" style="flex:1 1 150px">
@@ -171,7 +171,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
       <div class="field">
         <label for="wu"><?= te('URL de destination') ?></label>
         <input id="wu" type="text" name="webhook_url" value="<?= e((string)Config::get('notify.webhook.url', '')) ?>"
-               placeholder="<?= te('https://n8n.exemple.fr/webhook/uptimer') ?>" spellcheck="false">
+               placeholder="<?= te('https://n8n.exemple.fr/webhook/uptimeez') ?>" spellcheck="false">
       </div>
     </fieldset>
 
@@ -235,7 +235,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
 
   <!-- ==================== VITESSE RESSENTIE ==================== -->
   <?= Ui::accOpen('speed', 'chart', t('Vitesse ressentie par les visiteurs'),
-        Uptimer\Vitals::enabled() ? t('mesures de terrain activées') : t('analyse locale seulement')) ?>
+        Uptimeez\Vitals::enabled() ? t('mesures de terrain activées') : t('analyse locale seulement')) ?>
   <?= Ui::accBody() ?>
     <p class="muted small prose"><?= te('Sans rien configurer, {app} mesure le temps de réponse du serveur et lit dans vos pages ce qui retarde l\'affichage : fichiers qui bloquent le rendu, image du haut de page en chargement différé, images sans dimensions. C\'est ce qui permet d\'agir.') ?></p>
     <p class="muted small prose"><?= te('Les trois mesures officielles (LCP, INP, CLS) viennent de vrais navigateurs Chrome, et de nulle part ailleurs. Pour les afficher, il faut une clé du Chrome UX Report : elle est gratuite et se crée en deux minutes. Sans clé, aucun chiffre n\'est inventé.') ?></p>
@@ -254,7 +254,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
         <div class="field"><label for="ff"><?= te('Appareil de référence') ?></label><?= hint('Le Chrome UX Report sépare les mesures par type d\'appareil. Le téléphone est le bon défaut : c\'est là que les problèmes se voient, et c\'est ce que Google utilise pour classer.') ?>
           <select id="ff" name="form_factor">
             <?php foreach (['PHONE' => t('Téléphone'), 'DESKTOP' => t('Ordinateur')] as $k => $lbl): ?>
-              <option value="<?= e($k) ?>"<?= Uptimer\Vitals::formFactor() === $k ? ' selected' : '' ?>><?= e($lbl) ?></option>
+              <option value="<?= e($k) ?>"<?= Uptimeez\Vitals::formFactor() === $k ? ' selected' : '' ?>><?= e($lbl) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -302,9 +302,9 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
           <select id="loc" name="locale">
             <option value="auto"<?= in_array((string)Config::get('app.locale', ''), ['', 'auto'], true) ? ' selected' : '' ?>>
               <?= te('Automatique') ?></option>
-            <?php foreach (Uptimer\I18n::available() as $code => $native): ?>
+            <?php foreach (Uptimeez\I18n::available() as $code => $native): ?>
               <option value="<?= e($code) ?>"<?= (string)Config::get('app.locale', '') === $code ? ' selected' : '' ?>>
-                <?= e(Uptimer\I18n::flag($code)) ?> <?= e($native) ?></option>
+                <?= e(Uptimeez\I18n::flag($code)) ?> <?= e($native) ?></option>
             <?php endforeach; ?>
           </select></div>
         <div class="field"><label for="tz"><?= te('Fuseau horaire') ?></label>
@@ -344,7 +344,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
 <?php
 // Un index absent ne casse rien tout de suite : il rend l'outil lent des
 // semaines plus tard, quand personne ne fait le lien. On le dit maintenant.
-$idxIssues = Uptimer\Db::indexIssues();
+$idxIssues = Uptimeez\Db::indexIssues();
 if ($idxIssues): ?>
   <div class="alert alert-warn mt">
     <?= Ui::icon('alert', 18) ?>
@@ -376,7 +376,7 @@ if ($idxIssues): ?>
   <p class="hint mt"><?= te('Le résultat s\'affiche en haut de page, et reste consultable dans le {journal}.',
         ['journal' => '<a href="' . e(u('events')) . '">' . te('journal') . '</a>']) ?></p>
   <div class="section-title"><?= te('Vérifier la détection sur ce serveur') ?></div>
-  <pre class="mono small" style="white-space:pre-wrap;margin:0;color:var(--text-soft)">php <?= e(UPTIMER_ROOT) ?>/bin/selftest.php   # <?= te('logique de détection, hors ligne') ?>
-php <?= e(UPTIMER_ROOT) ?>/bin/bench.php      # <?= te('pannes reproduites de bout en bout') ?>
-php <?= e(UPTIMER_ROOT) ?>/bin/e2e.php        # <?= te('parcours complet de l\'interface') ?></pre>
+  <pre class="mono small" style="white-space:pre-wrap;margin:0;color:var(--text-soft)">php <?= e(UPTIMEEZ_ROOT) ?>/bin/selftest.php   # <?= te('logique de détection, hors ligne') ?>
+php <?= e(UPTIMEEZ_ROOT) ?>/bin/bench.php      # <?= te('pannes reproduites de bout en bout') ?>
+php <?= e(UPTIMEEZ_ROOT) ?>/bin/e2e.php        # <?= te('parcours complet de l\'interface') ?></pre>
 <?= Ui::accClose() ?>

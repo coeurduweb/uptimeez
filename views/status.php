@@ -1,9 +1,9 @@
 <?php
 /** Page d'état publique (accès par jeton, sans authentification). */
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Stats;
-use Uptimer\Ui;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Stats;
+use Uptimeez\Ui;
 
 $rows = Db::all("SELECT m.*, s.name AS site_name, s.domain FROM monitors m
                  LEFT JOIN sites s ON s.id = m.site_id
@@ -17,7 +17,7 @@ $ids = array_map(fn($r) => (int)$r['id'], $rows);
 $sparks = Stats::sparkBatch($ids, 86400, 48);
 ?>
 <div class="row" style="justify-content:center;margin:26px 0 4px">
-  <span style="font-size:20px;font-weight:700;letter-spacing:-.02em"><?= e((string)Config::get('app.name', 'Uptimer')) ?></span>
+  <span style="font-size:20px;font-weight:700;letter-spacing:-.02em"><?= e((string)Config::get('app.name', 'Uptimeez')) ?></span>
 </div>
 <p class="center muted small"><?= te('État des services · mis à jour') ?> <?= e(human_since((string)Db::setting('last_run_at'))) ?></p>
 

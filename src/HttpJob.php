@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 /** État interne d'une requête en cours (objet = passage par référence naturel). */
 final class HttpJob

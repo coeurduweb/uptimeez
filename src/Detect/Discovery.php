@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Detect;
+namespace Uptimeez\Detect;
 
-use Uptimer\Http;
-use Uptimer\Response;
+use Uptimeez\Http;
+use Uptimeez\Response;
 
 /**
  * Choix automatique des pages à surveiller pour un domaine, et déduction

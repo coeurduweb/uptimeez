@@ -1,8 +1,8 @@
-# Piloter Uptimer depuis un agent (MCP)
+# Piloter Uptimeez depuis un agent (MCP)
 
 [← Exploitation](exploitation.md) · [Documentation](README.md)
 
-Uptimer embarque un serveur MCP : Claude Code, Claude Desktop ou n'importe quel client MCP peut donc
+Uptimeez embarque un serveur MCP : Claude Code, Claude Desktop ou n'importe quel client MCP peut donc
 l'interroger sur votre parc et agir sur ses réponses. Il est écrit en PHP comme le reste du projet, sans aucune
 dépendance à installer.
 
@@ -15,16 +15,16 @@ Ajoutez le serveur à la configuration de votre client MCP :
 ```json
 {
   "mcpServers": {
-    "uptimer": {
+    "uptimeez": {
       "command": "php",
-      "args": ["/chemin/vers/uptimer/bin/mcp.php"],
-      "env": { "UPTIMER_CONFIG": "/chemin/vers/uptimer/config.php" }
+      "args": ["/chemin/vers/uptimeez/bin/mcp.php"],
+      "env": { "UPTIMEEZ_CONFIG": "/chemin/vers/uptimeez/config.php" }
     }
   }
 }
 ```
 
-`UPTIMER_CONFIG` n'est nécessaire que si votre `config.php` n'est pas à la racine du projet. Pour autoriser
+`UPTIMEEZ_CONFIG` n'est nécessaire que si votre `config.php` n'est pas à la racine du projet. Pour autoriser
 l'agent à agir et pas seulement à lire, ajoutez `--write` dans `args`.
 
 Vérifiez que ça répond avant de le brancher :

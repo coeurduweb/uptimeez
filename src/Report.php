@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
-use Uptimer\Notify\Mail;
+use Uptimeez\Notify\Mail;
 
 /**
  * Rapport mensuel de disponibilité, envoyé tout seul.
@@ -332,7 +332,7 @@ final class Report
                 $h .= '<tr style="border-top:1px solid #eef1f5">'
                     . '<td style="white-space:nowrap">' . e(date('d/m H:i', strtotime((string)$i['started_at']))) . '</td>'
                     . '<td>' . e((string)$i['name']) . '</td>'
-                    . '<td>' . e(\Uptimer\Notify\Notifier::reasonLabel($i['reason_code'] !== null ? (string)$i['reason_code'] : null)) . '</td>'
+                    . '<td>' . e(\Uptimeez\Notify\Notifier::reasonLabel($i['reason_code'] !== null ? (string)$i['reason_code'] : null)) . '</td>'
                     . '<td align="right" style="white-space:nowrap">' . e(human_duration($dur)) . '</td></tr>';
             }
             $h .= '</table>';
@@ -392,7 +392,7 @@ final class Report
                 $dur = $i['ended_at'] ? (int)$i['duration_sec']
                                       : max(0, time() - strtotime((string)$i['started_at']));
                 $L[] = '  ' . date('d/m H:i', strtotime((string)$i['started_at'])) . ' · ' . $i['name']
-                     . ' · ' . \Uptimer\Notify\Notifier::reasonLabel($i['reason_code'] !== null ? (string)$i['reason_code'] : null)
+                     . ' · ' . \Uptimeez\Notify\Notifier::reasonLabel($i['reason_code'] !== null ? (string)$i['reason_code'] : null)
                      . ' · ' . human_duration($dur);
             }
         }

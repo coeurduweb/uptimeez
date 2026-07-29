@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : audit de traduction.
+ * Uptimeez : audit de traduction.
  *
  * Trois questions, trois réponses :
  *   1. quelles phrases le code demande-t-il à traduire ?      (msgid extraits)
@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../src/bootstrap.php';
 
-use Uptimer\I18n;
+use Uptimeez\I18n;
 
 $opts = [];
 foreach (array_slice($argv, 1) as $a) {
@@ -26,17 +26,17 @@ function ui_files(): array
 {
     $out = [];
     foreach ([
-        UPTIMER_ROOT . '/views',
-        UPTIMER_ROOT . '/views/partials',
-        UPTIMER_ROOT . '/src',
-        UPTIMER_ROOT . '/src/Check',
-        UPTIMER_ROOT . '/src/Detect',
-        UPTIMER_ROOT . '/src/Notify',
+        UPTIMEEZ_ROOT . '/views',
+        UPTIMEEZ_ROOT . '/views/partials',
+        UPTIMEEZ_ROOT . '/src',
+        UPTIMEEZ_ROOT . '/src/Check',
+        UPTIMEEZ_ROOT . '/src/Detect',
+        UPTIMEEZ_ROOT . '/src/Notify',
     ] as $dir) {
         foreach (glob($dir . '/*.php') ?: [] as $f) $out[] = $f;
     }
     foreach (['index.php', 'api.php', 'install.php', 'beat.php'] as $f) {
-        $out[] = UPTIMER_ROOT . '/' . $f;
+        $out[] = UPTIMEEZ_ROOT . '/' . $f;
     }
     return array_values(array_filter($out, 'is_file'));
 }
@@ -113,7 +113,7 @@ function extract_msgids(array $files): array
     }
     // Les msgid passés par variable (libellés d'état, verdicts stockés en base)
     // ne peuvent pas être trouvés par lecture du code : ils sont déclarés.
-    $extra = UPTIMER_ROOT . '/lang/_dynamiques.php';
+    $extra = UPTIMEEZ_ROOT . '/lang/_dynamiques.php';
     if (is_file($extra)) {
         foreach ((array)require $extra as $id) {
             if (is_string($id) && $id !== '') $ids[$id][] = '_dynamiques.php';

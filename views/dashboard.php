@@ -5,9 +5,9 @@
  * Règle de lecture : ce qui demande une action est en haut et en rouge. Les
  * cartes ne portent que l'essentiel : le détail est sur la fiche de la sonde.
  */
-use Uptimer\Db;
-use Uptimer\Stats;
-use Uptimer\Ui;
+use Uptimeez\Db;
+use Uptimeez\Stats;
+use Uptimeez\Ui;
 
 $mode   = ($_GET['mode'] ?? 'site') === 'probe' ? 'probe' : 'site';
 $filter = (string)($_GET['f'] ?? 'all');

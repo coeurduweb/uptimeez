@@ -1,9 +1,9 @@
 <?php
 /** Historique des incidents, filtrable. */
-use Uptimer\Auth;
-use Uptimer\Db;
-use Uptimer\Notify\Notifier;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Db;
+use Uptimeez\Notify\Notifier;
+use Uptimeez\Ui;
 
 $csrf   = Auth::csrf();
 $onlyId = (int)($_GET['id'] ?? 0);

@@ -5,15 +5,15 @@
  * L'écran tient en une décision : coller une liste. Tous les réglages ont une
  * valeur par défaut sensée et sont repliés.
  */
-use Uptimer\Auth;
-use Uptimer\Config;
-use Uptimer\Importer;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Config;
+use Uptimeez\Importer;
+use Uptimeez\Ui;
 
 $csrf    = Auth::csrf();
 $pending = Importer::pending(200);
 $d       = Config::get('defaults', []);
-$preview = $GLOBALS['uptimer_preview'] ?? null;
+$preview = $GLOBALS['uptimeez_preview'] ?? null;
 $opt     = $preview['opt'] ?? [];
 $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
 ?>
@@ -42,7 +42,7 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
       <label for="file"><?= te('Ou déposez l\'export de votre outil actuel') ?></label><?= hint('Les exports d\'UptimeRobot, Uptime Kuma, Better Stack, Pingdom et Site24x7 sont reconnus au contenu, sans rien choisir. Un CSV avec une colonne d\'adresses fonctionne aussi. Cadences, mots-clés et sondes en pause sont reprises telles quelles.') ?>
       <input id="file" type="file" name="file" accept=".json,.csv,.txt,.tsv,application/json,text/csv,text/plain">
       <span class="hint"><?= te('{list} sont lus directement. Ce qui n\'a pas d\'équivalent, comme un port TCP ou un ping, est listé sans être créé : rien ne disparaît en silence.',
-            ['list' => implode(', ', array_slice(Uptimer\Import\Foreign::SOURCES, 0, 5))]) ?>
+            ['list' => implode(', ', array_slice(Uptimeez\Import\Foreign::SOURCES, 0, 5))]) ?>
         <br><?= te('Seule la configuration est reprise, jamais l\'historique de mesures : il a été pris par un autre outil, avec d\'autres seuils, depuis un autre réseau.') ?></span>
     </div>
 

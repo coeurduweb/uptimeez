@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Notify;
+namespace Uptimeez\Notify;
 
-use Uptimer\Config;
-use Uptimer\Http;
+use Uptimeez\Config;
+use Uptimeez\Http;
 
 final class Discord
 {
@@ -21,13 +21,13 @@ final class Discord
         }
         $link = Notifier::monitorLink($mon);
 
-        $payload = ['username' => 'Uptimer', 'embeds' => [[
+        $payload = ['username' => 'Uptimeez', 'embeds' => [[
             'title'       => str_cut($title, 240),
             'description' => $link ? '[' . t('Ouvrir la fiche de surveillance') . '](' . $link . ')' : null,
             'color'       => Notifier::COLORS[$sev] ?? Notifier::COLORS['info'],
             'fields'      => $fields,
             'timestamp'   => date('c'),
-            'footer'      => ['text' => 'Uptimer · ' . date('d/m/Y H:i')],
+            'footer'      => ['text' => 'Uptimeez · ' . date('d/m/Y H:i')],
         ]]];
 
         $res = Http::fetch($url, [

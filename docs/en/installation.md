@@ -2,7 +2,7 @@
 
 [← Documentation](README.md) · [Getting started →](getting-started.md)
 
-Uptimer is a plain PHP application. There is no build step, no package manager and no container. If you can
+Uptimeez is a plain PHP application. There is no build step, no package manager and no container. If you can
 upload files by FTP and add a cron entry, you can run it.
 
 ---
@@ -27,8 +27,8 @@ Nothing else. The installer checks all of it and tells you what is missing befor
 ## Standard installation
 
 ```bash
-git clone https://github.com/loran750/uptimer.git
-cd uptimer
+git clone https://github.com/loran750/uptimeez.git
+cd uptimeez
 chmod -R 775 data
 ```
 
@@ -47,26 +47,26 @@ Finally, add the cron entry (see below) and open the settings screen to configur
 
 This is the primary target, not an afterthought.
 
-1. Upload the folder into `public_html/uptimer/` (or wherever you serve from).
+1. Upload the folder into `public_html/uptimeez/` (or wherever you serve from).
 2. Set `data/` to `775` in the file manager.
-3. Visit `https://yourdomain.com/uptimer/install.php`.
+3. Visit `https://yourdomain.com/uptimeez/install.php`.
 4. In cPanel → **Cron jobs**, frequency **every minute**:
 
    ```
-   * * * * * /usr/local/bin/php /home/YOURACCOUNT/public_html/uptimer/cron.php >/dev/null 2>&1
+   * * * * * /usr/local/bin/php /home/YOURACCOUNT/public_html/uptimeez/cron.php >/dev/null 2>&1
    ```
 
    The exact line, with the right PHP path for your account, is displayed in **Settings → Scheduled task** , 
    copy it from there rather than guessing.
 
 **o2switch specifics.** The PHP binary is usually `/usr/local/bin/php`. LiteSpeed ignores some `.htaccess`
-rewrite flags, which is why Uptimer never relies on URL rewriting: every URL is a plain
+rewrite flags, which is why Uptimeez never relies on URL rewriting: every URL is a plain
 `index.php?p=…`. Nothing to configure.
 
 **No crontab at all?** Settings → *Trigger over URL* gives you a secret URL:
 
 ```
-https://yourdomain.com/uptimer/cron.php?key=YOUR_KEY
+https://yourdomain.com/uptimeez/cron.php?key=YOUR_KEY
 ```
 
 Call it every minute from any external scheduler (cron-job.org, EasyCron, a GitHub Action, another server's
@@ -76,7 +76,7 @@ crontab). Without the correct key the endpoint answers 403 and does nothing.
 
 ## Protecting the installation
 
-Uptimer is password-protected and sends `noindex, nofollow` on every page. For a belt-and-braces setup:
+Uptimeez is password-protected and sends `noindex, nofollow` on every page. For a belt-and-braces setup:
 
 - Put it on a subdomain you do not advertise, or in a folder with a non-obvious name.
 - Add HTTP authentication on top (cPanel → *Directory Privacy*) if you like.
@@ -99,8 +99,8 @@ Edit `config.php`:
     'driver'  => 'mysql',
     'host'    => 'localhost',
     'port'    => 3306,
-    'name'    => 'uptimer',
-    'user'    => 'uptimer',
+    'name'    => 'uptimeez',
+    'user'    => 'uptimeez',
     'pass'    => '…',
     'charset' => 'utf8mb4',
 ],

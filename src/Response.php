@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 /** Réponse HTTP enrichie (timings, certificat, erreur curl normalisée). */
 final class Response

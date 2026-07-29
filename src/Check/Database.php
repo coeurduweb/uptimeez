@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Check;
+namespace Uptimeez\Check;
 
-use Uptimer\Http;
-use Uptimer\Response;
+use Uptimeez\Http;
+use Uptimeez\Response;
 
 /**
  * Détection « base de données HS ».

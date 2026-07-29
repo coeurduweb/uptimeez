@@ -33,7 +33,7 @@ channel.
   "title": "The page layout is broken",
   "message": "Broken layout: stylesheet failed: …/cache/min/1/absent.css → HTTP 404",
   "since": "2026-07-28 18:24:11",
-  "link": "https://yourdomain.com/uptimer/index.php?p=monitor&id=12"
+  "link": "https://yourdomain.com/uptimeez/index.php?p=monitor&id=12"
 }
 ```
 
@@ -61,7 +61,7 @@ Nothing else. There is no "reminder that everything is fine", no daily volume of
 
 ## Grouped outages : the noise killer
 
-When three or more monitors fail on the **same IP address** within one pass, Uptimer sends **one** alert naming
+When three or more monitors fail on the **same IP address** within one pass, Uptimeez sends **one** alert naming
 the server and listing the affected sites, instead of one alert per site.
 
 This is the difference between "my hosting provider had an incident, I got one message" and "my hosting provider

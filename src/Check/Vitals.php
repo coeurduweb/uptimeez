@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Check;
+namespace Uptimeez\Check;
 
-use Uptimer\Http;
-use Uptimer\Response;
+use Uptimeez\Http;
+use Uptimeez\Response;
 
 /**
  * Ce qui rend une page lente, lu dans la page elle-même.
  *
  * Le problème des Core Web Vitals, pour un outil comme celui-ci : les trois
  * mesures officielles (LCP, INP, CLS) viennent de vrais navigateurs, sur de
- * vrais visiteurs. Sans navigateur et sans clé d'API, Uptimer ne peut pas les
+ * vrais visiteurs. Sans navigateur et sans clé d'API, Uptimeez ne peut pas les
  * inventer, et il ne le fera pas. Un chiffre de performance inventé serait la
  * pire chose à afficher : on le croirait.
  *
@@ -33,7 +33,7 @@ use Uptimer\Response;
  * Vocabulaire tenu du début à la fin : ce qui est mesuré est appelé mesure, ce
  * qui est déduit du HTML est appelé cause probable. Les deux ne sont jamais
  * mélangés dans une même phrase, et aucun LCP n'est annoncé sans venir d'un
- * vrai navigateur (voir \Uptimer\Vitals pour les données de terrain).
+ * vrai navigateur (voir \Uptimeez\Vitals pour les données de terrain).
  */
 final class Vitals
 {

@@ -1,6 +1,6 @@
 # Veille de sécurité
 
-**Uptimer sait déjà quelle version tourne sur chaque site qu'il surveille. Il ne reste plus qu'à demander si
+**Uptimeez sait déjà quelle version tourne sur chaque site qu'il surveille. Il ne reste plus qu'à demander si
 cette version a une faille publiée.**
 
 [← Documentation](README.md) · [English version](../en/security-watch.md)
@@ -12,7 +12,7 @@ cette version a une faille publiée.**
 Un outil de surveillance classique vous prévient quand un site tombe. Celui-ci vous prévient **avant**, quand un
 avis de sécurité vient d'être publié sur la version que votre client exécute encore.
 
-C'est le même travail de fond que la détection de mise en page cassée : Uptimer récupère déjà le HTML de chaque
+C'est le même travail de fond que la détection de mise en page cassée : Uptimeez récupère déjà le HTML de chaque
 page surveillée, donc l'information est là, gratuite, il suffisait de la lire.
 
 ![Logiciels et failles connues](../img/vulnerabilities.png)
@@ -30,7 +30,7 @@ C'est le point qui décide si vous pouvez faire confiance à cet écran.
 
 Confondre les deux serait le plus court chemin pour perdre votre confiance. Un outil qui affiche « vulnérable »
 alors qu'il ne sait que « pas à jour » se fait ignorer en trois semaines, et le jour où il a raison, personne ne
-regarde. Uptimer emploie donc deux mots différents, deux couleurs différentes, et n'affiche jamais de gravité
+regarde. Uptimeez emploie donc deux mots différents, deux couleurs différentes, et n'affiche jamais de gravité
 qu'il n'a pas lue dans un avis : quand l'avis n'annonce rien, l'écran dit « gravité non annoncée ».
 
 ---
@@ -71,7 +71,7 @@ Deux sources publiques, sans compte et sans clé d'API :
 
 ### Ce qui sort de chez vous
 
-À dire clairement, parce que c'est le seul flux sortant d'Uptimer qui ne va pas vers un site que vous
+À dire clairement, parce que c'est le seul flux sortant d'Uptimeez qui ne va pas vers un site que vous
 surveillez : la requête envoie **le nom du composant et son numéro de version**. Jamais l'adresse du site
 concerné, jamais le nom de votre client, jamais l'inventaire complet en un seul appel. Une source d'avis
 apprend que quelqu'un s'intéresse à `drupal/core 10.1.6`, rien de plus.
@@ -134,7 +134,7 @@ Dans `config.php`, si vous préférez les fichiers aux écrans :
 ## Ce que la veille ne fait pas
 
 - **Elle ne scanne pas votre site.** Aucune requête n'est envoyée pour tester une faille, aucun chemin
-  d'administration n'est sondé, aucune charge n'est injectée. Uptimer lit ce que la page publie et interroge des
+  d'administration n'est sondé, aucune charge n'est injectée. Uptimeez lit ce que la page publie et interroge des
   bases publiques. Un outil qui teste réellement les failles est un scanner de vulnérabilités : c'est un autre
   métier, et il se lance avec une autorisation écrite.
 - **Elle ne voit pas ce que le HTML ne dit pas.** Une extension qui ne charge ni CSS ni JavaScript sur la page

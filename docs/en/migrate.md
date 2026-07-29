@@ -1,6 +1,6 @@
 # Bring over a portfolio monitored elsewhere
 
-**Drop your current tool's export. Uptimer recognises it, shows you what it will create, and tells you what it
+**Drop your current tool's export. Uptimeez recognises it, shows you what it will create, and tells you what it
 cannot carry over.**
 
 [← Documentation](README.md) · [Version française](../fr/reprise.md)
@@ -33,7 +33,7 @@ in any order.
 ## How it goes
 
 1. **Add sites screen** → *Or drop your current tool's export*.
-2. Uptimer recognises the format **by its content**, never by the file name: a renamed export works, and a file
+2. Uptimeez recognises the format **by its content**, never by the file name: a renamed export works, and a file
    called `uptimerobot.json` that is not one fools nobody.
 3. The preview appears: what will be created, at what rate, with which proof string, and what cannot be carried
    over.
@@ -49,7 +49,7 @@ Nothing is created before you confirm.
 | Setting | Behaviour |
 |---|---|
 | Address | Taken as is. Pingdom stores hostname and path separately: the address is rebuilt, encryption included. |
-| Name | Taken over. Failing that, Uptimer derives one from the domain. |
+| Name | Taken over. Failing that, Uptimeez derives one from the domain. |
 | Check rate | **Taken as is**, and labelled as such in the preview. A one-minute rate next door stays one minute here: somebody chose it. |
 | Expected keyword | Becomes the proof string. |
 | Keyword that triggers the alert | Becomes a **forbidden string**, which is not the same thing. See below. |
@@ -68,13 +68,13 @@ The tools do not share a convention, and getting it wrong inverts the alert:
 - **Pingdom**: `shouldcontain` is a proof string, `shouldnotcontain` a forbidden one.
 - **Site24x7**: `matching_keyword` is expected, `unmatching_keyword` is forbidden.
 
-Uptimer honours each convention. The tests check it, for each of the five tools.
+Uptimeez honours each convention. The tests check it, for each of the five tools.
 
 ---
 
 ## What does not carry over, and why
 
-**Monitors with no equivalent.** A TCP port, an ICMP ping, a DNS lookup, an SMTP test: Uptimer monitors over HTTP.
+**Monitors with no equivalent.** A TCP port, an ICMP ping, a DNS lookup, an SMTP test: Uptimeez monitors over HTTP.
 Those monitors appear in a list, with the reason, and are not created. An import that silently loses six monitors
 out of forty is worse than one that refuses.
 
@@ -83,7 +83,7 @@ no sense: create the monitor here to get a new URL, then paste it into the scrip
 
 **The measurement history.** This is the most important point, and the most tempting one to ignore. Those
 measurements were taken by another tool, with other thresholds, from another network, at another frequency.
-Displaying them as its own would be a lie: a "99.98 %" carried over from Pingdom says nothing about what Uptimer
+Displaying them as its own would be a lie: a "99.98 %" carried over from Pingdom says nothing about what Uptimeez
 would have measured. So the uptime counter starts from zero, and that is stated before the import.
 
 **Alert contacts.** Channels are configured once for the whole installation, not per monitor. See
@@ -95,9 +95,9 @@ would have measured. So the uptime counter starts from zero, and that is stated 
 
 The right way to switch is not to cut the old tool off:
 
-1. Bring the portfolio into Uptimer and let the scheduled task run.
+1. Bring the portfolio into Uptimeez and let the scheduled task run.
 2. Keep the old tool running for a few days, alerts included.
-3. Compare: on a real incident, both should alert. If Uptimer sees an outage the other missed, that is the most
+3. Compare: on a real incident, both should alert. If Uptimeez sees an outage the other missed, that is the most
    common case, and usually a broken layout or a database down behind a 200.
 4. Switch the old one off when you no longer have doubts.
 

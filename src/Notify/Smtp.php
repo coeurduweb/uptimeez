@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Notify;
+namespace Uptimeez\Notify;
 
-use Uptimer\Config;
+use Uptimeez\Config;
 
 /**
  * Client SMTP minimal (fsockopen) : AUTH LOGIN / PLAIN, STARTTLS ou SSL direct.
@@ -51,7 +51,7 @@ final class Smtp
         };
 
         if (!$expect($read(), '220')) return $fail(t('Bannière SMTP inattendue'));
-        $ehlo = 'uptimer.' . (parse_url((string)Config::get('app.base_url', ''), PHP_URL_HOST) ?: 'localhost');
+        $ehlo = 'uptimeez.' . (parse_url((string)Config::get('app.base_url', ''), PHP_URL_HOST) ?: 'localhost');
         $write('EHLO ' . $ehlo);
         $caps = $read();
         if (!$expect($caps, '250')) return $fail(t('EHLO refusé'));
@@ -90,7 +90,7 @@ final class Smtp
         $write('DATA');
         if (!$expect($read(), '354')) return $fail(t('DATA refusé'));
 
-        $boundary = 'uptimer' . bin2hex(random_bytes(8));
+        $boundary = 'uptimeez' . bin2hex(random_bytes(8));
         $headers = [
             'Date: ' . date('r'),
             'From: ' . (preg_match('~[^\x20-\x7E]~', $fromName)
@@ -99,7 +99,7 @@ final class Smtp
             'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
             'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $ehlo . '>',
             'MIME-Version: 1.0',
-            'X-Mailer: Uptimer',
+            'X-Mailer: Uptimeez',
             'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
         ];
         $body = implode("\r\n", $headers) . "\r\n\r\n"

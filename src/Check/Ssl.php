@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Check;
+namespace Uptimeez\Check;
 
 /**
  * Inspection du certificat TLS.

@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer\Notify;
+namespace Uptimeez\Notify;
 
-use Uptimer\Config;
-use Uptimer\Db;
+use Uptimeez\Config;
+use Uptimeez\Db;
 
 /**
  * Envoi des alertes : Discord, Slack, e-mail, webhook générique.
@@ -317,10 +317,10 @@ final class Notifier
             [t('Date'), date('d/m/Y H:i:s')],
         ];
         $res = match ($channel) {
-            'discord' => Discord::send('✅ Test Uptimer', $lines, 'up', $mon),
-            'slack'   => Slack::send('✅ Test Uptimer', $lines, 'up', $mon),
-            'mail'    => Mail::send('✅ Test Uptimer', $lines, 'up', $mon),
-            'webhook' => Webhook::send('✅ Test Uptimer', $lines, 'up', $mon),
+            'discord' => Discord::send('✅ Test Uptimeez', $lines, 'up', $mon),
+            'slack'   => Slack::send('✅ Test Uptimeez', $lines, 'up', $mon),
+            'mail'    => Mail::send('✅ Test Uptimeez', $lines, 'up', $mon),
+            'webhook' => Webhook::send('✅ Test Uptimeez', $lines, 'up', $mon),
             default   => ['ok' => false, 'info' => t('Canal inconnu')],
         };
         self::log($mon, $channel, 'test', (bool)$res['ok'], (string)($res['info'] ?? ''));

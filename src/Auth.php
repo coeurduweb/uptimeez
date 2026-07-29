@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 final class Auth
 {
@@ -13,8 +13,8 @@ final class Auth
         self::$started = true;
         if (session_status() === PHP_SESSION_ACTIVE) return;
 
-        $name = (string)Config::get('auth.session_name', 'uptimer');
-        session_name(preg_replace('~[^a-z0-9_]~i', '', $name) ?: 'uptimer');
+        $name = (string)Config::get('auth.session_name', 'uptimeez');
+        session_name(preg_replace('~[^a-z0-9_]~i', '', $name) ?: 'uptimeez');
         session_set_cookie_params([
             'lifetime' => 0,
             'path'     => '/',
@@ -29,9 +29,9 @@ final class Auth
     public static function check(): bool
     {
         self::start();
-        if (empty($_SESSION['uptimer_auth'])) return false;
+        if (empty($_SESSION['uptimeez_auth'])) return false;
         $ttl = (int)Config::get('auth.session_ttl', 2592000);
-        if ($ttl > 0 && (time() - (int)($_SESSION['uptimer_auth_at'] ?? 0)) > $ttl) {
+        if ($ttl > 0 && (time() - (int)($_SESSION['uptimeez_auth_at'] ?? 0)) > $ttl) {
             self::logout();
             return false;
         }
@@ -56,9 +56,9 @@ final class Auth
             session_regenerate_id(true);
             $_SESSION = $keep;
         }
-        $_SESSION['uptimer_auth'] = true;
-        $_SESSION['uptimer_auth_at'] = time();
-        $_SESSION['uptimer_csrf'] = bin2hex(random_bytes(16));
+        $_SESSION['uptimeez_auth'] = true;
+        $_SESSION['uptimeez_auth_at'] = time();
+        $_SESSION['uptimeez_csrf'] = bin2hex(random_bytes(16));
         self::note(true);
         return true;
     }
@@ -102,14 +102,14 @@ final class Auth
     public static function csrf(): string
     {
         self::start();
-        if (empty($_SESSION['uptimer_csrf'])) $_SESSION['uptimer_csrf'] = bin2hex(random_bytes(16));
-        return (string)$_SESSION['uptimer_csrf'];
+        if (empty($_SESSION['uptimeez_csrf'])) $_SESSION['uptimeez_csrf'] = bin2hex(random_bytes(16));
+        return (string)$_SESSION['uptimeez_csrf'];
     }
 
     public static function checkCsrf(?string $token): bool
     {
         self::start();
-        $ref = (string)($_SESSION['uptimer_csrf'] ?? '');
+        $ref = (string)($_SESSION['uptimeez_csrf'] ?? '');
         return $ref !== '' && is_string($token) && hash_equals($ref, $token);
     }
 

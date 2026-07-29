@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 /**
  * Traduit un code d'anomalie en explication utile : ce que ça veut dire,

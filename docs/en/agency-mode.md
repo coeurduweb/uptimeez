@@ -14,7 +14,7 @@ has any business seeing the other twenty-nine.
 The tools on the market answer this with user accounts, roles and permissions: three configuration screens, one
 password to hand out per client, and a "I lost my password" on a Sunday evening.
 
-Uptimer answers differently. You create a client, tick their sites, copy their link. Done.
+Uptimeez answers differently. You create a client, tick their sites, copy their link. Done.
 
 ![Clients screen](../img/clients.png)
 
@@ -86,7 +86,7 @@ client with the same name is reused rather than duplicated, and pressing the but
 ### Send the link
 
 The *Link to send to the client* field selects with one click. Fill in **Settings → Address of this installation**
-first, otherwise the link will start with `https://votre-adresse-uptimer`.
+first, otherwise the link will start with `https://votre-adresse-uptimeez`.
 
 ---
 
@@ -139,7 +139,7 @@ seconds.
 **The link shows "Lien invalide ou expiré".** Three causes, one deliberate answer: the token is wrong, it was
 changed, or access is closed. Check the *Access open* switch and copy the link again from the Clients screen.
 
-**The link starts with `https://votre-adresse-uptimer`.** The installation address is not set:
+**The link starts with `https://votre-adresse-uptimeez`.** The installation address is not set:
 **Settings → Application and access → Address of this installation**.
 
 **A client says they can see a site that is not theirs.** That is impossible by construction, but it is an issue

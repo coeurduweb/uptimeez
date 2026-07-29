@@ -9,10 +9,10 @@
  *
  * Aucune de ces actions ne quitte la page.
  */
-use Uptimer\Auth;
-use Uptimer\Stats;
-use Uptimer\Triage;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Stats;
+use Uptimeez\Triage;
+use Uptimeez\Ui;
 
 $csrf     = Auth::csrf();
 $actions  = Triage::actions();

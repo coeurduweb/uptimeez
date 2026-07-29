@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : ce qui s'affiche quand Uptimer lui-même est en panne.
+ * Uptimeez : ce qui s'affiche quand Uptimeez lui-même est en panne.
  *
  * Un outil dont le métier est de dire « ce site est cassé, voilà pourquoi » n'a
  * pas le droit de répondre par une page blanche quand c'est lui qui tombe.
@@ -29,7 +29,7 @@
  */
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 use Throwable;
 
@@ -356,7 +356,7 @@ final class Fail
                 'cause' => self::tr('Le serveur répond, mais la base {name} est introuvable.', ['name' => $name]),
                 'fixes' => [
                     self::tr('Créez-la : `CREATE DATABASE {name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`',
-                             ['name' => $name !== '' ? $name : 'uptimer']),
+                             ['name' => $name !== '' ? $name : 'uptimeez']),
                     self::tr('Ou corrigez le nom dans config.php : une base renommée ne se devine pas.'),
                 ],
             ] + $base;
@@ -420,14 +420,14 @@ final class Fail
     private static function sqlitePaths(): array
     {
         $path = (string)self::safe(fn() => (string)Config::get('db.sqlite', ''), '');
-        if ($path === '') $path = UPTIMER_ROOT . '/data/uptimer.sqlite';
+        if ($path === '') $path = UPTIMEEZ_ROOT . '/data/uptimeez.sqlite';
         return [$path, dirname($path)];
     }
 
     /** Espace libre, quand le système accepte de le dire. */
     private static function diskHint(string $dir): string
     {
-        $free = @disk_free_space(is_dir($dir) ? $dir : UPTIMER_ROOT);
+        $free = @disk_free_space(is_dir($dir) ? $dir : UPTIMEEZ_ROOT);
         if ($free === false) return '';
         return self::tr('Espace libre sur ce disque : {size}.', ['size' => human_bytes((int)$free)]);
     }
@@ -443,7 +443,7 @@ final class Fail
               . ' [' . (PHP_SAPI === 'cli' ? 'cli' : (string)($_SERVER['REQUEST_URI'] ?? '-')) . ']' . "\n";
         if ($e !== null) $line .= '  ' . str_replace("\n", "\n  ", $e->getTraceAsString()) . "\n";
 
-        $dir = UPTIMER_ROOT . '/data';
+        $dir = UPTIMEEZ_ROOT . '/data';
         if (is_dir($dir) && is_writable($dir)) {
             $file = $dir . '/erreurs.log';
             // Journal borné : une panne en boucle ne remplit pas le disque
@@ -451,7 +451,7 @@ final class Fail
             if (@filesize($file) > 2 * 1024 * 1024) @unlink($file);
             if (@file_put_contents($file, $line, FILE_APPEND | LOCK_EX) !== false) return;
         }
-        error_log('Uptimer: ' . $tech);
+        error_log('Uptimeez: ' . $tech);
     }
 
     /**
@@ -464,7 +464,7 @@ final class Fail
         $out = self::safe(fn() => I18n::t($msgid, $vars), null);
         if (is_string($out)) return $out;
         foreach ($vars as $k => $v) $msgid = str_replace('{' . $k . '}', (string)$v, $msgid);
-        return str_replace('{app}', 'Uptimer', $msgid);
+        return str_replace('{app}', 'Uptimeez', $msgid);
     }
 
     private static function safe(callable $fn, mixed $default): mixed

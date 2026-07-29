@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimer : béta-test destructif (« l'utilisateur qui fait n'importe quoi »).
+ * Uptimeez : béta-test destructif (« l'utilisateur qui fait n'importe quoi »).
  *
  * On joue le rôle de quelqu'un qui écrit mal, clique partout, ne lit aucune
  * consigne, envoie des formulaires vides ou monstrueux, et essaie de casser
@@ -41,7 +41,7 @@ function title(string $s): void { echo "\n── $s " . str_repeat('─', max(0,
 // =========================================================================
 // Instance isolée
 // =========================================================================
-$tmp = sys_get_temp_dir() . '/uptimer-chaos-' . bin2hex(random_bytes(4));
+$tmp = sys_get_temp_dir() . '/uptimeez-chaos-' . bin2hex(random_bytes(4));
 @mkdir($tmp . '/site', 0775, true);
 
 $freePort = function (int $from): int {
@@ -65,12 +65,12 @@ file_put_contents("$tmp/site/api.php", "<?php header('Content-Type: application/
 $cfgFile = $tmp . '/config.php';
 file_put_contents($cfgFile, "<?php return " . var_export([
     'db'   => ['driver' => 'sqlite', 'sqlite' => $tmp . '/chaos.sqlite'],
-    'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimerchaos'],
-    'app'  => ['name' => 'Uptimer Chaos', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+    'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeezchaos'],
+    'app'  => ['name' => 'Uptimeez Chaos', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
                'public_token' => 'jeton-chaos', 'cron_key' => 'cle-chaos'],
     'defaults' => ['interval_sec' => 300, 'timeout_sec' => 5, 'retries' => 0, 'slow_ms' => 9000,
                    'max_parallel' => 4, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                   'user_agent' => 'UptimerBot/1.0 (Chaos)'],
+                   'user_agent' => 'UptimeezBot/1.0 (Chaos)'],
     'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                  'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => ''],
                  'resend_after_min' => 60, 'notify_recovery' => true, 'notify_degraded' => true, 'quiet_hours' => ''],
@@ -81,7 +81,7 @@ $spawn = function (array $cmd, string $cwd, array $env = []) {
                      $pipes, $cwd, $env + ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
 };
 $siteSrv = $spawn([PHP_BINARY, '-S', "127.0.0.1:$sitePort", '-t', "$tmp/site"], "$tmp/site");
-$appSrv  = $spawn([PHP_BINARY, '-S', "127.0.0.1:$appPort", '-t', $ROOT], $ROOT, ['UPTIMER_CONFIG' => $cfgFile]);
+$appSrv  = $spawn([PHP_BINARY, '-S', "127.0.0.1:$appPort", '-t', $ROOT], $ROOT, ['UPTIMEEZ_CONFIG' => $cfgFile]);
 
 register_shutdown_function(function () use ($siteSrv, $appSrv, $tmp, $appPort, $sitePort): void {
     foreach ([[$appSrv, $appPort], [$siteSrv, $sitePort]] as [$h, $port]) {
@@ -515,7 +515,7 @@ foreach (['PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'TRACE', 'BREW'] as $meth
     foreach (['/index.php?p=today', '/api.php?action=summary', '/beat.php'] as $p) {
         $r = $req($p, null, ['method' => $meth]);
         // 501 vient du serveur web lui-même face à un verbe inconnu : ce n'est
-        // pas Uptimer qui casse. Seul un 5xx applicatif compte.
+        // pas Uptimeez qui casse. Seul un 5xx applicatif compte.
         if ($r['code'] >= 500 && $r['code'] !== 501) { $bad++; echo "      $meth $p → HTTP {$r['code']}\n"; }
         if ($n = $phpNoise($r['body'])) { $bad++; echo "      $meth $p → bruit PHP « $n »\n"; }
     }
@@ -554,7 +554,7 @@ $badTimeout = (int)$pdo->query('SELECT COUNT(*) FROM monitors WHERE timeout_sec 
 ok('délais d\'attente dans des bornes saines', $badTimeout === 0, (string)$badTimeout);
 
 // Le collecteur doit encore tourner sur cette base malmenée.
-$out = shell_exec('UPTIMER_CONFIG=' . escapeshellarg($cfgFile) . ' '
+$out = shell_exec('UPTIMEEZ_CONFIG=' . escapeshellarg($cfgFile) . ' '
     . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --once 2>&1');
 ok('le collecteur tourne encore', $out !== null && !preg_match('~Fatal|Parse error|Uncaught~', (string)$out),
    str_cut(trim((string)$out), 60));

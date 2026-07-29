@@ -1,9 +1,9 @@
 <?php
 /**
- * Uptimer : réception d'un battement.
+ * Uptimeez : réception d'un battement.
  *
  * À appeler par le script à surveiller (cron, sauvegarde, import nocturne) :
- *   curl -fsS "https://uptimer.exemple.fr/beat.php?k=LACLE" > /dev/null
+ *   curl -fsS "https://uptimeez.exemple.fr/beat.php?k=LACLE" > /dev/null
  *
  * Optionnel : &m=texte pour joindre un mot (nombre de fichiers traités, durée…).
  * Aucune authentification par session : la clé fait office de secret, et une clé
@@ -13,16 +13,16 @@ declare(strict_types=1);
 
 require __DIR__ . '/src/bootstrap.php';
 
-use Uptimer\Config;
-use Uptimer\Db;
-use Uptimer\Heartbeat;
+use Uptimeez\Config;
+use Uptimeez\Db;
+use Uptimeez\Heartbeat;
 
 header('Content-Type: text/plain; charset=utf-8');
 header('Cache-Control: no-store');
 
 // Le script appelant lit du texte, pas du HTML. Et la clé de battement n'est pas
 // une authentification d'exploitant : aucun détail technique ne sort d'ici.
-Uptimer\Fail::asText();
+Uptimeez\Fail::asText();
 
 if (!Config::isInstalled()) {
     http_response_code(503);

@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
-use Uptimer\Detect\Cms;
-use Uptimer\Tune;
-use Uptimer\Detect\Discovery;
+use Uptimeez\Detect\Cms;
+use Uptimeez\Tune;
+use Uptimeez\Detect\Discovery;
 
 /**
  * Import de masse : on colle une liste de domaines ou d'URLs, rien d'autre.

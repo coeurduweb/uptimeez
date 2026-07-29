@@ -1,8 +1,8 @@
-# Talk to Uptimer from an agent (MCP)
+# Talk to Uptimeez from an agent (MCP)
 
 [← Operations](operations.md) · [Documentation](README.md)
 
-Uptimer ships an MCP server, so Claude Code, Claude Desktop or any MCP client can ask it questions about your
+Uptimeez ships an MCP server, so Claude Code, Claude Desktop or any MCP client can ask it questions about your
 portfolio and act on the answers. It is written in PHP like the rest of the project, with no dependency to
 install.
 
@@ -15,16 +15,16 @@ Add the server to your MCP client configuration:
 ```json
 {
   "mcpServers": {
-    "uptimer": {
+    "uptimeez": {
       "command": "php",
-      "args": ["/path/to/uptimer/bin/mcp.php"],
-      "env": { "UPTIMER_CONFIG": "/path/to/uptimer/config.php" }
+      "args": ["/path/to/uptimeez/bin/mcp.php"],
+      "env": { "UPTIMEEZ_CONFIG": "/path/to/uptimeez/config.php" }
     }
   }
 }
 ```
 
-`UPTIMER_CONFIG` is only needed if your `config.php` is not in the project root. To allow the agent to act and
+`UPTIMEEZ_CONFIG` is only needed if your `config.php` is not in the project root. To allow the agent to act and
 not just read, add `--write` to `args`.
 
 Check it works before wiring it up:

@@ -24,7 +24,7 @@ HTTP. Créez une sonde battement, copiez la ligne qu'elle vous donne, et placez-
 importe :
 
 ```bash
-curl -fsS --max-time 10 "https://votredomaine.fr/uptimer/beat.php?k=JETON" > /dev/null
+curl -fsS --max-time 10 "https://votredomaine.fr/uptimeez/beat.php?k=JETON" > /dev/null
 ```
 
 Ajoutez `&m=un+texte` pour joindre un mot au signal : un nombre de fichiers, une durée, un total de lignes. Si le
@@ -46,7 +46,7 @@ gagne toujours, définitivement.
 | Champ | Défaut | Y toucher quand |
 |---|---|---|
 | Nom | le nom du site | Il doit bien se lire dans une alerte |
-| Adresse surveillée | telle que collée | Un domaine nu devient `https://`, les redirections sont suivies. Si HTTPS ne répond pas du tout, Uptimer retente en HTTP, le signale, et surveille quand même |
+| Adresse surveillée | telle que collée | Un domaine nu devient `https://`, les redirections sont suivies. Si HTTPS ne répond pas du tout, Uptimeez retente en HTTP, le signale, et surveille quand même |
 | Fréquence de vérification | **auto** selon l'importance | Vous voulez une page tarifs chaque minute. Plus court = détection plus rapide et plus de charge sur le site |
 | Groupe | vide | Vous voulez filtrer le mur par client |
 | Sonde active | activée | Décocher garde la sonde et son historique mais arrête les vérifications |
@@ -61,7 +61,7 @@ gagne toujours, définitivement.
 Pourquoi c'est important : sans elle, une page vide renvoyant `200` passerait pour valide. Avec elle, une panne de
 base est détectée en une vérification alors que le code HTTP est impeccable.
 
-Uptimer la déduit dans cet ordre de préférence : copyright du pied de page (qui vient des réglages du site, donc de
+Uptimeez la déduit dans cet ordre de préférence : copyright du pied de page (qui vient des réglages du site, donc de
 la base) → `og:site_name` → titre de la page → première entrée du menu → titre H1. Les formulations passe-partout
 sont écartées (« tous droits réservés », « accueil »), et elle n'est jamais prise sur une page qui ressemble à une
 page d'erreur. Si rien d'assez identifiant n'est trouvé, la sonde apparaît dans *À prévoir* pour que vous la

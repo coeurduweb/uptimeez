@@ -33,7 +33,7 @@ un canal.
   "title": "La mise en page est cassée",
   "message": "Mise en page cassée : feuille de style en échec : …/cache/min/1/absent.css → HTTP 404",
   "since": "2026-07-28 18:24:11",
-  "link": "https://votredomaine.fr/uptimer/index.php?p=monitor&id=12"
+  "link": "https://votredomaine.fr/uptimeez/index.php?p=monitor&id=12"
 }
 ```
 
@@ -62,7 +62,7 @@ Rien d'autre. Il n'y a pas de « rappel que tout va bien », pas de volume quoti
 
 ## Pannes groupées : le tueur de bruit
 
-Quand trois sondes ou plus tombent sur la **même adresse IP** au cours d'une même passe, Uptimer envoie **une**
+Quand trois sondes ou plus tombent sur la **même adresse IP** au cours d'une même passe, Uptimeez envoie **une**
 alerte qui nomme le serveur et liste les sites touchés, au lieu d'une alerte par site.
 
 C'est la différence entre « mon hébergeur a eu un incident, j'ai reçu un message » et « mon hébergeur a eu un

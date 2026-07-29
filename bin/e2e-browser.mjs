@@ -1,5 +1,5 @@
 /**
- * Uptimer : tests de bout en bout dans un vrai navigateur.
+ * Uptimeez : tests de bout en bout dans un vrai navigateur.
  *
  * Complète bin/e2e.php (qui teste le serveur) en vérifiant ce qui ne vit que
  * côté navigateur : accordéons, filtre instantané, barre d'enregistrement,
@@ -354,9 +354,14 @@ try {
 
   title('Vitesse ressentie');
   // La sonde la plus lente du parc : c'est là que le bloc a quelque chose à dire.
+  // C'est « Bêta Deezer » qui porte le cas dans les données de démonstration
+  // (seule sonde en SLOW, donc seule à avoir des causes de lenteur). Le test
+  // visait « airbnb », ce qui ne marchait que lorsque les mesures venaient d'une
+  // analyse réelle : sur une démo fraîche, une sonde saine n'a rien à signaler,
+  // et c'est normal.
   const slowId = await page.evaluate(async (base) => {
     // La recherche renvoie les noms, ce que la synthèse ne fait pas.
-    const r = await fetch(base + '/api.php?action=search&q=airbnb',
+    const r = await fetch(base + '/api.php?action=search&q=deezer',
                           { headers: { 'X-Requested-With': 'fetch' } });
     const j = await r.json();
     return (j.results && j.results[0]) ? j.results[0].id : 0;
@@ -470,7 +475,7 @@ try {
   // seul est refusé par le navigateur avant même d'atteindre le serveur.
   ok('la liste collée n\'est pas obligatoire',
     !(await page.$eval('#list', (el) => el.required)));
-  const exportPath = '/tmp/claude-1000/uptimer-e2e-export.json';
+  const exportPath = '/tmp/claude-1000/uptimeez-e2e-export.json';
   const fs = require('node:fs');
   fs.mkdirSync('/tmp/claude-1000', { recursive: true });
   fs.writeFileSync(exportPath, JSON.stringify({ stat: 'ok', monitors: [

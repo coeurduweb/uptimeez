@@ -13,25 +13,25 @@ function e(?string $s): string
  */
 function t(string $msgid, array $vars = []): string
 {
-    return \Uptimer\I18n::t($msgid, $vars);
+    return \Uptimeez\I18n::t($msgid, $vars);
 }
 
 /** Traduit puis échappe : la forme à utiliser par défaut dans les gabarits. */
 function te(string $msgid, array $vars = []): string
 {
-    return e(\Uptimer\I18n::t($msgid, $vars));
+    return e(\Uptimeez\I18n::t($msgid, $vars));
 }
 
 /** Traduit un pluriel : tn($n, 'un site', '{n} sites'). */
 function tn(int $n, string $one, string $many, array $vars = []): string
 {
-    return \Uptimer\I18n::n($n, $one, $many, $vars);
+    return \Uptimeez\I18n::n($n, $one, $many, $vars);
 }
 
 /** Idem, échappé. */
 function tne(int $n, string $one, string $many, array $vars = []): string
 {
-    return e(\Uptimer\I18n::n($n, $one, $many, $vars));
+    return e(\Uptimeez\I18n::n($n, $one, $many, $vars));
 }
 
 /**
@@ -40,7 +40,7 @@ function tne(int $n, string $one, string $many, array $vars = []): string
  */
 function expert(): bool
 {
-    return \Uptimer\Ui::mode() === 'expert';
+    return \Uptimeez\Ui::mode() === 'expert';
 }
 
 /**
@@ -51,7 +51,7 @@ function hint(string $msgid, array $vars = []): string
 {
     static $seq = 0;
     $id  = 'hint' . (++$seq);
-    $txt = e(\Uptimer\I18n::t($msgid, $vars));
+    $txt = e(\Uptimeez\I18n::t($msgid, $vars));
     return '<span class="hint"><button type="button" class="hint-b" aria-label="'
          . te('Aide') . '" aria-describedby="' . $id . '" data-hint>?</button>'
          . '<span class="hint-t" id="' . $id . '" role="tooltip">' . $txt . '</span></span>';
@@ -75,8 +75,8 @@ function import_payload(): string
         // is_uploaded_file : la seule garantie que ce chemin vient bien d'un
         // envoi HTTP et pas d'une valeur fabriquée.
         if ($tmp !== '' && is_uploaded_file($tmp) && $size > 0
-            && $size <= \Uptimer\Import\Foreign::MAX_BYTES) {
-            $raw = (string)file_get_contents($tmp, false, null, 0, \Uptimer\Import\Foreign::MAX_BYTES);
+            && $size <= \Uptimeez\Import\Foreign::MAX_BYTES) {
+            $raw = (string)file_get_contents($tmp, false, null, 0, \Uptimeez\Import\Foreign::MAX_BYTES);
             // Un fichier binaire n'a rien à faire ici : on le refuse au lieu de
             // le donner à manger aux analyseurs.
             if ($raw !== '' && !str_contains(substr($raw, 0, 4096), "\0")) {
@@ -155,7 +155,7 @@ function human_bytes(?int $b): string
     $show = static function (float $v, int $max): string {
         $r = round($v, $max);
         $dec = fmod($r, 1.0) === 0.0 ? 0 : $max;
-        return \Uptimer\Ui::num($r, $dec);
+        return \Uptimeez\Ui::num($r, $dec);
     };
     if ($b < 1048576) return $show($b / 1024, $b < 10240 ? 1 : 0) . ' Ko';
     // L'échelle monte jusqu'au téraoctet : l'espace disque libre et un an

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Uptimer;
+namespace Uptimeez;
 
 /** Fabrique de fragments HTML/SVG pour les vues (aucune dépendance front). */
 final class Ui
@@ -111,7 +111,7 @@ final class Ui
     {
         static $mode = null;
         if ($mode !== null) return $mode;
-        $raw = (string)($_COOKIE['uptimer_mode'] ?? $_SESSION['uptimer_mode'] ?? '');
+        $raw = (string)($_COOKIE['uptimeez_mode'] ?? $_SESSION['uptimeez_mode'] ?? '');
         if (!in_array($raw, self::MODES, true)) {
             $raw = (string)Config::get('app.ui_mode', 'simple');
         }
@@ -121,13 +121,13 @@ final class Ui
     public static function setMode(string $mode): void
     {
         if (!in_array($mode, self::MODES, true)) return;
-        if (session_status() === PHP_SESSION_ACTIVE) $_SESSION['uptimer_mode'] = $mode;
+        if (session_status() === PHP_SESSION_ACTIVE) $_SESSION['uptimeez_mode'] = $mode;
         if (PHP_SAPI !== 'cli' && !headers_sent()) {
-            setcookie('uptimer_mode', $mode, [
+            setcookie('uptimeez_mode', $mode, [
                 'expires' => time() + 86400 * 365, 'path' => '/', 'samesite' => 'Lax',
             ]);
         }
-        $_COOKIE['uptimer_mode'] = $mode;
+        $_COOKIE['uptimeez_mode'] = $mode;
     }
 
     /**

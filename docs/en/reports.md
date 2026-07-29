@@ -66,7 +66,7 @@ list of outages with cause and duration, and a warning if a page layout has drif
 The e-mail is built for mail clients, not for a browser: tables and inline styles,
 no external stylesheet, no remote image, no SVG. The visual comparison of a broken
 layout stays on the online report, which the e-mail links to when a public status
-page is enabled. Uptimer never puts a link requiring the agency password into a
+page is enabled. Uptimeez never puts a link requiring the agency password into a
 client's inbox.
 
 Forcing a run by hand:
@@ -82,7 +82,7 @@ php cron.php --report      # sends every report that is due, right now
 **Settings → Public status page token.** Enter a random string; the page becomes available at:
 
 ```
-https://yourdomain.com/uptimer/index.php?p=status&token=YOUR_TOKEN
+https://yourdomain.com/uptimeez/index.php?p=status&token=YOUR_TOKEN
 ```
 
 No session, no password, no access to anything else. You hand that link to a client so they can see their sites
@@ -129,7 +129,7 @@ Failed checks: 8
 24 hours: 97.58 % (35 min down)
 Average response time: 334 ms · p95 512 ms
 
-Report produced by Uptimer
+Report produced by Uptimeez
 ```
 
 No HTML, no markup to clean up. It goes into a ticket, an e-mail or a Slack message as it is : with the evidence

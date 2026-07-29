@@ -1,8 +1,8 @@
 <?php
 /**
- * Uptimer : test de bout en bout de l'interface.
+ * Uptimeez : test de bout en bout de l'interface.
  *
- * Démarre une instance isolée de Uptimer et un faux site à surveiller, puis
+ * Démarre une instance isolée de Uptimeez et un faux site à surveiller, puis
  * déroule le parcours complet d'un utilisateur en HTTP réel : installation,
  * connexion, import, préparation, vérification, édition, incidents, export,
  * page publique, actions de masse, suppression, déconnexion.
@@ -35,7 +35,7 @@ function title(string $s): void { echo "\n── $s " . str_repeat('─', max(0,
 // =========================================================================
 // Instance isolée + faux site
 // =========================================================================
-$tmp = sys_get_temp_dir() . '/uptimer-e2e-' . bin2hex(random_bytes(4));
+$tmp = sys_get_temp_dir() . '/uptimeez-e2e-' . bin2hex(random_bytes(4));
 @mkdir($tmp . '/site', 0775, true);
 
 $freePort = function (int $from) : int {
@@ -131,12 +131,12 @@ file_put_contents("$tmp/site/router.php", "<?php\n"
 $cfgFile = $tmp . '/config.php';
 file_put_contents($cfgFile, "<?php return " . var_export([
     'db'   => ['driver' => 'sqlite', 'sqlite' => $tmp . '/e2e.sqlite'],
-    'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimere2e'],
-    'app'  => ['name' => 'Uptimer E2E', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+    'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeeze2e'],
+    'app'  => ['name' => 'Uptimeez E2E', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
                'public_token' => 'jeton-e2e', 'cron_key' => 'cle-e2e'],
     'defaults' => ['interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'slow_ms' => 9000,
                    'max_parallel' => 6, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                   'user_agent' => 'UptimerBot/1.0 (E2E)'],
+                   'user_agent' => 'UptimeezBot/1.0 (E2E)'],
     'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                  'mail' => ['enabled' => false, 'to' => ''],
                  'webhook' => ['enabled' => true, 'url' => "$SITE/api.php"],
@@ -150,7 +150,7 @@ $spawn = function (array $cmd, string $cwd, array $env = []) {
                      $pipes, $cwd, $env + ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
 };
 $siteSrv = $spawn([PHP_BINARY, '-S', "127.0.0.1:$sitePort", '-t', "$tmp/site", "$tmp/site/router.php"], "$tmp/site");
-$appSrv  = $spawn([PHP_BINARY, '-S', "127.0.0.1:$appPort", '-t', $ROOT], $ROOT, ['UPTIMER_CONFIG' => $cfgFile]);
+$appSrv  = $spawn([PHP_BINARY, '-S', "127.0.0.1:$appPort", '-t', $ROOT], $ROOT, ['UPTIMEEZ_CONFIG' => $cfgFile]);
 
 $cleanup = function () use ($siteSrv, $appSrv, $tmp, $appPort, $sitePort): void {
     foreach ([[$appSrv, $appPort], [$siteSrv, $sitePort]] as [$h, $port]) {
@@ -277,10 +277,10 @@ ok('import accepté', $r['code'] === 200 && $noPhpError($r)
 ok('ligne invalide signalée sans bloquer', $has($r, 'ignorée'));
 
 require_once $ROOT . '/src/bootstrap.php';
-Uptimer\Config::set('db.driver', 'sqlite');
-Uptimer\Config::set('db.sqlite', $tmp . '/e2e.sqlite');
-$db = fn(string $sql, array $p = []) => Uptimer\Db::all($sql, $p);
-$val = fn(string $sql, array $p = []) => Uptimer\Db::val($sql, $p);
+Uptimeez\Config::set('db.driver', 'sqlite');
+Uptimeez\Config::set('db.sqlite', $tmp . '/e2e.sqlite');
+$db = fn(string $sql, array $p = []) => Uptimeez\Db::all($sql, $p);
+$val = fn(string $sql, array $p = []) => Uptimeez\Db::val($sql, $p);
 
 $created = (int)$val('SELECT COUNT(*) FROM monitors');
 ok('4 sondes créées en base', $created === 4, $created . ' sonde(s)');
@@ -507,7 +507,7 @@ $first = $j['results'][0] ?? [];
 ok('un site hors service arrive en tête', in_array(($first['status'] ?? ''), ['down', 'degraded'], true),
     (string)($first['status'] ?? '?'));
 // Sonde dédiée au test de recherche : indépendante de l'ordre des autres sections.
-Uptimer\Db::insert('monitors', ['name' => 'Boulangerie Créchêt', 'url' => "$SITE/tarifs.html",
+Uptimeez\Db::insert('monitors', ['name' => 'Boulangerie Créchêt', 'url' => "$SITE/tarifs.html",
     'kind' => 'page', 'role' => 'secondary', 'method' => 'GET', 'interval_sec' => 3600,
     'timeout_sec' => 10, 'retries' => 0, 'slow_ms' => 9000, 'expect_status' => '200-299',
     'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0, 'check_noindex' => 0,
@@ -528,7 +528,7 @@ $j = json_decode($r['body'], true);
 ok('recherche sans résultat', count($j['results'] ?? []) === 0);
 
 title('Sonde battement');
-$hb = Uptimer\Heartbeat::create('Cron client E2E', 3600, 300);
+$hb = Uptimeez\Heartbeat::create('Cron client E2E', 3600, 300);
 ok('sonde battement créée', $hb['id'] > 0 && strlen((string)$hb['token']) >= 16);
 $r = $req('/beat.php?k=' . $hb['token'] . '&m=' . urlencode('E2E, 12 fichiers'));
 ok('signal accepté par beat.php', $r['code'] === 200 && str_contains($r['body'], 'OK'), 'HTTP ' . $r['code']);
@@ -621,12 +621,12 @@ ok('aide accessible au clavier', $has($r, 'role="tooltip"') && $has($r, 'aria-de
 title('Import : aperçu avant création');
 $before = (int)$val('SELECT COUNT(*) FROM monitors');
 $r = $req('/index.php?p=import', ['csrf' => $tok, 'action' => 'preview',
-    'list' => "Bonjour, merci de surveiller aperçu-un-uptimer.fr et https://apercu-deux-uptimer.fr/contact. Logo : x.png",
+    'list' => "Bonjour, merci de surveiller aperçu-un-uptimeez.fr et https://apercu-deux-uptimeez.fr/contact. Logo : x.png",
     'interval_sec' => 300, 'pages' => 3]);
 ok('aperçu affiché', $r['code'] === 200 && $has($r, 'Aperçu :') && $noPhpError($r));
 ok('rien n\'a été créé à cette étape', (int)$val('SELECT COUNT(*) FROM monitors') === $before,
     $before . ' → ' . $val('SELECT COUNT(*) FROM monitors'));
-ok('adresses extraites d\'un texte libre', $has($r, 'apercu-deux-uptimer.fr'));
+ok('adresses extraites d\'un texte libre', $has($r, 'apercu-deux-uptimeez.fr'));
 ok('cadence proposée visible', $has($r, 'Cadence') || $has($r, 'cadence'));
 
 title('Rapport client');
@@ -677,7 +677,7 @@ $r = $req('/index.php?p=report', ['csrf' => $tok, 'action' => 'send_site_report'
 ok('site inconnu : refus propre', $r['code'] < 500 && $noPhpError($r));
 
 // Le cron sait forcer les envois sans casser.
-$out = shell_exec('UPTIMER_CONFIG=' . escapeshellarg($cfgFile) . ' '
+$out = shell_exec('UPTIMEEZ_CONFIG=' . escapeshellarg($cfgFile) . ' '
     . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --report 2>&1');
 ok('cron --report s\'exécute sans erreur',
    $out !== null && !preg_match('~Fatal|Uncaught~', (string)$out), str_cut(trim((string)$out), 60));
@@ -843,7 +843,7 @@ ok('fiche rendue jusqu\'au bout', $complete($r));
 
 // Réglages : la clé et l'appareil de référence s'enregistrent.
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
-    'app_name' => 'Uptimer E2E', 'timezone' => 'Europe/Paris',
+    'app_name' => 'Uptimeez E2E', 'timezone' => 'Europe/Paris',
     'vitals_enabled' => '1', 'crux_key' => 'cle-de-test-e2e', 'form_factor' => 'DESKTOP',
     'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 14,
     'def_slow' => 3000, 'def_css_drop' => 35, 'def_parallel' => 10, 'def_retention' => 45]);
@@ -854,7 +854,7 @@ ok('appareil de référence relu', $has($r, 'value="DESKTOP" selected')
     || preg_match('~value="DESKTOP"[^>]*selected~', $r['body']) === 1);
 // Et on la retire : le reste du banc ne doit pas partir interroger Google.
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
-    'app_name' => 'Uptimer E2E', 'timezone' => 'Europe/Paris',
+    'app_name' => 'Uptimeez E2E', 'timezone' => 'Europe/Paris',
     'vitals_enabled' => '1', 'crux_key' => '', 'form_factor' => 'PHONE',
     'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 14,
     'def_slow' => 3000, 'def_css_drop' => 35, 'def_parallel' => 10, 'def_retention' => 45]);
@@ -890,9 +890,9 @@ $anon = function (string $path, ?array $post = null) use ($APP, $anonJar): array
 // (tout est sur 127.0.0.1) et son nom se retrouve partout dans les pages : il
 // ne peut pas servir à prouver une absence. On fabrique donc de quoi tester.
 $mkSite = function (string $name, string $domain, ?string $group = null) use ($SITE): array {
-    $sid = Uptimer\Db::insert('sites', ['name' => $name, 'domain' => $domain,
+    $sid = Uptimeez\Db::insert('sites', ['name' => $name, 'domain' => $domain,
         'group_name' => $group, 'created_at' => now()]);
-    $mid = Uptimer\Db::insert('monitors', ['site_id' => $sid, 'name' => $name,
+    $mid = Uptimeez\Db::insert('monitors', ['site_id' => $sid, 'name' => $name,
         'url' => $SITE . '/', 'kind' => 'page', 'role' => 'primary', 'method' => 'GET',
         'interval_sec' => 300, 'timeout_sec' => 15, 'retries' => 0, 'expect_status' => '200-299',
         'enabled' => 1, 'status' => 'up', 'uptime_30d' => 99.9, 'setup_state' => 'done',
@@ -944,7 +944,7 @@ ok('aucune navigation d\'administration dans l\'espace',
 $posts = preg_match_all('~<form[^>]*method=["\']post~i', $ra['body']);
 ok('aucun formulaire d\'écriture dans l\'espace', $posts === 0, $posts . ' formulaire(s) POST');
 ok('jeton d\'administration absent de la page',
-    !str_contains($ra['body'], 'UPTIMER') && !str_contains($ra['body'], 'csrf'));
+    !str_contains($ra['body'], 'UPTIMEEZ') && !str_contains($ra['body'], 'csrf'));
 ok('page non indexable et sans référent sortant',
     stripos($ra['head'], 'x-robots-tag: noindex') !== false
     && stripos($ra['head'], 'referrer-policy: no-referrer') !== false);
@@ -1001,16 +1001,16 @@ ok('accès réouvert sans rien perdre',
     && (int)$val('SELECT client_id FROM sites WHERE id = ?', [$sA]) === (int)$alpha['id']);
 
 // ---- Le rapport mensuel retombe sur l'adresse du client ----------------
-Uptimer\Db::update('sites', ['report_to' => null], 'id = :__i', ['__i' => $sA]);
+Uptimeez\Db::update('sites', ['report_to' => null], 'id = :__i', ['__i' => $sA]);
 $siteRow = $db('SELECT * FROM sites WHERE id = ?', [$sA])[0];
 ok('destinataire hérité du client quand le site n\'en a pas',
-    in_array('alpha@exemple.fr', Uptimer\Report::recipients($siteRow), true),
-    implode(', ', Uptimer\Report::recipients($siteRow)) ?: '(aucun)');
+    in_array('alpha@exemple.fr', Uptimeez\Report::recipients($siteRow), true),
+    implode(', ', Uptimeez\Report::recipients($siteRow)) ?: '(aucun)');
 // Et l'inverse : ce que porte le site gagne toujours sur l'adresse du client.
-Uptimer\Db::update('sites', ['report_to' => 'direct@exemple.fr'], 'id = :__i', ['__i' => $sA]);
+Uptimeez\Db::update('sites', ['report_to' => 'direct@exemple.fr'], 'id = :__i', ['__i' => $sA]);
 $siteOwn = $db('SELECT * FROM sites WHERE id = ?', [$sA])[0];
 ok('adresse propre au site prioritaire sur celle du client',
-    Uptimer\Report::recipients($siteOwn) === ['direct@exemple.fr']);
+    Uptimeez\Report::recipients($siteOwn) === ['direct@exemple.fr']);
 
 // ---- Suppression : les sites survivent ---------------------------------
 $sitesBefore = (int)$val('SELECT COUNT(*) FROM sites');
@@ -1045,7 +1045,7 @@ ok('onglet Clients dans la navigation', $has($r, 'p=clients'));
 // =========================================================================
 title('Réglages');
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
-    'app_name' => 'Uptimer E2E renommée', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+    'app_name' => 'Uptimeez E2E renommée', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
     'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 21,
     'def_slow' => 4000, 'def_css_drop' => 30, 'def_parallel' => 8, 'def_retention' => 45,
     'resend_after' => 30, 'notify_recovery' => 1, 'public_token' => 'jeton-e2e', 'cron_key' => 'cle-e2e',
@@ -1053,7 +1053,7 @@ $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
 ok('réglages enregistrés', $has($r, 'Réglages enregistrés'));
 $cfg = require $cfgFile;
 ok('écrits dans le fichier de configuration',
-    ($cfg['app']['name'] ?? '') === 'Uptimer E2E renommée' && (int)($cfg['defaults']['def_retention'] ?? 45) !== 0
+    ($cfg['app']['name'] ?? '') === 'Uptimeez E2E renommée' && (int)($cfg['defaults']['def_retention'] ?? 45) !== 0
     || ($cfg['defaults']['retention_days'] ?? 0) === 45,
     ($cfg['app']['name'] ?? '?') . ' · rétention ' . ($cfg['defaults']['retention_days'] ?? '?') . ' j');
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'test_notify', 'channel' => 'webhook']);
@@ -1075,10 +1075,10 @@ title('Page trop volumineuse : une lecture partielle ne conclut rien');
 // pas lue. Le drapeau existait depuis toujours et personne ne le lisait : une
 // chaîne de contrôle placée en pied de page était donc déclarée absente, ce qui
 // veut dire « la base de données ne répond plus ». Fausse panne permanente.
-$big1 = Uptimer\Http::fetch("$SITE/enorme.php", ['timeout' => 30]);
-$big2 = Uptimer\Http::fetch("$SITE/enorme.php", ['timeout' => 30]);
+$big1 = Uptimeez\Http::fetch("$SITE/enorme.php", ['timeout' => 30]);
+$big2 = Uptimeez\Http::fetch("$SITE/enorme.php", ['timeout' => 30]);
 ok('la page dépasse la lecture maximale', $big1->truncated, human_bytes(strlen($big1->body)));
-ok('le corps est coupé exactement à la borne', strlen($big1->body) === Uptimer\Http::MAX_BODY,
+ok('le corps est coupé exactement à la borne', strlen($big1->body) === Uptimeez\Http::MAX_BODY,
    number_format(strlen($big1->body), 0, ',', ' ') . ' octets');
 // Le point qui compte : deux lectures de la même page, servie en blocs de
 // tailles différentes, donnent le même corps. Sinon l'empreinte de contenu
@@ -1087,7 +1087,7 @@ ok('deux lectures de la même page donnent le même corps',
    strlen($big1->body) === strlen($big2->body) && $big1->body === $big2->body,
    strlen($big1->body) . ' vs ' . strlen($big2->body));
 ok('et donc la même empreinte de contenu',
-   Uptimer\Runner::contentHash($big1->body) === Uptimer\Runner::contentHash($big2->body));
+   Uptimeez\Runner::contentHash($big1->body) === Uptimeez\Runner::contentHash($big2->body));
 
 // Puis le verdict : la sonde ne doit pas déclarer de panne sur cette base.
 $tokB = $csrf();
@@ -1099,7 +1099,7 @@ $bid = (int)$val("SELECT id FROM monitors WHERE url LIKE '%enorme.php%' LIMIT 1"
 if ($bid) {
     // On isole le contrôle : l'analyse CSS d'une page de 3 Mo sans feuille de
     // style produit son propre verdict, qui masquerait celui qu'on mesure ici.
-    Uptimer\Db::q('UPDATE monitors SET expect_string = ?, setup_state = ?, check_css = 0,
+    Uptimeez\Db::q('UPDATE monitors SET expect_string = ?, setup_state = ?, check_css = 0,
                    check_content = 1, css_state = NULL WHERE id = ?',
           ['Mentions legales 2026', 'done', $bid]);
     $rr = $req('/api.php?action=check', ['csrf' => $tokB, 'id' => $bid]);

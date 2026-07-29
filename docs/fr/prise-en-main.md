@@ -37,7 +37,7 @@ quarante sondes fausses en un clic.
 
 ### Ce qui se passe ensuite, tout seul
 
-À la passe suivante, pour chaque site, Uptimer :
+À la passe suivante, pour chaque site, Uptimeez :
 
 1. **identifie la technologie**. WordPress, PrestaShop, Shopify, Drupal, Joomla, Wix, Astro, Next.js, Laravel… ;
 2. **choisit des pages représentatives** depuis `robots.txt` → sitemap → liens internes : une par famille (contact,
@@ -48,7 +48,7 @@ quarante sondes fausses en un clic.
    traverse réellement la base) ;
 6. **prend une première mesure**, pour qu'aucune carte n'affiche « jamais vérifié ».
 
-Tout ce qu'il a décidé est écrit dans *Ce que Uptimer a décidé toute seule*, sur la fiche de la sonde en mode
+Tout ce qu'il a décidé est écrit dans *Ce que Uptimeez a décidé toute seule*, sur la fiche de la sonde en mode
 Complet.
 
 ---

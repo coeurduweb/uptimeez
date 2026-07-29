@@ -1,12 +1,12 @@
 <?php
 /** Gabarit commun. Le thème est appliqué avant peinture pour éviter tout clignotement. */
-use Uptimer\Auth;
-use Uptimer\Config;
-use Uptimer\I18n;
-use Uptimer\Stats;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Config;
+use Uptimeez\I18n;
+use Uptimeez\Stats;
+use Uptimeez\Ui;
 
-$appName  = (string)Config::get('app.name', 'Uptimer');
+$appName  = (string)Config::get('app.name', 'Uptimeez');
 $isClient = ($view ?? '') === 'client';
 $isPublic = ($view ?? '') === 'status' || $isClient;
 $isLogin  = ($view ?? '') === 'login';
@@ -47,7 +47,7 @@ $nav = [
 ];
 // L'onglet Clients n'a de sens que si l'agence en a créé au moins un : sinon
 // c'est un écran vide de plus dans une barre déjà chargée.
-if (!$isLogin && !$isPublic && !Uptimer\Db::val('SELECT COUNT(*) FROM clients')) {
+if (!$isLogin && !$isPublic && !Uptimeez\Db::val('SELECT COUNT(*) FROM clients')) {
     unset($nav['clients']);
 }
 if (!expert()) {
@@ -69,12 +69,12 @@ $uiMode  = Ui::mode();
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
 <title><?= ($down > 0 ? '(' . $down . ') ' : '') . e($pageTitle) . ' · ' . e($appName) ?></title>
-<link rel="stylesheet" href="assets/app.css?v=<?= UPTIMER_VERSION ?>">
+<link rel="stylesheet" href="assets/app.css?v=<?= UPTIMEEZ_VERSION ?>">
 <link rel="icon" href="data:image/svg+xml,<?= rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="' . ($down > 0 ? '%23ce2233' : '%230d8f56') . '"/></svg>') ?>">
 <script>
 (function () {
   try {
-    var t = localStorage.getItem('uptimer-theme');
+    var t = localStorage.getItem('uptimeez-theme');
     if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     document.documentElement.dataset.theme = t;
   } catch (e) {}
@@ -181,10 +181,10 @@ if (is_file($file)) require $file; else require __DIR__ . '/today.php';
 
 <div id="toasts" aria-live="polite" aria-atomic="false"></div>
 <?php if (!$isLogin && !$isPublic): ?>
-<script>window.UPTIMER = { csrf: <?= json_encode(Auth::csrf()) ?>, view: <?= json_encode($view) ?>,
-  queue: <?= json_encode(array_values((array)($_SESSION['uptimer_setup_queue'] ?? []))) ?> };</script>
-<?php unset($_SESSION['uptimer_setup_queue']); ?>
-<script src="assets/app.js?v=<?= UPTIMER_VERSION ?>"></script>
+<script>window.UPTIMEEZ = { csrf: <?= json_encode(Auth::csrf()) ?>, view: <?= json_encode($view) ?>,
+  queue: <?= json_encode(array_values((array)($_SESSION['uptimeez_setup_queue'] ?? []))) ?> };</script>
+<?php unset($_SESSION['uptimeez_setup_queue']); ?>
+<script src="assets/app.js?v=<?= UPTIMEEZ_VERSION ?>"></script>
 <?php endif; ?>
 </body>
 </html>

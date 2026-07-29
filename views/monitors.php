@@ -1,8 +1,8 @@
 <?php
 /** Liste complète des sondes, avec recherche, tri et actions de masse. */
-use Uptimer\Auth;
-use Uptimer\Db;
-use Uptimer\Ui;
+use Uptimeez\Auth;
+use Uptimeez\Db;
+use Uptimeez\Ui;
 
 $csrf = Auth::csrf();
 $sort = (string)($_GET['sort'] ?? 'status');
@@ -71,7 +71,7 @@ $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
             <option value="<?= $s ?>" <?= $s === 300 ? 'selected' : '' ?>><?= e($l) ?></option>
           <?php endforeach; ?>
         </select>
-        <button class="btn btn-sm" id="bulk-apply" disabled onclick="return UptimerConfirmBulk(this.form)"><?= te('Appliquer') ?></button>
+        <button class="btn btn-sm" id="bulk-apply" disabled onclick="return UptimeezConfirmBulk(this.form)"><?= te('Appliquer') ?></button>
       </div>
     </div>
     <div class="table-scroll">
