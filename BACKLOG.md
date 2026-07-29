@@ -43,7 +43,11 @@ Trois règles de conception, opposables à chaque écran :
 
 ## 2. Backlog
 
-Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spécifié, à développer) · **◻︎ à cadrer**.
+Légende : **✅ livré** · **◐ partiel** · **▶︎ prêt** (spécifié, à développer) · **◻︎ à cadrer**.
+
+> Recalé le 2026-07-29, fichier par fichier : six items annoncés « prêts » étaient en
+> réalité livrés depuis plusieurs itérations. Un backlog en retard sur le code envoie
+> retravailler du fait, ce qui coûte plus cher qu'un backlog vide.
 
 ### Épopée A : Ne rien avoir à configurer
 
@@ -66,7 +70,7 @@ Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spéci
 - Chaque sonde affiche en clair les décisions prises et leur justification.
 - Critère : une ligne par décision, en français, sans jargon.
 
-**A5 ▶︎ En tant qu'agence, j'importe depuis un sitemap ou un fichier CSV d'hébergeur.**
+**A5 ✅ En tant qu'agence, j'importe depuis un sitemap ou un fichier CSV d'hébergeur.**
 - Coller l'URL d'un `sitemap.xml` suffit à proposer les pages ; un CSV à colonnes est reconnu (domaine, nom, groupe).
 
 **A6 ◻︎ En tant qu'agence, je connecte l'API de mon hébergeur (o2switch/cPanel) pour importer les domaines.**
@@ -93,7 +97,7 @@ Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spéci
 **B5 ✅ En tant qu'utilisateur, une action de trop se répare.**
 - Toute action destructive ou perturbante propose « Annuler » pendant 8 secondes.
 
-**B6 ▶︎ En tant qu'utilisateur, je regroupe les problèmes par cause probable.**
+**B6 ✅ En tant qu'utilisateur, je regroupe les problèmes par cause probable.**
 - « Ces 6 sites partagent le serveur 51.x.x.x » remonte comme un seul élément à traiter.
 
 ### Épopée C : Ne pas se faire noyer par les alertes
@@ -104,7 +108,7 @@ Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spéci
 **C2 ✅ En tant qu'utilisateur, je peux couper le bruit sans couper la surveillance.**
 - Heures calmes (les pannes réelles passent), fenêtres de maintenance, « pris en compte ».
 
-**C3 ▶︎ En tant qu'utilisateur, une alerte récurrente me propose de s'auto-régler.**
+**C3 ✅ En tant qu'utilisateur, une alerte récurrente me propose de s'auto-régler.**
 - Après 3 alertes de lenteur en 7 jours sur la même sonde, Uptimeez propose de relever le seuil (un clic).
 
 **C4 ▶︎ En tant qu'astreinte, je reçois un résumé quotidien au lieu d'alertes unitaires pour le non-urgent.**
@@ -117,8 +121,8 @@ Légende : **✅ livré** dans l'itération courante · **▶︎ prêt** (spéci
 **D3 ✅ `noindex` oublié en production** : spécificité agence, absent partout ailleurs.
 **D4 ✅ Sonde *dead-man* (battement)**, surveiller le cron ou la sauvegarde d'un client : c'est l'absence
 de signal qui déclenche l'alerte. Équivalent des *push monitors* de Kuma, avec URL prête à copier.
-**D5 ▶︎ Cœur des Web Vitals**. LCP/CLS/INP via l'API PageSpeed, une mesure par jour, en tendance.
-**D6 ▶︎ Veille de vulnérabilités WordPress** : version du cœur et des plugins visibles, croisées avec un flux CVE.
+**D5 ✅ Cœur des Web Vitals**. LCP/CLS/INP via l'API PageSpeed, une mesure par jour, en tendance.
+**D6 ✅ Veille de vulnérabilités WordPress** : version du cœur et des plugins visibles, croisées avec un flux CVE.
 **D7 ◻︎ Parcours scripté sans navigateur** : enchaîner 3 requêtes (accueil → formulaire → confirmation)
 avec extraction de jeton, pour valider un tunnel de contact sans Playwright.
 
@@ -127,15 +131,20 @@ avec extraction de jeton, pour valider un tunnel de contact sans Playwright.
 **E1 ✅ Rapport client imprimable** : un écran par site, période au choix, prêt à envoyer en PDF.
 **E2 ✅ Export CSV des incidents** : justificatif de SLA.
 **E3 ✅ Page d'état publique par jeton** : à partager sans donner d'accès.
-**E4 ▶︎ Envoi automatique du rapport mensuel** par e-mail au client.
+**E4 ✅ Envoi automatique du rapport mensuel** par e-mail au client.
 
 ### Épopée F : Tenir à l'échelle
 
 **F1 ✅ 300 sondes sur un mutualisé** : agrégation SQL, plafond d'analyses coûteuses par passe, purge.
 **F2 ✅ Mise à jour sans intervention** : le schéma se complète tout seul.
-**F3 ▶︎ Vue « mur »** pour écran d'agence, sans authentification, jeton dédié.
+**F3 ◐ Vue « mur »** pour écran d'agence, sans authentification, jeton dédié.
+  *Partiel : la page de statut publique par jeton existe (`p=status&token=`) ; le mur
+  plein écran sans authentification, pour un téléviseur d'agence, reste à faire.*
 **F5 ✅ Renommage en Uptimeez** : nom, dossier, base, catalogues, documentation.
-**F4 ◻︎ Multi-utilisateur et accès client en lecture seule.**
+**F4 ✅ Multi-utilisateur et accès client en lecture seule.**
+  *Mode agence livré : `src/Client.php`, un jeton par client, cloisonnement vérifié
+  par le banc d'essai. Le multi-utilisateur au sens comptes nominatifs relève de la
+  coque SaaS (cdwstarterkit), pas du moteur.*
 
 ### Épopée G : Internationalisation
 
@@ -162,7 +171,7 @@ rognerait, et jamais contaminées par la casse d'un titre de section.
 **H3 ✅ Béta-test destructif.** `bin/chaos.php` : 825 requêtes hostiles jouant un utilisateur qui écrit
 mal, clique partout et cherche à casser. Contrat vérifié : aucun 500, aucun message PHP dans la page,
 aucune saisie réinjectée, base cohérente à l'arrivée. Deux vrais bugs trouvés.
-**H4 ◻︎ Digest quotidien** au lieu d'une alerte par évènement, pour ceux qui préfèrent un seul e-mail.
+**H4** → fusionné avec **C4** (même besoin décrit deux fois, dans deux épopées).
 
 ---
 
