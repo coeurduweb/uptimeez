@@ -2,7 +2,7 @@
 
 [← Monitors](monitors.md) · [Documentation](README.md) · [Alerts →](alerts.md)
 
-This page explains what Uptimeez actually looks at. It matters for two reasons: you need to trust a verdict before
+This page explains what UptimeEZ actually looks at. It matters for two reasons: you need to trust a verdict before
 you act on it, and you need to know why a false alarm is a bug we want to hear about.
 
 ---
@@ -42,7 +42,7 @@ language.
 
 ## Broken layout: the nine signals
 
-A page that answers `200` can still be unusable. Uptimeez fetches the HTML, extracts every stylesheet, script and
+A page that answers `200` can still be unusable. UptimeEZ fetches the HTML, extracts every stylesheet, script and
 font, fetches them too (capped at six resources per pass to stay polite), and crosses nine signals.
 
 ### 1. Availability
@@ -55,7 +55,7 @@ build hash that changed, a file not uploaded.
 
 A server that returns `text/html` for a `.css` file is usually returning an error page or a PHP trace. With
 `X-Content-Type-Options: nosniff`, which most hardened servers now send, the browser refuses the file outright.
-Uptimeez reports it as blocked, because that is what happens in reality.
+UptimeEZ reports it as blocked, because that is what happens in reality.
 
 ### 3. Mixed content
 
@@ -74,7 +74,7 @@ perfectly available stylesheet. It happens whenever a file is regenerated withou
 
 ### 6. Volume against the learned baseline
 
-Uptimeez remembers what healthy looks like: total stylesheet weight and number of CSS rules. A drop beyond the
+UptimeEZ remembers what healthy looks like: total stylesheet weight and number of CSS rules. A drop beyond the
 tolerated percentage (35 % by default) means the CSS was replaced by something much smaller : a truncated build,
 a cache mid-purge, an over-eager minifier.
 
@@ -92,14 +92,14 @@ visitor gets a broken page.
 ### 9. Content awaiting an animation
 
 Modern page builders hide blocks (`opacity: 0`) and reveal them with a script. If that script fails, the page
-answers `200`, the CSS is fine, and the content is *invisible*. Uptimeez counts blocks left waiting for a reveal
+answers `200`, the CSS is fine, and the content is *invisible*. UptimeEZ counts blocks left waiting for a reveal
 and flags it : a failure mode that looks perfect from every other angle.
 
 ### The silhouette: showing instead of describing
 
 A number does not settle an argument with a client. An image does.
 
-So on every audit, Uptimeez reconstructs a **silhouette** of the page: the block
+So on every audit, UptimeEZ reconstructs a **silhouette** of the page: the block
 structure read from the HTML, laid out according to what the CSS actually loaded
 allows. Headings, paragraphs, images, buttons, columns. It stores the silhouette
 of a healthy state as the reference, and compares the current one against it.
@@ -112,7 +112,7 @@ The monitor page shows both side by side with the measured difference, and any
 site above 20 % difference appears in the client report under "What the visitor
 sees".
 
-**It is not a screenshot, and the interface says so.** Uptimeez runs no browser:
+**It is not a screenshot, and the interface says so.** UptimeEZ runs no browser:
 that is what lets it check hundreds of sites from shared hosting. The silhouette
 is a functional reconstruction, and for this purpose it is enough.
 
@@ -166,13 +166,13 @@ connection failed.
 content.
 
 **3. A CMS probe that really touches the database.** On WordPress, `/wp-json/` traverses the database, unlike a
-fully cached homepage. Uptimeez adds that probe automatically when it detects WordPress.
+fully cached homepage. UptimeEZ adds that probe automatically when it detects WordPress.
 
 ---
 
 ## Certificates: two passes
 
-A single TLS read cannot answer both questions you need answered. Uptimeez does two.
+A single TLS read cannot answer both questions you need answered. UptimeEZ does two.
 
 **Permissive pass**, connects while accepting anything, reads the certificate and extracts the facts: subject,
 issuer, expiry, alternative names. This works even on an expired or self-signed certificate, which is exactly when
@@ -211,7 +211,7 @@ not to be noise.
 
 ---
 
-## What Uptimeez deliberately does not do
+## What UptimeEZ deliberately does not do
 
 - **It does not run a browser.** No JavaScript execution, no rendering. That is what keeps it able to check
   hundreds of sites from shared hosting. The nine signals are how it reaches a rendering verdict without a

@@ -11,7 +11,7 @@ use Uptimeez\Response;
  *
  * Le problème des Core Web Vitals, pour un outil comme celui-ci : les trois
  * mesures officielles (LCP, INP, CLS) viennent de vrais navigateurs, sur de
- * vrais visiteurs. Sans navigateur et sans clé d'API, Uptimeez ne peut pas les
+ * vrais visiteurs. Sans navigateur et sans clé d'API, UptimeEZ ne peut pas les
  * inventer, et il ne le fera pas. Un chiffre de performance inventé serait la
  * pire chose à afficher : on le croirait.
  *

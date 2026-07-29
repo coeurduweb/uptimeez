@@ -1,6 +1,6 @@
 # Speed as visitors feel it
 
-**Uptimeez does not guess your Core Web Vitals. It measures what it can measure, reads from your pages what
+**UptimeEZ does not guess your Core Web Vitals. It measures what it can measure, reads from your pages what
 degrades them, and tells you which of the two you are looking at.**
 
 [← Documentation](README.md) · [Version française](../fr/vitesse.md)
@@ -13,7 +13,7 @@ Google's three official metrics (LCP, INP, CLS) come from real Chrome browsers, 
 honest calculation that replaces them without a browser. A PHP tool that displayed "LCP: 2.1 s" without ever
 launching Chrome would be inventing a number, and you would believe it.
 
-So Uptimeez does two distinct things, with two distinct vocabularies:
+So UptimeEZ does two distinct things, with two distinct vocabularies:
 
 | What it is | What it is worth | Key needed |
 |---|---|---|
@@ -31,13 +31,13 @@ nothing here is a browser measurement".
 
 ### Server response time
 
-Measured by Uptimeez on every check, in milliseconds, over the real network. It is a measurement, not an estimate,
+Measured by UptimeEZ on every check, in milliseconds, over the real network. It is a measurement, not an estimate,
 and it is the floor for everything else: **LCP will never beat the server response time.** The target is 800 ms;
 past 1.8 s it is poor.
 
 ### What blocks the first paint
 
-The resource audit already downloads every stylesheet and script on the page, with their exact weight. Uptimeez
+The resource audit already downloads every stylesheet and script on the page, with their exact weight. UptimeEZ
 derives from that what actually blocks rendering:
 
 - a stylesheet in the head blocks rendering, by construction;
@@ -49,7 +49,7 @@ Weight is counted per kind: "three stylesheets weigh 203 kB" does not quietly in
 
 ### The top-of-page image
 
-It is almost always what LCP measures. Uptimeez identifies the first image in the body that is neither an icon, nor
+It is almost always what LCP measures. UptimeEZ identifies the first image in the body that is neither an icon, nor
 a logo, nor a tracking pixel, then makes **a single HEAD request** on it to learn its real weight, which is
 nowhere to be found in the HTML.
 
@@ -102,7 +102,7 @@ layout jumps around is not "generally fine" because its LCP is good.
 
 ### When there is no data
 
-The Chrome UX Report requires a sufficient sample. A rarely visited page is not in it. In that case Uptimeez queries
+The Chrome UX Report requires a sufficient sample. A rarely visited page is not in it. In that case UptimeEZ queries
 the site's origin and says so explicitly: "this page does not have enough traffic to be measured on its own, the
 figures cover the whole site". If the origin has no data either, no figure is displayed. That is an answer, not a
 failure.
@@ -161,12 +161,12 @@ applied. See [MCP server](mcp.md).
 
 ## What this feature does not do
 
-- **It does not launch a browser.** No headless Chrome, no Lighthouse, no Node. That is what lets Uptimeez run on
+- **It does not launch a browser.** No headless Chrome, no Lighthouse, no Node. That is what lets UptimeEZ run on
   shared hosting, and it is also what limits what it can measure. The trade-off is deliberate.
 - **It does not replace PageSpeed Insights.** To audit one page in depth before a redesign, run Lighthouse.
-  Uptimeez watches continuously and warns you when things degrade, which Lighthouse does not do.
+  UptimeEZ watches continuously and warns you when things degrade, which Lighthouse does not do.
 - **It does not guess the exact LCP element.** Without a browser, there is no way to know which element covers the
-  most screen. Uptimeez takes the first large top-of-page image, which is the right answer on the vast majority of
+  most screen. UptimeEZ takes the first large top-of-page image, which is the right answer on the vast majority of
   pages, and it writes "very probably" rather than "this is".
 
 ---
@@ -181,7 +181,7 @@ not enabled on the Google Cloud project, or neither the page nor its origin has 
 "measured" only appears when a response was obtained, so its absence is information.
 
 **The top-of-page image weight stays empty.** The server returns no `Content-Length` header for that image, or the
-HEAD request is refused. Uptimeez does not invent the weight in that case.
+HEAD request is refused. UptimeEZ does not invent the weight in that case.
 
 ---
 

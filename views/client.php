@@ -11,6 +11,7 @@
  * validation du jeton. Cette page ne lit jamais un identifiant de l'URL : elle
  * ne peut donc pas être détournée pour afficher les sites d'un autre.
  */
+use Uptimeez\I18n;
 use Uptimeez\Client;
 use Uptimeez\Config;
 use Uptimeez\Db;
@@ -26,7 +27,7 @@ $sites = Client::sites($cid);
 $monIds = array_values(array_filter(array_map(fn($s) => (int)($s['monitor_id'] ?? 0), $sites)));
 $sparks = $monIds ? Stats::sparkBatch($monIds, 86400, 48) : [];
 $incidents = Client::incidents($cid, 12);
-$appName = (string)Config::get('app.name', 'Uptimeez');
+$appName = (string)Config::get('app.name', I18n::APP);
 ?>
 
 <div class="cli-head">

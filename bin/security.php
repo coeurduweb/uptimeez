@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : audit de sécurité, en trois profondeurs.
+ * UptimeEZ : audit de sécurité, en trois profondeurs.
  *
  *   niveau 1 : léger        : configuration, secrets, en-têtes, surface exposée
  *   niveau 2, profond      : OWASP Top 10 en tests actifs sur une instance réelle
@@ -331,11 +331,11 @@ if ($lvl === 0 || $lvl === 2 || $lvl === 3) {
     file_put_contents($cfgFile, "<?php return " . var_export([
         'db'   => ['driver' => 'sqlite', 'sqlite' => $tmp . '/sec.sqlite'],
         'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeezsec'],
-        'app'  => ['name' => 'Uptimeez Sécurité', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+        'app'  => ['name' => 'UptimeEZ Sécurité', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
                    'public_token' => 'jeton-public-secret', 'cron_key' => 'cle-cron-secrete'],
         'defaults' => ['interval_sec' => 300, 'timeout_sec' => 6, 'retries' => 0, 'slow_ms' => 9000,
                        'max_parallel' => 4, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                       'user_agent' => 'UptimeezBot/1.0 (Sec)'],
+                       'user_agent' => 'UptimeEZBot/1.0 (Sec)'],
         'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                      'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => ''],
                      'resend_after_min' => 60, 'notify_recovery' => true, 'notify_degraded' => true, 'quiet_hours' => ''],

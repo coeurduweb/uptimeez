@@ -14,7 +14,7 @@ n'a à voir les vingt-neuf autres.
 Les outils du marché répondent à ça par des comptes utilisateurs, des rôles et des permissions : trois écrans de
 configuration, un mot de passe à transmettre par client, et un « j'ai perdu mon mot de passe » un dimanche soir.
 
-Uptimeez répond autrement. Vous créez un client, vous cochez ses sites, vous copiez son lien. C'est fini.
+UptimeEZ répond autrement. Vous créez un client, vous cochez ses sites, vous copiez son lien. C'est fini.
 
 ![Écran des clients](../img/clients.png)
 

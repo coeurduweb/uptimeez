@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez, Spanish catalogue.
+ * UptimeEZ, Spanish catalogue.
  *
  * Keys are the French source sentences (msgid), the way gettext does it.
  * The product name never appears in a key: sentences write {app}, which

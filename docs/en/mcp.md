@@ -1,8 +1,8 @@
-# Talk to Uptimeez from an agent (MCP)
+# Talk to UptimeEZ from an agent (MCP)
 
 [← Operations](operations.md) · [Documentation](README.md)
 
-Uptimeez ships an MCP server, so Claude Code, Claude Desktop or any MCP client can ask it questions about your
+UptimeEZ ships an MCP server, so Claude Code, Claude Desktop or any MCP client can ask it questions about your
 portfolio and act on the answers. It is written in PHP like the rest of the project, with no dependency to
 install.
 

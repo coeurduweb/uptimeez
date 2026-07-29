@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : réception d'un battement.
+ * UptimeEZ : réception d'un battement.
  *
  * À appeler par le script à surveiller (cron, sauvegarde, import nocturne) :
  *   curl -fsS "https://uptimeez.exemple.fr/beat.php?k=LACLE" > /dev/null

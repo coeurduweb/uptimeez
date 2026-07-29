@@ -34,7 +34,7 @@ final class Webhook
         $res = Http::fetch($url, [
             'method'  => 'POST',
             'body'    => jenc($payload),
-            'headers' => ['Content-Type' => 'application/json', 'User-Agent' => 'Uptimeez/1.0'],
+            'headers' => ['Content-Type' => 'application/json', 'User-Agent' => 'UptimeEZ/1.0'],
             'timeout' => 12,
             'maxBody' => 20000,
         ]);

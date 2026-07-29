@@ -6,7 +6,7 @@ use Uptimeez\I18n;
 use Uptimeez\Stats;
 use Uptimeez\Ui;
 
-$appName  = (string)Config::get('app.name', 'Uptimeez');
+$appName  = (string)Config::get('app.name', I18n::APP);
 $isClient = ($view ?? '') === 'client';
 $isPublic = ($view ?? '') === 'status' || $isClient;
 $isLogin  = ($view ?? '') === 'login';
@@ -70,7 +70,44 @@ $uiMode  = Ui::mode();
 <meta name="color-scheme" content="light dark">
 <title><?= ($down > 0 ? '(' . $down . ') ' : '') . e($pageTitle) . ' · ' . e($appName) ?></title>
 <link rel="stylesheet" href="assets/app.css?v=<?= UPTIMEEZ_VERSION ?>">
-<link rel="icon" href="data:image/svg+xml,<?= rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="' . ($down > 0 ? '%23ce2233' : '%230d8f56') . '"/></svg>') ?>">
+<?php
+/**
+ * Le favicon : le sigle du produit, dont la barre qui dépasse porte l'état.
+ *
+ * Il fait deux choses à la fois, et c'est voulu. La géométrie (quatre barres, une
+ * plus haute) est la marque : l'onglet est reconnaissable parmi trente autres. La
+ * couleur de cette barre est le seul état qui compte, lisible sans lire :
+ * opérationnel, à regarder, hors service.
+ *
+ * La barre est verte quand tout va bien, alors que le logo statique la met en
+ * ambre. Ce n'est pas une incohérence : une barre ambre en permanence apprendrait
+ * à l'oeil à ignorer l'ambre, et c'est exactement le réflexe qu'on ne veut pas
+ * installer. Ici la couleur ne décore pas, elle alerte.
+ *
+ * LE PIÈGE, ET IL A COÛTÉ CE FAVICON PENDANT TOUTE LA VIE DU PRODUIT : les
+ * couleurs s'écrivent « # » et non « %23 ». Le code précédent pré-encodait le
+ * dièse, puis rawurlencode() encodait le « % » en « %25 », si bien que le
+ * navigateur lisait « fill="%230d8f56" » — une couleur invalide, silencieusement
+ * ignorée. Le favicon était un rond NOIR sur toutes les installations, et l'état
+ * ne s'est jamais affiché. Aucune erreur nulle part : une image simplement fausse.
+ * L'encodage se fait une seule fois, ici, sur du SVG écrit avec de vrais dièses.
+ */
+$etatCouleur = $down > 0
+    ? '#f0555f'                                             // hors service
+    : (((int)($summary['degraded'] ?? 0)) > 0
+        ? '#f0ad3c'                                         // à regarder
+        : '#34c785');                                       // opérationnel
+$sigle = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+    . '<rect width="64" height="64" rx="14" fill="#080b12"/>'
+    . '<g fill="#34c785">'
+    . '<rect x="9" y="16" width="8" height="32" rx="4"/>'
+    . '<rect x="20.5" y="16" width="8" height="32" rx="4"/>'
+    . '<rect x="43.5" y="16" width="8" height="32" rx="4"/>'
+    . '</g>'
+    . '<rect x="32" y="10" width="8" height="44" rx="4" fill="' . $etatCouleur . '"/>'
+    . '</svg>';
+?>
+<link rel="icon" href="data:image/svg+xml,<?= rawurlencode($sigle) ?>">
 <script>
 (function () {
   try {
@@ -86,7 +123,7 @@ $uiMode  = Ui::mode();
 <?php if (!$isLogin && !$isPublic): ?>
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="<?= e(u('today')) ?>"><?= Ui::icon('pulse', 21) ?> <?= e($appName) ?></a>
+    <a class="brand" href="<?= e(u('today')) ?>"><?= Ui::brand(21) ?> <?= e($appName) ?></a>
     <nav class="nav" aria-label="<?= te('Navigation principale') ?>">
       <?php foreach ($nav as $key => [$label, $icon, $always]): ?>
         <a href="<?= e(u($key)) ?>"<?= $navCurrent === $key ? ' aria-current="page"' : '' ?>>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : ce qui s'affiche quand Uptimeez lui-même est en panne.
+ * UptimeEZ : ce qui s'affiche quand UptimeEZ lui-même est en panne.
  *
  * Un outil dont le métier est de dire « ce site est cassé, voilà pourquoi » n'a
  * pas le droit de répondre par une page blanche quand c'est lui qui tombe.
@@ -30,6 +30,8 @@
 declare(strict_types=1);
 
 namespace Uptimeez;
+
+use Uptimeez\I18n;
 
 use Throwable;
 
@@ -451,7 +453,7 @@ final class Fail
             if (@filesize($file) > 2 * 1024 * 1024) @unlink($file);
             if (@file_put_contents($file, $line, FILE_APPEND | LOCK_EX) !== false) return;
         }
-        error_log('Uptimeez: ' . $tech);
+        error_log('UptimeEZ: ' . $tech);
     }
 
     /**
@@ -464,7 +466,7 @@ final class Fail
         $out = self::safe(fn() => I18n::t($msgid, $vars), null);
         if (is_string($out)) return $out;
         foreach ($vars as $k => $v) $msgid = str_replace('{' . $k . '}', (string)$v, $msgid);
-        return str_replace('{app}', 'Uptimeez', $msgid);
+        return str_replace('{app}', I18n::APP, $msgid);
     }
 
     private static function safe(callable $fn, mixed $default): mixed

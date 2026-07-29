@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : msgid que le code ne révèle pas par simple lecture.
+ * UptimeEZ : msgid que le code ne révèle pas par simple lecture.
  *
  * Deux familles :
  *   1. les libellés passés par variable (états d'une sonde) ;

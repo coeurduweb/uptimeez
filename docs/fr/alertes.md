@@ -62,7 +62,7 @@ Rien d'autre. Il n'y a pas de « rappel que tout va bien », pas de volume quoti
 
 ## Pannes groupées : le tueur de bruit
 
-Quand trois sondes ou plus tombent sur la **même adresse IP** au cours d'une même passe, Uptimeez envoie **une**
+Quand trois sondes ou plus tombent sur la **même adresse IP** au cours d'une même passe, UptimeEZ envoie **une**
 alerte qui nomme le serveur et liste les sites touchés, au lieu d'une alerte par site.
 
 C'est la différence entre « mon hébergeur a eu un incident, j'ai reçu un message » et « mon hébergeur a eu un

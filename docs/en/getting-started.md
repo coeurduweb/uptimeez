@@ -36,7 +36,7 @@ forty wrong monitors in one click.
 
 ### What happens next, on its own
 
-On the following pass, for each site, Uptimeez:
+On the following pass, for each site, UptimeEZ:
 
 1. **fingerprints the technology**. WordPress, PrestaShop, Shopify, Drupal, Joomla, Wix, Astro, Next.js, Laravel…
 2. **picks representative pages** from `robots.txt` → sitemap → internal links: one per family (contact, pricing,
@@ -47,7 +47,7 @@ On the following pass, for each site, Uptimeez:
    traverses the database);
 6. **takes a first measurement**, so no card sits there saying "never checked".
 
-Everything it decided is written in *What Uptimeez decided on its own*, on the monitor page in Full mode.
+Everything it decided is written in *What UptimeEZ decided on its own*, on the monitor page in Full mode.
 
 ---
 

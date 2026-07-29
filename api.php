@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : points d'entrée JSON pour l'interface (vérification à la demande,
+ * UptimeEZ : points d'entrée JSON pour l'interface (vérification à la demande,
  * mise en pause, préparation d'un site, rafraîchissement du tableau de bord).
  */
 declare(strict_types=1);

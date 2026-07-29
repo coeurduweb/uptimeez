@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : audit de traduction.
+ * UptimeEZ : audit de traduction.
  *
  * Trois questions, trois réponses :
  *   1. quelles phrases le code demande-t-il à traduire ?      (msgid extraits)

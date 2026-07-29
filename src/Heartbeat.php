@@ -8,7 +8,7 @@ use Uptimeez\Notify\Notifier;
 /**
  * Sonde « battement » (dead-man switch).
  *
- * Le principe est inversé : ce n'est pas Uptimeez qui interroge le site, c'est le
+ * Le principe est inversé : ce n'est pas UptimeEZ qui interroge le site, c'est le
  * site qui doit se signaler. On surveille ainsi ce qu'aucune requête HTTP ne peut
  * voir : un cron WordPress qui ne tourne plus, une sauvegarde qui ne s'exécute
  * plus, un import nocturne silencieux. L'alerte part quand le signal n'arrive pas.

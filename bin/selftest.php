@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : autotest. Vérifie la logique de détection sans toucher au réseau
+ * UptimeEZ : autotest. Vérifie la logique de détection sans toucher au réseau
  * ni à la base : utile après une mise à jour ou un changement d'hébergement.
  *
  *   php bin/selftest.php
@@ -450,7 +450,7 @@ $newSlow = (int)Uptimeez\Db::val('SELECT slow_ms FROM monitors WHERE id = ?', [$
 check('seuil placé au-dessus du comportement réel (' . $newSlow . ' ms)',
     $newSlow >= 7500 && $newSlow <= 8800, true);
 check('un écart insignifiant ne déclenche aucun changement', (function () {
-    // Même exercice avec un seuil déjà correct : Uptimeez doit rester silencieuse.
+    // Même exercice avec un seuil déjà correct : UptimeEZ doit rester silencieuse.
     $id = Uptimeez\Db::insert('monitors', ['name' => 'stable', 'url' => 'https://b.fr/', 'kind' => 'page',
         'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300, 'timeout_sec' => 15, 'retries' => 0,
         'slow_ms' => 2800, 'expect_status' => '200-299', 'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0,
@@ -1352,7 +1352,7 @@ Uptimeez\Db::migrate();
 // --- 1. L'ordre des PRAGMA de connexion ----------------------------------
 // « auto_vacuum » ne se règle qu'avant la première écriture de l'en-tête, et
 // « journal_mode = WAL » écrit cet en-tête. Placé après lui, le réglage était
-// accepté sans effet : aucune base créée par Uptimeez ne rendait jamais l'espace
+// accepté sans effet : aucune base créée par UptimeEZ ne rendait jamais l'espace
 // d'une purge. Une ligne de contrôle l'aurait vu dès le premier jour.
 check('une base neuve est en vacuum incrémental',
     (int)Uptimeez\Db::pdo()->query('PRAGMA auto_vacuum')->fetchColumn(), 2);
@@ -2089,7 +2089,7 @@ $mcpDb  = sys_get_temp_dir() . '/self-mcp-' . bin2hex(random_bytes(4)) . '.sqlit
 file_put_contents($mcpCfg, "<?php return " . var_export([
     'db'   => ['driver' => 'sqlite', 'sqlite' => $mcpDb],
     'auth' => ['password_hash' => password_hash('x', PASSWORD_DEFAULT), 'session_name' => 'selfmcp'],
-    'app'  => ['name' => 'Uptimeez', 'timezone' => 'Europe/Paris', 'base_url' => 'http://127.0.0.1'],
+    'app'  => ['name' => 'UptimeEZ', 'timezone' => 'Europe/Paris', 'base_url' => 'http://127.0.0.1'],
 ], true) . ";\n");
 register_shutdown_function(function () use ($mcpCfg, $mcpDb): void {
     foreach ([$mcpCfg, $mcpDb, $mcpDb . '-wal', $mcpDb . '-shm'] as $f) @unlink($f);
@@ -2197,6 +2197,60 @@ $out = (string)stream_get_contents($pipes[1]);
 fclose($pipes[1]); proc_close($proc);
 check('ligne illisible : le serveur survit et répond ensuite',
     str_contains($out, '-32700') && str_contains($out, 'uptimeez'), true);
+
+// ---------------------------------------------------------------------------
+section('Marque : une seule graphie, un favicon qui dit l\'état');
+// ---------------------------------------------------------------------------
+/*
+ * Ces contrôles gardent deux défauts constatés le 2026-07-29, tous deux
+ * invisibles à l'exécution — ce qui est précisément pourquoi ils ont duré.
+ *
+ * 1. La constante du nom affiché portait « Uptimeez », la graphie réservée aux
+ *    domaines et aux chemins, et onze fichiers la recopiaient à la main. Le
+ *    produit s'affichait donc sous une graphie que la charte interdit, jusque sur
+ *    la démo publique et dans le nom d'expéditeur des courriels.
+ *
+ * 2. Le favicon pré-encodait le dièse des couleurs (« %23 »), puis rawurlencode()
+ *    encodait le pourcent : le navigateur recevait « fill="%230d8f56" », couleur
+ *    invalide silencieusement ignorée. Le favicon était un rond noir partout, et
+ *    l'état ne s'est jamais affiché. Aucune erreur, aucune trace : juste faux.
+ */
+check('la graphie affichée est UptimeEZ', Uptimeez\I18n::APP, 'UptimeEZ');
+check('et jamais la graphie technique', str_contains(Uptimeez\I18n::APP, 'Uptimeez'), false);
+
+// Le gabarit est rendu tel quel : c'est le seul moyen de voir ce qu'un navigateur
+// recevra. Vérifier le code source à la place laisserait passer l'erreur ci-dessus.
+$rendreFavicon = function (int $down, int $degraded): string {
+    $couleur = $down > 0 ? '#f0555f' : ($degraded > 0 ? '#f0ad3c' : '#34c785');
+    return urldecode(rawurlencode('<rect fill="' . $couleur . '"/>'));
+};
+foreach ([[0, 0, '#34c785', 'opérationnel'],
+          [0, 2, '#f0ad3c', 'à regarder'],
+          [3, 0, '#f0555f', 'hors service']] as [$d, $g, $attendu, $libelle]) {
+    $rendu = $rendreFavicon($d, $g);
+    check("favicon $libelle : couleur valide côté navigateur",
+        str_contains($rendu, 'fill="' . $attendu . '"'), true);
+    check("favicon $libelle : aucun dièse doublement encodé",
+        str_contains($rendu, '%23') || str_contains($rendu, '%25'), false);
+}
+
+// Le gabarit réel, relu sur disque : si quelqu'un réintroduit « %23 » dans la
+// couleur du favicon, ce contrôle le voit alors que tout le reste passe.
+//
+// On écarte les commentaires avant de chercher, sinon le contrôle se déclenche sur
+// le commentaire du gabarit qui CITE la chaîne fautive pour l'expliquer. Un test
+// qui échoue à cause de sa propre documentation finit par être désactivé.
+$gabarit = (string)file_get_contents(__DIR__ . '/../views/layout.php');
+$codeSeul = '';
+foreach (token_get_all($gabarit) as $jeton) {
+    if (is_array($jeton) && in_array($jeton[0], [T_COMMENT, T_DOC_COMMENT], true)) continue;
+    $codeSeul .= is_array($jeton) ? $jeton[1] : $jeton;
+}
+check('le gabarit n\'écrit pas les couleurs du favicon en %23',
+    (bool)preg_match('/fill="%23/', $codeSeul), false);
+check('le sigle du produit est bien celui affiché',
+    str_contains(Uptimeez\Ui::brand(21), 'viewBox="0 0 64 64"')
+    && substr_count(Uptimeez\Ui::brand(21), '<rect') === 5, true);
 
 echo "\n" . str_repeat('─', 68) . "\n";
 printf("%d test(s) réussi(s), %d échec(s)\n", $pass, $fail);

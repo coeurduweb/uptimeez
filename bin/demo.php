@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : jeu de démonstration.
+ * UptimeEZ : jeu de démonstration.
  *
  * Monte un parc d'agence fictif (9 sites, 30 jours d'historique) sur un faux
  * site local, pour visiter l'interface avant de brancher de vrais domaines.
@@ -38,7 +38,7 @@ if ($purge) {
 // UPTIMEEZ_DEMO=1 dit sans ambiguïté que cette instance EST une démonstration :
 // le refuser empêchait de monter une démo publique, ce qui était l'inverse du but.
 if (is_file($root . '/config.php') && !is_file($marker) && !\Uptimeez\Demo::on()) {
-    exit("Uptimeez est déjà installé pour de vrai : la démonstration écraserait votre configuration.\n"
+    exit("UptimeEZ est déjà installé pour de vrai : la démonstration écraserait votre configuration.\n"
        . "Supprimez config.php si vous voulez malgré tout repartir de la démo,\n"
        . "ou posez UPTIMEEZ_DEMO=1 si cette instance est justement une démonstration.\n");
 }
@@ -139,7 +139,7 @@ echo "   php -S 127.0.0.1:$port -t " . $fixtures . " " . $fixtures . "/router.ph
 Config::save([
     'db'   => ['driver' => 'sqlite', 'sqlite' => $root . '/data/uptimeez.sqlite'],
     'auth' => ['password_hash' => password_hash('demo1234', PASSWORD_DEFAULT)],
-    'app'  => ['name' => 'Uptimeez', 'demo' => true, 'base_url' => '', 'cron_key' => bin2hex(random_bytes(12)),
+    'app'  => ['name' => Uptimeez\I18n::APP, 'demo' => true, 'base_url' => '', 'cron_key' => bin2hex(random_bytes(12)),
                'public_token' => 'demo', 'timezone' => 'Europe/Paris'],
     'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                  'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => '']],

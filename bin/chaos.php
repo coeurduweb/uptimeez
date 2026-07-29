@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : béta-test destructif (« l'utilisateur qui fait n'importe quoi »).
+ * UptimeEZ : béta-test destructif (« l'utilisateur qui fait n'importe quoi »).
  *
  * On joue le rôle de quelqu'un qui écrit mal, clique partout, ne lit aucune
  * consigne, envoie des formulaires vides ou monstrueux, et essaie de casser
@@ -66,11 +66,11 @@ $cfgFile = $tmp . '/config.php';
 file_put_contents($cfgFile, "<?php return " . var_export([
     'db'   => ['driver' => 'sqlite', 'sqlite' => $tmp . '/chaos.sqlite'],
     'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeezchaos'],
-    'app'  => ['name' => 'Uptimeez Chaos', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+    'app'  => ['name' => 'UptimeEZ Chaos', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
                'public_token' => 'jeton-chaos', 'cron_key' => 'cle-chaos'],
     'defaults' => ['interval_sec' => 300, 'timeout_sec' => 5, 'retries' => 0, 'slow_ms' => 9000,
                    'max_parallel' => 4, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                   'user_agent' => 'UptimeezBot/1.0 (Chaos)'],
+                   'user_agent' => 'UptimeEZBot/1.0 (Chaos)'],
     'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                  'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => ''],
                  'resend_after_min' => 60, 'notify_recovery' => true, 'notify_degraded' => true, 'quiet_hours' => ''],
@@ -515,7 +515,7 @@ foreach (['PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'TRACE', 'BREW'] as $meth
     foreach (['/index.php?p=today', '/api.php?action=summary', '/beat.php'] as $p) {
         $r = $req($p, null, ['method' => $meth]);
         // 501 vient du serveur web lui-même face à un verbe inconnu : ce n'est
-        // pas Uptimeez qui casse. Seul un 5xx applicatif compte.
+        // pas UptimeEZ qui casse. Seul un 5xx applicatif compte.
         if ($r['code'] >= 500 && $r['code'] !== 501) { $bad++; echo "      $meth $p → HTTP {$r['code']}\n"; }
         if ($n = $phpNoise($r['body'])) { $bad++; echo "      $meth $p → bruit PHP « $n »\n"; }
     }

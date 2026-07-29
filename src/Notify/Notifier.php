@@ -317,10 +317,10 @@ final class Notifier
             [t('Date'), date('d/m/Y H:i:s')],
         ];
         $res = match ($channel) {
-            'discord' => Discord::send('✅ Test Uptimeez', $lines, 'up', $mon),
-            'slack'   => Slack::send('✅ Test Uptimeez', $lines, 'up', $mon),
-            'mail'    => Mail::send('✅ Test Uptimeez', $lines, 'up', $mon),
-            'webhook' => Webhook::send('✅ Test Uptimeez', $lines, 'up', $mon),
+            'discord' => Discord::send('✅ Test UptimeEZ', $lines, 'up', $mon),
+            'slack'   => Slack::send('✅ Test UptimeEZ', $lines, 'up', $mon),
+            'mail'    => Mail::send('✅ Test UptimeEZ', $lines, 'up', $mon),
+            'webhook' => Webhook::send('✅ Test UptimeEZ', $lines, 'up', $mon),
             default   => ['ok' => false, 'info' => t('Canal inconnu')],
         };
         self::log($mon, $channel, 'test', (bool)$res['ok'], (string)($res['info'] ?? ''));

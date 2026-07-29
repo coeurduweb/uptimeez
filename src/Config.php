@@ -92,7 +92,7 @@ final class Config
         $current = is_file($file) ? (require $file) : [];
         $merged  = self::merge(is_array($current) ? $current : [], $patch);
 
-        $php = "<?php\n// Uptimeez - configuration générée le " . date('Y-m-d H:i:s') . "\n"
+        $php = "<?php\n// UptimeEZ - configuration générée le " . date('Y-m-d H:i:s') . "\n"
              . "// Ne pas versionner ce fichier.\nreturn " . self::export($merged) . ";\n";
 
         $ok = @file_put_contents($file, $php, LOCK_EX) !== false;

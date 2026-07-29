@@ -1,8 +1,8 @@
-# Piloter Uptimeez depuis un agent (MCP)
+# Piloter UptimeEZ depuis un agent (MCP)
 
 [← Exploitation](exploitation.md) · [Documentation](README.md)
 
-Uptimeez embarque un serveur MCP : Claude Code, Claude Desktop ou n'importe quel client MCP peut donc
+UptimeEZ embarque un serveur MCP : Claude Code, Claude Desktop ou n'importe quel client MCP peut donc
 l'interroger sur votre parc et agir sur ses réponses. Il est écrit en PHP comme le reste du projet, sans aucune
 dépendance à installer.
 

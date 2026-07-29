@@ -66,7 +66,7 @@ list of outages with cause and duration, and a warning if a page layout has drif
 The e-mail is built for mail clients, not for a browser: tables and inline styles,
 no external stylesheet, no remote image, no SVG. The visual comparison of a broken
 layout stays on the online report, which the e-mail links to when a public status
-page is enabled. Uptimeez never puts a link requiring the agency password into a
+page is enabled. UptimeEZ never puts a link requiring the agency password into a
 client's inbox.
 
 Forcing a run by hand:
@@ -129,7 +129,7 @@ Failed checks: 8
 24 hours: 97.58 % (35 min down)
 Average response time: 334 ms · p95 512 ms
 
-Report produced by Uptimeez
+Report produced by UptimeEZ
 ```
 
 No HTML, no markup to clean up. It goes into a ticket, an e-mail or a Slack message as it is : with the evidence

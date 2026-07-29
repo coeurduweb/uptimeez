@@ -2,7 +2,7 @@
 
 [← Documentation](README.md) · [Prise en main →](prise-en-main.md)
 
-Uptimeez est une application PHP simple. Aucune compilation, aucun gestionnaire de paquets, aucun conteneur. Si vous
+UptimeEZ est une application PHP simple. Aucune compilation, aucun gestionnaire de paquets, aucun conteneur. Si vous
 savez envoyer des fichiers par FTP et ajouter une tâche cron, vous savez l'installer.
 
 ---
@@ -61,7 +61,7 @@ C'est la cible principale, pas un cas dégradé.
    copiez-la de là plutôt que de la deviner.
 
 **Spécificités o2switch.** Le binaire PHP est en général `/usr/local/bin/php`. LiteSpeed ignore certains drapeaux
-de réécriture d'`.htaccess`, raison pour laquelle Uptimeez ne dépend d'aucune réécriture d'URL : chaque adresse est
+de réécriture d'`.htaccess`, raison pour laquelle UptimeEZ ne dépend d'aucune réécriture d'URL : chaque adresse est
 un simple `index.php?p=…`. Rien à configurer.
 
 **Pas de crontab du tout ?** Réglages → *Déclenchement par URL* vous donne une adresse secrète :
@@ -77,7 +77,7 @@ crontab d'un autre serveur). Sans la bonne clé, le point d'entrée répond 403 
 
 ## Protéger l'installation
 
-Uptimeez est protégé par mot de passe et envoie `noindex, nofollow` sur chaque page. Pour une ceinture et des
+UptimeEZ est protégé par mot de passe et envoie `noindex, nofollow` sur chaque page. Pour une ceinture et des
 bretelles :
 
 - Placez-le sur un sous-domaine que vous ne communiquez pas, ou dans un dossier au nom peu évident.

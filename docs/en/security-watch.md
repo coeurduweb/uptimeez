@@ -1,6 +1,6 @@
 # Security watch
 
-**Uptimeez already knows which version runs on every site it watches. All that was left was to ask whether that
+**UptimeEZ already knows which version runs on every site it watches. All that was left was to ask whether that
 version has a published vulnerability.**
 
 [← Documentation](README.md) · [Version française](../fr/veille-securite.md)
@@ -12,7 +12,7 @@ version has a published vulnerability.**
 A classic monitoring tool tells you when a site goes down. This one tells you **before**, when a security
 advisory has just been published for the version your client is still running.
 
-It rests on the same groundwork as broken-layout detection: Uptimeez already fetches the HTML of every page it
+It rests on the same groundwork as broken-layout detection: UptimeEZ already fetches the HTML of every page it
 checks, so the information is right there, free of charge. It only had to be read.
 
 ![Software and known vulnerabilities](../img/vulnerabilities.png)
@@ -29,7 +29,7 @@ This is the point that decides whether you can trust this screen.
 | **Behind latest** | The installed version is older than the latest release. | Technical debt, not a vulnerability. Plan it. |
 
 Mixing the two would be the shortest path to losing your trust. A tool that says "vulnerable" when it only knows
-"not up to date" gets ignored within three weeks, and the day it is right, nobody is looking. So Uptimeez uses two
+"not up to date" gets ignored within three weeks, and the day it is right, nobody is looking. So UptimeEZ uses two
 different words, two different colours, and never displays a severity it did not read in an advisory: when the
 advisory announces none, the screen says "severity not announced".
 
@@ -71,7 +71,7 @@ Two public sources, no account, no API key:
 
 ### What leaves your server
 
-Worth stating plainly, because it is the only outbound traffic from Uptimeez that does not go to a site you
+Worth stating plainly, because it is the only outbound traffic from UptimeEZ that does not go to a site you
 monitor: the request sends **the component name and its version number**. Never the address of the site
 concerned, never your client's name, never the full inventory in one call. An advisory source learns that
 somebody is interested in `drupal/core 10.1.6`, and nothing more.
@@ -134,7 +134,7 @@ In `config.php`, if you prefer files to screens:
 ## What the watch does not do
 
 - **It does not scan your site.** No request is sent to test a vulnerability, no admin path is probed, no
-  payload is injected. Uptimeez reads what the page publishes and queries public databases. A tool that actually
+  payload is injected. UptimeEZ reads what the page publishes and queries public databases. A tool that actually
   tests vulnerabilities is a vulnerability scanner: that is a different job, and it runs with written
   authorisation.
 - **It does not see what the HTML does not say.** A plugin that loads neither CSS nor JavaScript on the homepage

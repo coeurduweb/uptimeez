@@ -1,12 +1,12 @@
 <?php
 /**
- * Uptimeez : passe de surveillance. À exécuter chaque minute :
+ * UptimeEZ : passe de surveillance. À exécuter chaque minute :
  *   * * * * * /usr/bin/php /home/user/uptimeez/cron.php >/dev/null 2>&1
  *
  * Ou par URL si crontab n'est pas accessible (clé à définir dans les réglages) :
  *   https://exemple.fr/uptimeez/cron.php?key=VOTRECLE
  *
- * Uptimeez choisit elle-même les sondes dues : une exécution par minute suffit
+ * UptimeEZ choisit elle-même les sondes dues : une exécution par minute suffit
  * quels que soient les intervalles configurés.
  */
 declare(strict_types=1);
@@ -48,7 +48,7 @@ if (!$isCli) {
 }
 
 if (!Config::isInstalled()) {
-    exit("Uptimeez n'est pas installé : ouvrez install.php dans votre navigateur.\n");
+    exit("UptimeEZ n'est pas installé : ouvrez install.php dans votre navigateur.\n");
 }
 
 $t0   = microtime(true);

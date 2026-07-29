@@ -1,6 +1,6 @@
-# Uptimeez documentation
+# UptimeEZ documentation
 
-**Uptime monitoring that tells you what to do.** Everything you need to install, run and trust Uptimeez.
+**Uptime monitoring that tells you what to do.** Everything you need to install, run and trust UptimeEZ.
 
 [← Back to the project](../../README.md) · [Version française](../fr/README.md)
 
@@ -36,13 +36,13 @@ php bin/demo.php --purge    # then start clean with install.php
 
 ## The idea in one page
 
-Uptimeez assumes three things about you.
+UptimeEZ assumes three things about you.
 
 **1. You look after sites that belong to other people.** So a failure is not an abstraction, it is a phone call.
 The home screen is therefore a to-do list, not a dashboard: each entry says what broke, why it matters, what to
 do about it, and carries the buttons that do it.
 
-**2. You do not have time to configure anything.** So Uptimeez decides for you and tells you what it decided.
+**2. You do not have time to configure anything.** So UptimeEZ decides for you and tells you what it decided.
 Paste a list of domains: it fingerprints the technology, picks representative pages from the sitemap, derives a
 proof string from the site's own content, sets the check rate from the page's importance, and tunes the slowness
 threshold from measured p95. Every decision is written down in a journal you can read, and every one of them can

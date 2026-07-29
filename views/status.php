@@ -1,5 +1,6 @@
 <?php
 /** Page d'état publique (accès par jeton, sans authentification). */
+use Uptimeez\I18n;
 use Uptimeez\Config;
 use Uptimeez\Db;
 use Uptimeez\Stats;
@@ -16,8 +17,9 @@ foreach ($rows as $r) {
 $ids = array_map(fn($r) => (int)$r['id'], $rows);
 $sparks = Stats::sparkBatch($ids, 86400, 48);
 ?>
-<div class="row" style="justify-content:center;margin:26px 0 4px">
-  <span style="font-size:20px;font-weight:700;letter-spacing:-.02em"><?= e((string)Config::get('app.name', 'Uptimeez')) ?></span>
+<div class="row" style="justify-content:center;gap:9px;margin:26px 0 4px">
+  <?= Ui::brand(24) ?>
+  <span style="font-size:20px;font-weight:700;letter-spacing:-.02em"><?= e((string)Config::get('app.name', I18n::APP)) ?></span>
 </div>
 <p class="center muted small"><?= te('État des services · mis à jour') ?> <?= e(human_since((string)Db::setting('last_run_at'))) ?></p>
 

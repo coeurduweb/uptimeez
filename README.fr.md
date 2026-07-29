@@ -1,6 +1,6 @@
 <div align="center">
 
-# Uptimeez
+# UptimeEZ
 
 ### La surveillance de sites qui vous dit **quoi faire**, pas seulement ce qui est cassé.
 
@@ -11,7 +11,7 @@ clic.
 
 Aucune dépendance · Pas de Docker · Tourne sur un mutualisé · SQLite ou MySQL · 10 langues
 
-[Pourquoi Uptimeez](#pourquoi-un-outil-duptime-de-plus-) ·
+[Pourquoi UptimeEZ](#pourquoi-un-outil-duptime-de-plus-) ·
 [Captures](#à-quoi-ça-ressemble) ·
 [Ce qu'il détecte](#ce-quil-détecte-vraiment) ·
 [Comparatif](#face-aux-concurrents) ·
@@ -20,7 +20,7 @@ Aucune dépendance · Pas de Docker · Tourne sur un mutualisé · SQLite ou MyS
 [Documentation](docs/fr/README.md) ·
 [English version](README.md)
 
-<img src="docs/img/tour.gif" alt="Uptimeez en action : la liste de tâches du jour, les aides contextuelles, la palette de commandes, les correctifs en un clic et le mur d'écran" width="820">
+<img src="docs/img/tour.gif" alt="UptimeEZ en action : la liste de tâches du jour, les aides contextuelles, la palette de commandes, les correctifs en un clic et le mur d'écran" width="820">
 
 </div>
 
@@ -35,21 +35,21 @@ complètement cassé : la feuille de style est en 404 après un déploiement et 
 base de données est tombée et WordPress affiche une jolie page d'erreur avec un code impeccable ; quelqu'un a
 laissé un `noindex` après une mise en ligne et Google déréférence tranquillement.
 
-Uptimeez est né de trois constats faits en gérant un parc d'agence avec les alternatives :
+UptimeEZ est né de trois constats faits en gérant un parc d'agence avec les alternatives :
 
-| Ce qui coince ailleurs | Ce que fait Uptimeez |
+| Ce qui coince ailleurs | Ce que fait UptimeEZ |
 |---|---|
 | **La configuration est un impôt.** Vingt écrans, quarante champs avant d'avoir surveillé quoi que ce soit. | Vous collez une liste de domaines. Il détecte la technologie, choisit les pages qui valent la peine, déduit la chaîne qui prouve que la base répond, cale les seuils sur le p95 mesuré, puis montre un **aperçu avant de créer quoi que ce soit**. |
 | **Les alertes deviennent du bruit.** Un serveur tombe, quarante e-mails arrivent. Au bout d'une semaine, personne ne les lit. | Les pannes qui partagent une IP deviennent **une seule alerte groupée**. Les seuils s'ajustent seuls : un site lent par nature ne crie pas au loup. Heures calmes, fenêtres de maintenance, prise en compte, relances avant alerte. |
 | **Les tableaux de bord montrent des états, pas des actions.** Des points verts et rouges ; à vous de deviner quoi faire. | L'écran d'accueil est une **liste de tâches** : la cause, pourquoi c'est un problème, quoi faire, la preuve, et les boutons qui le font sans quitter la page. Chaque action est annulable. |
 
-> Les autres montrent **des états**. Uptimeez donne **une liste de choses à faire**, et devine tout le reste.
+> Les autres montrent **des états**. UptimeEZ donne **une liste de choses à faire**, et devine tout le reste.
 
 ---
 
 ## Tout ce qu'il surveille
 
-La plupart des outils surveillent une chose : est-ce que le serveur répond. Uptimeez surveille **cinq couches**,
+La plupart des outils surveillent une chose : est-ce que le serveur répond. UptimeEZ surveille **cinq couches**,
 sur chaque page qu'il vérifie, sans vous demander d'en configurer une seule.
 
 | | Ce qu'il surveille | Ce que ça attrape |
@@ -63,7 +63,7 @@ sur chaque page qu'il vérifie, sans vous demander d'en configurer une seule.
 **Cinq types de sondes**, chacune avec ses réglages : une **page**, une **API JSON** (chemin du champ, valeur
 attendue, en-têtes, corps, n'importe quelle méthode), un **fichier** (une ressource qui doit rester joignable et
 inchangée), un **mot-clé** (un texte qui doit apparaître, ou ne jamais apparaître) et un **battement** (votre
-script appelle Uptimeez quand il a fini ; c'est le silence qui alerte).
+script appelle UptimeEZ quand il a fini ; c'est le silence qui alerte).
 
 Et ce qu'il fait de tout ça : les pannes qui partagent une IP deviennent **une seule** alerte, les seuils se
 règlent sur le p95 mesuré, chaque décision est consignée dans un journal lisible, et l'écran d'accueil transforme
@@ -82,7 +82,7 @@ l'ensemble en liste de tâches.
 **La journée commence ici.** Une carte par problème, les plus urgents d'abord : la cause, la conséquence, le
 remède, et les boutons qui l'appliquent sur place.
 
-<img src="docs/img/today.png" alt="Écran d'accueil d'Uptimeez : liste des sites à traiter, chacun avec sa cause, son explication, son remède et les boutons d'action">
+<img src="docs/img/today.png" alt="Écran d'accueil d'UptimeEZ : liste des sites à traiter, chacun avec sa cause, son explication, son remède et les boutons d'action">
 
 </td>
 <td width="50%" valign="top">
@@ -90,7 +90,7 @@ remède, et les boutons qui l'appliquent sur place.
 **Le mur d'écran**, pour l'écran du bureau. Vert, orange, rouge. Les sites en souffrance remontent en haut,
 jamais sous la ligne de flottaison.
 
-<img src="docs/img/wall.png" alt="Mur d'écran d'Uptimeez : cartes colorées par site avec uptime, temps de réponse et courbe des 24 dernières heures">
+<img src="docs/img/wall.png" alt="Mur d'écran d'UptimeEZ : cartes colorées par site avec uptime, temps de réponse et courbe des 24 dernières heures">
 
 </td>
 </tr>
@@ -148,13 +148,13 @@ imprimer ou à enregistrer en PDF.
 
 | Thème sombre | Sur téléphone |
 |---|---|
-| <img src="docs/img/today-dark.png" alt="Écran d'accueil d'Uptimeez en thème sombre"> | <img src="docs/img/mobile-today.png" alt="Écran d'accueil d'Uptimeez sur un téléphone" width="300"> |
+| <img src="docs/img/today-dark.png" alt="Écran d'accueil d'UptimeEZ en thème sombre"> | <img src="docs/img/mobile-today.png" alt="Écran d'accueil d'UptimeEZ sur un téléphone" width="300"> |
 
 | Anglais (par défaut) | Arabe (droite à gauche) |
 |---|---|
-| <img src="docs/img/today-en.png" alt="Interface d'Uptimeez en anglais"> | <img src="docs/img/today-ar.png" alt="Interface d'Uptimeez en arabe, disposée de droite à gauche"> |
+| <img src="docs/img/today-en.png" alt="Interface d'UptimeEZ en anglais"> | <img src="docs/img/today-ar.png" alt="Interface d'UptimeEZ en arabe, disposée de droite à gauche"> |
 
-**Import : un aperçu avant que rien n'existe.** Collez des domaines, un tableau, un e-mail de client. Uptimeez
+**Import : un aperçu avant que rien n'existe.** Collez des domaines, un tableau, un e-mail de client. UptimeEZ
 y récupère les adresses et montre exactement ce qu'il va faire.
 
 <img src="docs/img/import-preview.png" alt="Tableau d'aperçu d'import listant chaque site, sa cadence, ses pages suivies et sa chaîne de preuve déduite avant création">
@@ -162,7 +162,7 @@ y récupère les adresses et montre exactement ce qu'il va faire.
 **Les réglages, repliés.** Tout a une valeur par défaut sensée ; les accordéons restent fermés jusqu'à ce que
 vous en ayez besoin.
 
-<img src="docs/img/settings.png" alt="Écran de réglages d'Uptimeez avec les accordéons repliés pour le cron, les alertes, les valeurs par défaut et les accès">
+<img src="docs/img/settings.png" alt="Écran de réglages d'UptimeEZ avec les accordéons repliés pour le cron, les alertes, les valeurs par défaut et les accès">
 
 </details>
 
@@ -179,7 +179,7 @@ vous en ayez besoin.
 
 ## Ce qu'il détecte vraiment
 
-La plupart des outils vérifient un code HTTP et un mot-clé. Voici ce que surveille Uptimeez, et pourquoi chaque
+La plupart des outils vérifient un code HTTP et un mot-clé. Voici ce que surveille UptimeEZ, et pourquoi chaque
 point compte.
 
 ### La mise en page cassée, celle que personne d'autre ne détecte sans écrire de code
@@ -188,7 +188,7 @@ Un déploiement se passe mal, la feuille de style minifiée part en 404, et le s
 document texte de 1994. Code HTTP : `200`. Temps de réponse : excellent. Tous les outils d'uptime du marché
 annoncent que le site va bien.
 
-Uptimeez croise **neuf signaux indépendants** sur chaque page HTML vérifiée :
+UptimeEZ croise **neuf signaux indépendants** sur chaque page HTML vérifiée :
 
 | Signal | Ce qu'il attrape |
 |---|---|
@@ -212,7 +212,7 @@ et quand le design change exprès, un bouton réapprend la référence.
 ### La base de données tombée derrière un 200 impeccable
 
 WordPress, Laravel, Doctrine, PDO et Symfony ont chacun leur façon d'annoncer une panne de base, et tous
-renvoient volontiers `200 OK`. Uptimeez embarque **≈45 signatures d'erreur**, croise avec une sonde CMS qui
+renvoient volontiers `200 OK`. UptimeEZ embarque **≈45 signatures d'erreur**, croise avec une sonde CMS qui
 traverse réellement la base (l'API REST de WordPress, pas la page d'accueil en cache), et surveille la **chaîne
 de preuve** : un texte qui ne peut venir que de la base, comme le copyright du pied de page.
 
@@ -223,7 +223,7 @@ répond encore 200, la couche données est tombée et vous le savez en une véri
 
 ### Quitter un autre outil prend cinq minutes
 
-Le frein au changement n'est pas le prix, c'est la soirée à ressaisir quarante sondes. Uptimeez lit donc l'export de
+Le frein au changement n'est pas le prix, c'est la soirée à ressaisir quarante sondes. UptimeEZ lit donc l'export de
 l'outil que vous quittez : **UptimeRobot, Uptime Kuma, Better Stack, Pingdom, Site24x7**, et un CSV générique pour
 tout le reste.
 
@@ -241,14 +241,14 @@ import qui refuse. Et **le sens du mot-clé est respecté outil par outil** : le
 tromper inverserait chaque alerte.
 
 **L'historique de mesures n'est jamais importé.** Il a été pris par un autre outil, avec d'autres seuils, depuis un
-autre réseau. Un « 99,98 % » repris de Pingdom ne dirait rien de ce qu'Uptimeez a mesuré : le compteur repart de
+autre réseau. Un « 99,98 % » repris de Pingdom ne dirait rien de ce qu'UptimeEZ a mesuré : le compteur repart de
 zéro, et l'écran le dit avant que vous validiez.
 
 → **[Reprise](docs/fr/reprise.md)**
 
 ### Pourquoi une page est lente, et quoi changer
 
-Les Core Web Vitals viennent de vrais navigateurs Chrome. Un outil en PHP ne peut pas les calculer, et Uptimeez ne
+Les Core Web Vitals viennent de vrais navigateurs Chrome. Un outil en PHP ne peut pas les calculer, et UptimeEZ ne
 fera pas semblant : aucune mesure de navigateur n'est inventée ici. En revanche il fait ce que personne ne fait
 sans lancer Chrome, parce qu'il a déjà les données sous la main.
 
@@ -279,7 +279,7 @@ vide.
 Vous surveillez trente sites qui appartiennent à douze personnes. Chacune veut savoir si le sien va bien. Aucune
 n'a à voir les vingt-neuf autres.
 
-Tous les autres outils répondent à ça par des comptes utilisateurs, des rôles et des permissions. Uptimeez vous
+Tous les autres outils répondent à ça par des comptes utilisateurs, des rôles et des permissions. UptimeEZ vous
 donne un client, une liste de cases à cocher, et un lien.
 
 ![Écran des clients](docs/img/clients.png)
@@ -306,7 +306,7 @@ Vos sites sont déjà groupés depuis l'import ? Un bouton transforme ces groupe
 
 ### Les versions vulnérables, avant que quoi que ce soit ne casse
 
-Uptimeez lit déjà le HTML de chaque page qu'il vérifie, et ce HTML dit presque toujours quelle version tourne : la
+UptimeEZ lit déjà le HTML de chaque page qu'il vérifie, et ce HTML dit presque toujours quelle version tourne : la
 balise `generator`, le paramètre `?ver=` des fichiers statiques, les chemins d'extensions. Il construit donc
 **l'inventaire logiciel de chaque site** sans rien demander de plus, puis le croise avec les bases d'avis
 publiques : **OSV.dev** pour Packagist (Drupal, Laravel, Symfony, TYPO3, Magento, PrestaShop, Joomla) et
@@ -341,7 +341,7 @@ de version, jamais l'adresse du site concerné, et l'ensemble se coupe en un cli
 | **`noindex` oublié** | Le tueur silencieux du SEO après une mise en ligne. Personne ne s'en aperçoit pendant des semaines. |
 | **Modification de contenu** | Une empreinte du texte visible : repère une publication passée en ligne, comme une page défigurée. |
 | **API JSON** | Chemin du champ, valeur attendue, en-têtes personnalisés, corps de requête, n'importe quelle méthode. |
-| **Tâches cron silencieuses** | Un battement dead-man : votre script de sauvegarde appelle Uptimeez quand il a fini. **C'est le silence qui déclenche l'alerte**, la seule panne qu'aucune requête HTTP ne peut voir. |
+| **Tâches cron silencieuses** | Un battement dead-man : votre script de sauvegarde appelle UptimeEZ quand il a fini. **C'est le silence qui déclenche l'alerte**, la seule panne qu'aucune requête HTTP ne peut voir. |
 | **Temps de réponse** | DNS, connexion, TLS, premier octet, total. Seuil calé sur le p95 mesuré du site, pas sur un chiffre rond. |
 | **Pannes groupées** | Dix sites qui tombent sur une même IP, c'est *un* incident, pas dix alertes. |
 | **Rapport client mensuel** | Disponibilité, interruptions, temps de réponse, envoyés à chaque client le jour choisi. Une fois par mois, jamais deux, retenté le lendemain si le serveur de messagerie était en panne. |
@@ -354,7 +354,7 @@ Comparatif des fonctions face aux outils que l'on évalue réellement. Il reflè
 des formules standard, en juillet 2026** : sans script, sans extension, sans module payant. Une erreur ?
 Ouvrez une pull request, le tableau est dans ce fichier.
 
-| | **Uptimeez** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
+| | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration seulement | ❌ | ❌ | ⚠️ à scripter |
 | Erreurs de console reconstituées | ✅ | ❌ | ⚠️ dans les logs du script | ❌ | ❌ | ❌ | ⚠️ dans les logs |
@@ -394,7 +394,7 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 **Là où les autres sont réellement meilleurs.** Checkly pour les parcours utilisateurs scriptés en intégration
 continue ; Zabbix pour les métriques d'infrastructure sur vos propres serveurs ; New Relic pour le traçage
 applicatif dans votre code ; Site24x7 pour la largeur si vous voulez un seul fournisseur pour tout ; SiteGuru
-pour l'audit SEO, qui est un autre métier. Uptimeez n'essaie pas d'être l'un de ceux-là. Il fait une seule
+pour l'audit SEO, qui est un autre métier. UptimeEZ n'essaie pas d'être l'un de ceux-là. Il fait une seule
 chose : **garder en vie les sites des autres sans qu'un humain passe sa journée devant des tableaux de bord.**
 
 ---
@@ -417,7 +417,7 @@ cd uptimeez
 * * * * * /usr/local/bin/php /chemin/vers/uptimeez/cron.php >/dev/null 2>&1
 ```
 
-Uptimeez choisit lui-même les sondes dues : une seule passe par minute couvre tous les intervalles, de 30
+UptimeEZ choisit lui-même les sondes dues : une seule passe par minute couvre tous les intervalles, de 30
 secondes à un jour. Pas d'accès à crontab ? L'écran **Réglages** vous donne une URL à appeler depuis n'importe
 quel service externe.
 
@@ -441,7 +441,7 @@ sondes, canaux d'alerte, le moteur de détection expliqué, la ligne de commande
 
 ## Le piloter depuis un agent (MCP)
 
-Uptimeez embarque un **serveur MCP** : Claude Code, Claude Desktop ou n'importe quel client MCP peut donc
+UptimeEZ embarque un **serveur MCP** : Claude Code, Claude Desktop ou n'importe quel client MCP peut donc
 l'interroger et agir sur ses réponses. Il est écrit en PHP comme le reste, parce que le serveur MCP ne doit pas
 être la seule pièce qui réclame soudain Node.
 
@@ -498,7 +498,7 @@ php bin/e2e.php           240 contrôles   parcours complet en HTTP réel, insta
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
 php bin/chaos.php          35 contrôles   859 requêtes hostiles d'un utilisateur qui fait tout de travers
 php bin/security.php      113 contrôles   OWASP Top 10, trois profondeurs, face à un site hostile local
-php bin/infra.php          61 contrôles   Uptimeez en panne : ce qu'il dit, et ce qu'il ne divulgue pas
+php bin/infra.php          61 contrôles   UptimeEZ en panne : ce qu'il dit, et ce qu'il ne divulgue pas
 php bin/mysql.php          43 contrôles   le pilote MySQL / MariaDB, sur un vrai serveur
 php bin/mcp.php            n/a            serveur MCP pour les agents (27 des contrôles ci-dessus le testent)
 php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, msgid et fichiers inutilisés
@@ -523,7 +523,7 @@ que l'utilisateur a tapé réinjecté dans le HTML, et une base cohérente à l'
 | **2, profond** | L'OWASP Top 10 en tests *actifs* sur une instance réelle isolée : accès non authentifié à chaque écran et chaque action d'API, accès direct aux fichiers source, traversée de chemin, CSRF sur chaque écriture, 11 charges d'injection SQL sur 5 paramètres, XSS réfléchie / stockée / par attribut, injection d'en-tête de réponse, fixation de session, verrou de force brute, invalidation à la déconnexion |
 | **3, très profond** | Ce qui vise le collecteur lui-même : SSRF (un site surveillé qui redirige vers `file://`), XXE par un sitemap hostile, réponse de 40 Mo, contenu pathologique face aux expressions régulières, comparaison de jeton en temps constant, réponses de battement indiscernables, injection de formule dans le tableur, identifiants SQL dynamiques |
 
-**`bin/infra.php`** vérifie qu'Uptimeez sait tomber. Un outil dont le métier est de dire « ce site est cassé,
+**`bin/infra.php`** vérifie qu'UptimeEZ sait tomber. Un outil dont le métier est de dire « ce site est cassé,
 voilà pourquoi » n'a pas le droit de rendre une page blanche quand c'est lui qui tombe. Huit pannes
 d'infrastructure sont provoquées pour de vrai — dossier `data/` non inscriptible, base corrompue, fichier en
 lecture seule, serveur MySQL éteint, identifiants périmés, `config.php` illisible, cassé, ou ne renvoyant pas un
@@ -558,7 +558,7 @@ uptimeez/
 │   ├── Diagnose.php          23 causes → ce que ça veut dire, quoi faire
 │   ├── Tune.php              seuils auto-ajustés + journal des décisions
 │   ├── Heartbeat.php         le dead-man switch
-│   ├── Fail.php              la panne d'Uptimeez lui-même : cause, remède, et rien de public
+│   ├── Fail.php              la panne d'UptimeEZ lui-même : cause, remède, et rien de public
 │   └── I18n.php              10 langues, RTL, règles de pluriel
 ├── lang/                     un catalogue par langue
 ├── views/                    gabarits, aucun framework, aucune compilation
@@ -615,7 +615,7 @@ MIT. Utilisez-le, vendez des services autour, forkez-le.
 
 <div align="center">
 <br>
-<b>Uptimeez</b>. Parce que « le site répond » n'a jamais été la question.
+<b>UptimeEZ</b>. Parce que « le site répond » n'a jamais été la question.
 <br><br>
 <sub>surveillance de sites web · monitoring auto-hébergé · outil de monitoring PHP · monitoring sur mutualisé ·
 détection de CSS cassé · détection de base de données HS · surveillance de certificat SSL · surveillance de

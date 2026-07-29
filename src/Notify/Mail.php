@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Uptimeez\Notify;
 
+use Uptimeez\I18n;
+
 use Uptimeez\Config;
 
 final class Mail
@@ -20,7 +22,7 @@ final class Mail
         if (!$recipients) return ['ok' => false, 'info' => t('Destinataire invalide')];
 
         $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimeez@' . (gethostname() ?: 'localhost'));
-        $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimeez'));
+        $fromName = trim((string)Config::get('notify.mail.from_name', I18n::APP));
         $subject  = self::subjectPrefix($sev) . ' ' . strip_tags($title);
         [$html, $text] = self::body($title, $lines, $sev, $mon);
 
@@ -35,7 +37,7 @@ final class Mail
             'Reply-To: ' . $from,
             'MIME-Version: 1.0',
             'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
-            'X-Mailer: Uptimeez',
+            'X-Mailer: UptimeEZ',
             'X-Priority: ' . ($sev === 'down' ? '1' : '3'),
         ];
         $msg = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
@@ -71,7 +73,7 @@ final class Mail
         }
 
         $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimeez@' . (gethostname() ?: 'localhost'));
-        $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimeez'));
+        $fromName = trim((string)Config::get('notify.mail.from_name', I18n::APP));
 
         if (Config::get('notify.mail.transport', 'mail') === 'smtp') {
             return Smtp::send($recipients, $from, $fromName, $subject, $html, $text);
@@ -83,7 +85,7 @@ final class Mail
             'Reply-To: ' . $from,
             'MIME-Version: 1.0',
             'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
-            'X-Mailer: Uptimeez',
+            'X-Mailer: UptimeEZ',
             'Auto-Submitted: auto-generated',
         ];
         $msg = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"

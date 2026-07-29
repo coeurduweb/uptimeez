@@ -8,7 +8,7 @@ namespace Uptimeez\Import;
  *
  * Le vrai frein au changement d'outil n'est pas le prix, c'est la soirée à
  * ressaisir quarante sondes. Cette classe lit l'export de l'outil qu'on quitte
- * et en tire des sondes Uptimeez, sans rien demander à personne.
+ * et en tire des sondes UptimeEZ, sans rien demander à personne.
  *
  * Cinq sources reconnues, choisies parce que ce sont celles qu'on rencontre :
  * UptimeRobot, Uptime Kuma, Better Stack, Pingdom, Site24x7. Plus un CSV
@@ -21,9 +21,9 @@ namespace Uptimeez\Import;
  *      écartées, avec la raison. Un import qui perd silencieusement six sondes
  *      sur quarante est pire qu'un import qui refuse.
  *   2. **Rien n'est inventé.** Un intervalle absent de l'export reste absent :
- *      c'est la valeur par défaut d'Uptimeez qui s'applique, et l'écran le dit.
+ *      c'est la valeur par défaut d'UptimeEZ qui s'applique, et l'écran le dit.
  *      Aucune sonde n'est créée avec une cadence tirée au hasard.
- *   3. **La configuration, jamais l'historique.** Uptimeez n'importe pas les
+ *   3. **La configuration, jamais l'historique.** UptimeEZ n'importe pas les
  *      mesures passées : elles ont été prises par un autre outil, avec d'autres
  *      seuils, depuis un autre réseau. Les afficher comme les siennes serait un
  *      mensonge. Le compteur de disponibilité repart donc de zéro, et c'est

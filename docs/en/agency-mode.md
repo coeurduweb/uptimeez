@@ -14,7 +14,7 @@ has any business seeing the other twenty-nine.
 The tools on the market answer this with user accounts, roles and permissions: three configuration screens, one
 password to hand out per client, and a "I lost my password" on a Sunday evening.
 
-Uptimeez answers differently. You create a client, tick their sites, copy their link. Done.
+UptimeEZ answers differently. You create a client, tick their sites, copy their link. Done.
 
 ![Clients screen](../img/clients.png)
 

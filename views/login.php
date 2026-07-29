@@ -1,12 +1,13 @@
 <?php
 /** Écran de connexion. */
+use Uptimeez\I18n;
 use Uptimeez\Config;
 use Uptimeez\Ui;
 ?>
 <div style="max-width:360px;margin:11vh auto 0">
   <div class="row" style="justify-content:center;margin-bottom:20px;gap:9px">
-    <?= Ui::icon('pulse', 26) ?>
-    <span style="font-size:20px;font-weight:700;letter-spacing:-.02em"><?= e((string)Config::get('app.name', 'Uptimeez')) ?></span>
+    <?= Ui::brand(26) ?>
+    <span style="font-size:20px;font-weight:700;letter-spacing:-.02em"><?= e((string)Config::get('app.name', I18n::APP)) ?></span>
   </div>
   <div class="panel" style="margin-top:0">
     <div class="panel-body">

@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez - amorçage commun (web + CLI).
+ * UptimeEZ - amorçage commun (web + CLI).
  * Aucune dépendance externe : autoload maison, PHP >= 8.2.
  *
  * Le plancher était annoncé à 8.1, sans qu'aucune suite n'ait jamais tourné
@@ -20,7 +20,7 @@ define('UPTIMEEZ_VERSION', '1.0.1');
 
 if (PHP_VERSION_ID < 80200) {
     http_response_code(500);
-    exit('Uptimeez requires PHP 8.2 or newer. Uptimeez nécessite PHP 8.2 ou plus récent. (' . 'PHP ' . PHP_VERSION . ')');
+    exit('UptimeEZ requires PHP 8.2 or newer. UptimeEZ nécessite PHP 8.2 ou plus récent. (' . 'PHP ' . PHP_VERSION . ')');
 }
 
 spl_autoload_register(function (string $class): void {

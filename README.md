@@ -1,6 +1,6 @@
 <div align="center">
 
-# Uptimeez
+# UptimeEZ
 
 ### Uptime monitoring that tells you **what to do**, not just what broke.
 
@@ -10,7 +10,7 @@ jobs, then hands you a to-do list with the fix one click away.
 
 Zero dependencies · No Docker · Runs on plain shared hosting · SQLite or MySQL · 10 languages
 
-[Why Uptimeez](#why-another-uptime-monitor) ·
+[Why UptimeEZ](#why-another-uptime-monitor) ·
 [Screenshots](#see-it) ·
 [What it detects](#what-it-actually-detects) ·
 [Comparison](#how-it-compares) ·
@@ -19,7 +19,7 @@ Zero dependencies · No Docker · Runs on plain shared hosting · SQLite or MySQ
 [Documentation](docs/en/README.md) ·
 [Version française](README.fr.md)
 
-<img src="docs/img/tour.gif" alt="Uptimeez in action: the daily to-do list, contextual help, the command palette, one-click fixes and the wall view" width="820">
+<img src="docs/img/tour.gif" alt="UptimeEZ in action: the daily to-do list, contextual help, the command palette, one-click fixes and the wall view" width="820">
 
 </div>
 
@@ -34,21 +34,21 @@ completely broken: the stylesheet 404s after a deployment and visitors get raw H
 WordPress serves a cheerful error page with a perfect status code; someone left `noindex` on after a release
 and Google is quietly dropping the site.
 
-Uptimeez was built around three findings from running an agency portfolio on the alternatives:
+UptimeEZ was built around three findings from running an agency portfolio on the alternatives:
 
-| What goes wrong with the others | What Uptimeez does instead |
+| What goes wrong with the others | What UptimeEZ does instead |
 |---|---|
 | **Setup is a tax.** Twenty screens and forty fields before you have monitored anything at all. | You paste a list of domains. It detects the CMS, picks the pages worth following, infers the string that proves the database answers, tunes thresholds from measured p95, then shows a **preview before creating anything**. |
 | **Alerts become noise.** One server goes down, forty e-mails arrive. After a week nobody reads them. | Failures sharing an IP become **one grouped alert**. Thresholds tune themselves, so a naturally slow site never cries wolf. Quiet hours, maintenance windows, acknowledgement, retries before alerting. |
 | **Dashboards show states, not actions.** Green and red dots; you still have to work out what to do. | The home screen is a **to-do list**: cause, why it matters, what to do, the evidence, and the buttons that do it without leaving the page. Every action is undoable. |
 
-> The others show you **states**. Uptimeez gives you **a list of things to do**, and guesses everything else.
+> The others show you **states**. UptimeEZ gives you **a list of things to do**, and guesses everything else.
 
 ---
 
 ## Everything it watches
 
-Most tools watch one thing: does the server answer. Uptimeez watches **five layers**, on every page it checks,
+Most tools watch one thing: does the server answer. UptimeEZ watches **five layers**, on every page it checks,
 without asking you to configure any of them.
 
 | | What it watches | What that catches |
@@ -61,7 +61,7 @@ without asking you to configure any of them.
 
 **Five kinds of monitor**, each with its own settings: a **page**, a **JSON API** (field path, expected value,
 headers, body, any method), an **asset** (a file that must stay reachable and unchanged), a **keyword** (a text
-that must appear, or must never appear), and a **heartbeat** (your script calls Uptimeez when it finishes; silence
+that must appear, or must never appear), and a **heartbeat** (your script calls UptimeEZ when it finishes; silence
 raises the alert).
 
 And what it does with all that: outages sharing one IP become **one** alert, thresholds tune themselves from
@@ -81,7 +81,7 @@ into a list of things to do.
 **The day starts here.** One card per problem, most urgent first: cause, consequence, remedy, and the buttons
 that apply it in place.
 
-<img src="docs/img/today.png" alt="Uptimeez home screen: a to-do list of sites needing attention, each with its cause, explanation, remedy and inline action buttons">
+<img src="docs/img/today.png" alt="UptimeEZ home screen: a to-do list of sites needing attention, each with its cause, explanation, remedy and inline action buttons">
 
 </td>
 <td width="50%" valign="top">
@@ -89,7 +89,7 @@ that apply it in place.
 **The wall view**, for the screen in the office. Green, orange, red. Sites in trouble float to the top, never
 below the fold.
 
-<img src="docs/img/wall.png" alt="Uptimeez wall view: colour-coded cards for every monitored site with uptime, response time and a 24-hour sparkline">
+<img src="docs/img/wall.png" alt="UptimeEZ wall view: colour-coded cards for every monitored site with uptime, response time and a 24-hour sparkline">
 
 </td>
 </tr>
@@ -147,20 +147,20 @@ as PDF.
 
 | Dark theme | On a phone |
 |---|---|
-| <img src="docs/img/today-dark.png" alt="Uptimeez home screen in dark theme"> | <img src="docs/img/mobile-today.png" alt="Uptimeez home screen on a phone" width="300"> |
+| <img src="docs/img/today-dark.png" alt="UptimeEZ home screen in dark theme"> | <img src="docs/img/mobile-today.png" alt="UptimeEZ home screen on a phone" width="300"> |
 
 | English (the default) | Arabic (right-to-left) |
 |---|---|
-| <img src="docs/img/today-en.png" alt="Uptimeez interface in English"> | <img src="docs/img/today-ar.png" alt="Uptimeez interface in Arabic, laid out right to left"> |
+| <img src="docs/img/today-en.png" alt="UptimeEZ interface in English"> | <img src="docs/img/today-ar.png" alt="UptimeEZ interface in Arabic, laid out right to left"> |
 
-**Import: a preview before anything exists.** Paste domains, a spreadsheet, or a client e-mail. Uptimeez pulls
+**Import: a preview before anything exists.** Paste domains, a spreadsheet, or a client e-mail. UptimeEZ pulls
 the addresses out of it and shows exactly what it is about to do.
 
 <img src="docs/img/import-preview.png" alt="Import preview table listing each site, its check rate, tracked pages and inferred proof string before creation">
 
 **Settings, folded away.** Everything has a sane default; the accordions stay shut until you need them.
 
-<img src="docs/img/settings.png" alt="Uptimeez settings screen with collapsed accordions for cron, alerts, defaults and access">
+<img src="docs/img/settings.png" alt="UptimeEZ settings screen with collapsed accordions for cron, alerts, defaults and access">
 
 </details>
 
@@ -176,14 +176,14 @@ the addresses out of it and shows exactly what it is about to do.
 
 ## What it actually detects
 
-Most monitors check a status code and a keyword. Here is what Uptimeez watches, and why each one matters.
+Most monitors check a status code and a keyword. Here is what UptimeEZ watches, and why each one matters.
 
 ### Broken layout, the one nobody else does out of the box
 
 A deployment goes wrong, the minified stylesheet 404s, and your client's site looks like a 1994 text file.
 Status code: `200`. Response time: excellent. Every uptime monitor on the market reports that the site is fine.
 
-Uptimeez crosses **nine independent signals** on every HTML page it checks:
+UptimeEZ crosses **nine independent signals** on every HTML page it checks:
 
 | Signal | What it catches |
 |---|---|
@@ -207,7 +207,7 @@ the design does change on purpose, one button relearns it.
 ### Database down behind a perfect 200
 
 WordPress, Laravel, Doctrine, PDO and Symfony each have a house style for database failures, and all of them
-happily return `200 OK`. Uptimeez carries **≈45 error signatures**, cross-checks a CMS probe that really
+happily return `200 OK`. UptimeEZ carries **≈45 error signatures**, cross-checks a CMS probe that really
 traverses the database (the WordPress REST API, not the cached homepage), and watches the **proof string**: a
 piece of text that can only come from the database, such as the footer copyright.
 
@@ -217,7 +217,7 @@ gone and you know within one check.
 
 ### Leaving another tool takes five minutes
 
-The obstacle to switching is not the price, it is the evening spent retyping forty monitors. So Uptimeez reads the
+The obstacle to switching is not the price, it is the evening spent retyping forty monitors. So UptimeEZ reads the
 export of the tool you are leaving: **UptimeRobot, Uptime Kuma, Better Stack, Pingdom, Site24x7**, plus a generic
 CSV for everything else.
 
@@ -234,14 +234,14 @@ Stack's `keyword_absence` and Pingdom's `shouldnotcontain` all mean "alert when 
 a forbidden string here, not a proof string. Getting that backwards would invert every alert.
 
 **The measurement history is never imported.** It was taken by another tool, with other thresholds, from another
-network. A "99.98 %" carried over from Pingdom would say nothing about what Uptimeez measured, so the counter starts
+network. A "99.98 %" carried over from Pingdom would say nothing about what UptimeEZ measured, so the counter starts
 at zero and the screen says so before you confirm.
 
 → **[Migrate](docs/en/migrate.md)**
 
 ### Why a page is slow, and what to change
 
-Core Web Vitals come from real Chrome browsers. A PHP tool cannot compute them, and Uptimeez will not pretend
+Core Web Vitals come from real Chrome browsers. A PHP tool cannot compute them, and UptimeEZ will not pretend
 otherwise: no browser measurement is ever invented here. What it does instead is the part nobody else does without
 launching Chrome, because it already has the data.
 
@@ -270,7 +270,7 @@ and a page without enough traffic is told so rather than shown a blank.
 You monitor thirty sites belonging to twelve people. Each wants to know whether theirs is fine. None of them has
 any business seeing the other twenty-nine.
 
-Every other tool answers this with user accounts, roles and permissions. Uptimeez gives you a client, a checkbox
+Every other tool answers this with user accounts, roles and permissions. UptimeEZ gives you a client, a checkbox
 list of their sites, and a link.
 
 ![Clients screen](docs/img/clients.png)
@@ -297,7 +297,7 @@ Already grouped your sites at import time? One button turns those groups into cl
 
 ### Vulnerable versions, before anything breaks
 
-Uptimeez already reads the HTML of every page it checks, and that HTML almost always says which version is
+UptimeEZ already reads the HTML of every page it checks, and that HTML almost always says which version is
 running: the `generator` tag, the `?ver=` parameter on static files, the plugin paths. So it builds a **software
 inventory of every site** at no extra cost, then crosses it with public advisory databases: **OSV.dev** for
 Packagist (Drupal, Laravel, Symfony, TYPO3, Magento, PrestaShop, Joomla) and **api.wordpress.org** for the
@@ -331,7 +331,7 @@ the address of the site concerned, and the whole thing switches off in one click
 | **Forgotten `noindex`** | The silent SEO killer after a release. Nobody notices for weeks. |
 | **Content changes** | A fingerprint of the visible text: catches a publication going live, and a defaced page. |
 | **JSON APIs** | Field path, expected value, custom headers, request body, any method. |
-| **Silent cron jobs** | A dead-man heartbeat: your backup script calls Uptimeez when it finishes. **Silence raises the alert**, the one failure no HTTP request can ever see. |
+| **Silent cron jobs** | A dead-man heartbeat: your backup script calls UptimeEZ when it finishes. **Silence raises the alert**, the one failure no HTTP request can ever see. |
 | **Response time** | DNS, connect, TLS, first byte, total. Threshold tuned from the site's own measured p95, not a round number. |
 | **Grouped outages** | Ten sites failing on one IP is *one* incident, not ten alerts. |
 | **Monthly client report** | Availability, outages, response times, e-mailed to each client on the day you choose. Once a month, never twice, retried the next day if the mail server was down. |
@@ -344,7 +344,7 @@ Feature comparison against the tools people actually evaluate. This reflects **o
 standard plans, as of July 2026**: no scripting, no plug-ins, no add-ons. Found a mistake? Open a pull
 request; the table lives in this file.
 
-| | **Uptimeez** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
+| | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement only | ❌ | ❌ | ⚠️ write a synthetic script |
 | Browser-console errors reconstructed | ✅ | ❌ | ⚠️ in script logs | ❌ | ❌ | ❌ | ⚠️ in script logs |
@@ -384,7 +384,7 @@ request; the table lives in this file.
 **Where the others are genuinely better.** Checkly for scripted end-to-end journeys in CI; Zabbix for
 infrastructure metrics on servers you own; New Relic for application tracing inside your code; Site24x7 for
 breadth if you want a single vendor for everything; SiteGuru for SEO auditing, which is a different job
-entirely. Uptimeez does not try to be any of those. It does one thing: **keep other people's websites alive
+entirely. UptimeEZ does not try to be any of those. It does one thing: **keep other people's websites alive
 without a full-time human watching dashboards.**
 
 ---
@@ -407,7 +407,7 @@ cd uptimeez
 * * * * * /usr/bin/php /path/to/uptimeez/cron.php >/dev/null 2>&1
 ```
 
-Uptimeez picks the monitors that are due itself, so a single per-minute pass covers every interval from 30
+UptimeEZ picks the monitors that are due itself, so a single per-minute pass covers every interval from 30
 seconds to a day. No crontab access? The settings screen hands you a URL to call from any external scheduler.
 
 **Want to look around first? There is a demo mode.** It builds a 13-site portfolio on recognisable domains,
@@ -430,7 +430,7 @@ channels, the detection engine explained, the CLI, translations, and troubleshoo
 
 ## Talk to it from an agent (MCP)
 
-Uptimeez ships an **MCP server**, so Claude Code, Claude Desktop or any MCP client can ask it questions and act
+UptimeEZ ships an **MCP server**, so Claude Code, Claude Desktop or any MCP client can ask it questions and act
 on the answers. It is written in PHP like everything else: the MCP server is not the one piece that suddenly
 demands Node.
 
@@ -487,7 +487,7 @@ php bin/e2e.php           240 checks   full user journey over real HTTP, isolate
 node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
 php bin/chaos.php          35 checks   859 hostile requests from a user doing everything wrong
 php bin/security.php      113 checks   OWASP Top 10, three depths, against a hostile local site
-php bin/infra.php          61 checks   Uptimeez itself down: what it says, and what it never leaks
+php bin/infra.php          61 checks   UptimeEZ itself down: what it says, and what it never leaks
 php bin/mysql.php          43 checks   the MySQL / MariaDB driver, on a real server
 php bin/mcp.php            n/a         MCP server for agents (27 of the checks above exercise it)
 php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, msgids, files
@@ -512,7 +512,7 @@ consistent database afterwards.
 | **2, deep** | OWASP Top 10 as *active* tests on a live isolated instance: unauthenticated access to every screen and API action, forced browsing to source files, path traversal, CSRF on every write, 11 SQL-injection payloads across 5 parameters, reflected / stored / attribute XSS, response-header injection, session fixation, brute-force lockout, logout invalidation |
 | **3, very deep** | What targets the collector itself: SSRF (a monitored site that redirects to `file://`), XXE through a hostile sitemap, a 40 MB response, pathological content against the regexes, constant-time token comparison, indistinguishable heartbeat responses, spreadsheet formula injection, dynamic SQL identifiers |
 
-**`bin/infra.php`** checks that Uptimeez knows how to fall over. A tool whose job is to say "this site is broken,
+**`bin/infra.php`** checks that UptimeEZ knows how to fall over. A tool whose job is to say "this site is broken,
 here is why" has no business returning a blank page when it is the one going down. Eight infrastructure failures
 are provoked for real — `data/` not writable, a corrupt database, a read-only file, a MySQL server that is off,
 stale credentials, a `config.php` that is unreadable, broken, or not returning an array — and each one has to
@@ -546,7 +546,7 @@ uptimeez/
 │   ├── Diagnose.php          23 causes → what it means, what to do
 │   ├── Tune.php              self-tuning thresholds + decisions journal
 │   ├── Heartbeat.php         the dead-man switch
-│   ├── Fail.php              Uptimeez's own failure: cause, remedy, and nothing public
+│   ├── Fail.php              UptimeEZ's own failure: cause, remedy, and nothing public
 │   └── I18n.php              10 languages, RTL, plural rules
 ├── lang/                     one catalogue per language
 ├── views/                    templates, no framework, no build
@@ -598,7 +598,7 @@ MIT. Use it, sell services around it, fork it.
 
 <div align="center">
 <br>
-<b>Uptimeez</b>. Because "the site is up" was never the question.
+<b>UptimeEZ</b>. Because "the site is up" was never the question.
 <br><br>
 <sub>uptime monitoring · website monitoring · self-hosted monitoring · PHP monitoring tool · shared hosting
 monitoring · broken CSS detection · database down detection · SSL certificate monitoring · cron job monitoring

@@ -1,5 +1,5 @@
 /**
- * Uptimeez : tests de bout en bout dans un vrai navigateur.
+ * UptimeEZ : tests de bout en bout dans un vrai navigateur.
  *
  * Complète bin/e2e.php (qui teste le serveur) en vérifiant ce qui ne vit que
  * côté navigateur : accordéons, filtre instantané, barre d'enregistrement,

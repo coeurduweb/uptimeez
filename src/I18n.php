@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : traduction de l'interface.
+ * UptimeEZ : traduction de l'interface.
  *
  * Choix d'architecture : la clé de traduction est la phrase française du code
  * source (msgid), comme le fait gettext. Deux avantages concrets :
@@ -48,7 +48,20 @@ final class I18n
      * phrases écrivent « {app} », substitué ici. Un renommage du produit ne
      * périme donc aucun catalogue : la leçon de deux renommages successifs.
      */
-    public const APP = 'Uptimeez';
+    /**
+     * Le nom affiché, une seule fois dans tout le produit.
+     *
+     * La graphie est « UptimeEZ » : le EZ en capitales lève l'ambiguïté de
+     * prononciation (« uptime easy ») et donne au logo son point de couleur.
+     * « UptimeEZ » tout en bas de casse ne s'écrit que dans le domaine, les
+     * chemins, le nom du dépôt et la base — jamais devant un lecteur.
+     *
+     * Aucun catalogue de traduction ne contient ce nom : les messages portent
+     * « {app} », ce qui a rendu les renommages successifs indolores. Ne jamais
+     * recopier la chaîne ailleurs, sinon la prochaine bascule en oublie la moitié
+     * et le produit s'affiche sous deux noms à la fois.
+     */
+    public const APP = 'UptimeEZ';
 
     /** Le français est la langue des msgid : son catalogue est l'identité. */
     public const SOURCE = 'fr';

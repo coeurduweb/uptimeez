@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : installeur. Vérifie l'environnement, crée la base et le mot de passe.
+ * UptimeEZ : installeur. Vérifie l'environnement, crée la base et le mot de passe.
  * Supprimez ce fichier après l'installation si vous le souhaitez.
  */
 declare(strict_types=1);
@@ -99,7 +99,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Installation · Uptimeez</title>
+<title>Installation · UptimeEZ</title>
 <link rel="stylesheet" href="assets/app.css">
 <script>(function(){try{var t=localStorage.getItem('uptimeez-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 </head>
@@ -112,7 +112,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
   <p class="center muted small"><?= te('Surveillance de sites : fonctionne sur un hébergement mutualisé, sans Docker.') ?></p>
 
   <?php if ($alreadyInstalled): ?>
-    <div class="alert alert-warn mt">Uptimeez est déjà installé : le formulaire est désactivé.
+    <div class="alert alert-warn mt">UptimeEZ est déjà installé : le formulaire est désactivé.
       <a href="index.php"><?= te('Accéder à l\'application') ?></a>.
       <?= te('Pour repartir de zéro, supprimez {file} par FTP ou SSH.',
              ['file' => '<span class="mono">config.php</span>']) ?>

@@ -10,7 +10,7 @@ wrong.
 ## The collector
 
 `cron.php` is the only thing that needs to run on a schedule. One pass per minute, whatever your intervals:
-Uptimeez picks the monitors that are due itself.
+UptimeEZ picks the monitors that are due itself.
 
 ```
 * * * * * /usr/local/bin/php /path/to/uptimeez/cron.php >/dev/null 2>&1
@@ -98,7 +98,7 @@ php bin/e2e.php               # 240 checks: full user journey, isolated instance
 node bin/e2e-browser.mjs      # 105 checks: real Chromium
 php bin/chaos.php             # 35 checks: 859 hostile requests, nothing must break
 php bin/chaos.php --long      # adds the bulky payloads
-php bin/infra.php             # 61 checks: Uptimeez down, what it says and what it withholds
+php bin/infra.php             # 61 checks: UptimeEZ down, what it says and what it withholds
 php bin/mysql.php             # 43 checks: the MySQL driver, skipped without a test database
 php bin/security.php          # 113 checks: OWASP Top 10, three depths
 php bin/security.php --niveau=1   # light only: configuration, secrets, surface
@@ -185,7 +185,7 @@ What is locked, and why:
 
 | Lock | The reason |
 |---|---|
-| Private ranges blocked outright | Uptimeez fetches the URLs it is given: that is the product. On a public demo, without this, anyone can have it scan `127.0.0.1` and the host's local network |
+| Private ranges blocked outright | UptimeEZ fetches the URLs it is given: that is the product. On a public demo, without this, anyone can have it scan `127.0.0.1` and the host's local network |
 | No sender emits | The lock sits in **every** sender, not in the dispatcher: re-enabling a channel from the settings does not reopen it. Otherwise a webhook set by a visitor becomes an exfiltration channel |
 | Adding a monitor refused | That is the main abuse vector, the one that actually matters |
 | Settings, client access, reports refused | The first visitor would lock the demo behind them, or make it send wherever they like |
@@ -210,7 +210,7 @@ cp config.php config-reference.php
 The locks are verified by `bin/security.php`, section A04: seven checks, including one that
 re-enables the channels in configuration to prove the senders stay silent anyway.
 
-### When Uptimeez itself goes down
+### When UptimeEZ itself goes down
 
 A storage-layer failure no longer shows a blank page. The screen names the cause and gives the command that
 fixes it: `data/` not writable, a database corrupted by an FTP transfer in text mode, a read-only file, a full
@@ -339,7 +339,7 @@ If neither applies, open an issue with the URL. False positives are treated as d
 
 ### The proof string was not found
 
-Uptimeez needs a piece of text distinctive enough. Some sites have nothing usable : no footer copyright, no
+UptimeEZ needs a piece of text distinctive enough. Some sites have nothing usable : no footer copyright, no
 `og:site_name`, a generic title. Set it by hand on the monitor page: pick something that comes from the database
 and never appears on an error page.
 

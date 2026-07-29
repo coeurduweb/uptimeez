@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : banc d'essai de bout en bout.
+ * UptimeEZ : banc d'essai de bout en bout.
  *
  * Monte un faux site local qui reproduit chaque panne à détecter, lance de
  * vraies vérifications dessus, et vérifie les verdicts. Utile pour prouver que
@@ -148,7 +148,7 @@ echo '<!doctype html><html><head><title>404 Not Found</title></head><body><h1>No
 return true;
 PHP);
 
-echo "Banc d'essai Uptimeez : faux site sur $BASE\n";
+echo "Banc d'essai UptimeEZ : faux site sur $BASE\n";
 // Commande passée en tableau : sans cela proc_open lance « sh -c », et l'arrêt
 // ne tuerait que le shell en laissant le serveur derrière lui.
 $cmd = [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', $tmp, $tmp . '/router.php'];

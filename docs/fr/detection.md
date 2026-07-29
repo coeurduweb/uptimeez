@@ -2,7 +2,7 @@
 
 [← Sondes](sondes.md) · [Documentation](README.md) · [Alertes →](alertes.md)
 
-Cette page explique ce qu'Uptimeez regarde réellement. C'est important pour deux raisons : il faut faire confiance à
+Cette page explique ce qu'UptimeEZ regarde réellement. C'est important pour deux raisons : il faut faire confiance à
 un verdict avant d'agir dessus, et il faut savoir pourquoi une fausse alerte est un bug qu'on veut connaître.
 
 ---
@@ -42,7 +42,7 @@ langue.
 
 ## Mise en page cassée : les neuf signaux
 
-Une page qui répond `200` peut être inutilisable. Uptimeez récupère le HTML, extrait chaque feuille de style, script
+Une page qui répond `200` peut être inutilisable. UptimeEZ récupère le HTML, extrait chaque feuille de style, script
 et police, les récupère aussi (six ressources par passe au maximum, pour rester poli), et croise neuf signaux.
 
 ### 1. Disponibilité
@@ -55,7 +55,7 @@ plus, une empreinte de build qui a changé, un fichier non envoyé.
 
 Un serveur qui renvoie `text/html` pour un fichier `.css` renvoie en général une page d'erreur ou une trace PHP.
 Avec `X-Content-Type-Options: nosniff`, que la plupart des serveurs durcis envoient désormais, le navigateur
-refuse le fichier purement et simplement. Uptimeez le signale comme bloqué, parce que c'est ce qui se passe en vrai.
+refuse le fichier purement et simplement. UptimeEZ le signale comme bloqué, parce que c'est ce qui se passe en vrai.
 
 ### 3. Contenu mixte
 
@@ -76,7 +76,7 @@ l'empreinte à jour.
 
 ### 6. Volume comparé à la référence apprise
 
-Uptimeez se souvient de ce à quoi ressemble un état sain : poids total des feuilles de style et nombre de règles CSS.
+UptimeEZ se souvient de ce à quoi ressemble un état sain : poids total des feuilles de style et nombre de règles CSS.
 Une chute au-delà du pourcentage toléré (35 % par défaut) signifie que le CSS a été remplacé par quelque chose de
 beaucoup plus petit : un build tronqué, un cache en cours de purge, un minifieur trop zélé.
 
@@ -95,14 +95,14 @@ l'air correct alors que chaque visiteur sur téléphone voit une page cassée.
 ### 9. Contenu en attente d'animation
 
 Les constructeurs de pages modernes masquent des blocs (`opacity: 0`) et les révèlent avec un script. Si ce script
-échoue, la page répond `200`, le CSS est bon, et le contenu est *invisible*. Uptimeez compte les blocs restés en
+échoue, la page répond `200`, le CSS est bon, et le contenu est *invisible*. UptimeEZ compte les blocs restés en
 attente de révélation et le signale : une panne qui paraît parfaite sous tous les autres angles.
 
 ### La silhouette : montrer au lieu de décrire
 
 Un chiffre ne clôt pas une discussion avec un client. Une image, si.
 
-À chaque analyse, Uptimeez reconstruit donc une **silhouette** de la page : la
+À chaque analyse, UptimeEZ reconstruit donc une **silhouette** de la page : la
 structure des blocs lue dans le HTML, mise en page selon ce que le CSS réellement
 chargé permet de faire. Titres, paragraphes, images, boutons, colonnes. Il garde
 la silhouette d'un état sain comme référence, et compare l'actuelle avec elle.
@@ -115,7 +115,7 @@ La fiche de la sonde montre les deux côte à côte avec l'écart mesuré, et to
 site au-delà de 20 % d'écart apparaît dans le rapport client, sous « Ce que voit
 le visiteur ».
 
-**Ce n'est pas une capture d'écran, et l'interface le dit.** Uptimeez n'exécute
+**Ce n'est pas une capture d'écran, et l'interface le dit.** UptimeEZ n'exécute
 aucun navigateur : c'est ce qui lui permet de vérifier des centaines de sites
 depuis un mutualisé. La silhouette est une reconstruction fonctionnelle, et pour
 cet usage elle suffit.
@@ -172,13 +172,13 @@ encore `200`, la couche données est tombée. C'est ce qui attrape la panne poli
 cache avec un contenu vide.
 
 **3. Une sonde CMS qui touche vraiment la base.** Sur WordPress, `/wp-json/` traverse la base, contrairement à une
-page d'accueil entièrement mise en cache. Uptimeez ajoute cette sonde automatiquement quand il détecte WordPress.
+page d'accueil entièrement mise en cache. UptimeEZ ajoute cette sonde automatiquement quand il détecte WordPress.
 
 ---
 
 ## Certificats : deux passes
 
-Une seule lecture TLS ne peut pas répondre aux deux questions qui vous intéressent. Uptimeez en fait deux.
+Une seule lecture TLS ne peut pas répondre aux deux questions qui vous intéressent. UptimeEZ en fait deux.
 
 **Passe permissive**, se connecte en acceptant tout, lit le certificat et en extrait les faits : sujet, émetteur,
 expiration, noms alternatifs. Cela fonctionne même sur un certificat expiré ou auto-signé, c'est-à-dire exactement
@@ -217,7 +217,7 @@ tôt pour compter et assez tard pour ne pas être du bruit.
 
 ---
 
-## Ce qu'Uptimeez ne fait volontairement pas
+## Ce qu'UptimeEZ ne fait volontairement pas
 
 - **Il n'exécute pas de navigateur.** Pas de JavaScript, pas de rendu. C'est ce qui lui permet de vérifier des
   centaines de sites depuis un mutualisé. Les neuf signaux sont la façon d'obtenir un verdict de rendu sans moteur

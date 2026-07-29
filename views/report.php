@@ -67,7 +67,7 @@ $mons = $site ? Db::all('SELECT * FROM monitors WHERE site_id = ? ORDER BY role 
         <?= e(mb_strtolower(Ui::rangeLabel($range))) ?>
         (du <?= e(date('d/m/Y', time() - $secs)) ?> au <?= e(date('d/m/Y')) ?>)</div>
     </div>
-    <div class="rep-logo"><?= Ui::icon('pulse', 26) ?> <?= te('{app}') ?></div>
+    <div class="rep-logo"><?= Ui::brand(26) ?> <?= te('{app}') ?></div>
   </header>
 
   <?php

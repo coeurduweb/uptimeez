@@ -1,8 +1,8 @@
 <?php
 /**
- * Uptimeez : test de bout en bout de l'interface.
+ * UptimeEZ : test de bout en bout de l'interface.
  *
- * Démarre une instance isolée de Uptimeez et un faux site à surveiller, puis
+ * Démarre une instance isolée de UptimeEZ et un faux site à surveiller, puis
  * déroule le parcours complet d'un utilisateur en HTTP réel : installation,
  * connexion, import, préparation, vérification, édition, incidents, export,
  * page publique, actions de masse, suppression, déconnexion.
@@ -137,11 +137,11 @@ file_put_contents($cfgFile, "<?php return " . var_export([
     'db'   => ['driver' => 'sqlite', 'sqlite' => $tmp . '/e2e.sqlite'],
     'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeeze2e',
                'bridge_secret' => $BRIDGE],
-    'app'  => ['name' => 'Uptimeez E2E', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+    'app'  => ['name' => 'UptimeEZ E2E', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
                'public_token' => 'jeton-e2e', 'cron_key' => 'cle-e2e'],
     'defaults' => ['interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'slow_ms' => 9000,
                    'max_parallel' => 6, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                   'user_agent' => 'UptimeezBot/1.0 (E2E)'],
+                   'user_agent' => 'UptimeEZBot/1.0 (E2E)'],
     'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                  'mail' => ['enabled' => false, 'to' => ''],
                  'webhook' => ['enabled' => true, 'url' => "$SITE/api.php"],
@@ -848,7 +848,7 @@ ok('fiche rendue jusqu\'au bout', $complete($r));
 
 // Réglages : la clé et l'appareil de référence s'enregistrent.
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
-    'app_name' => 'Uptimeez E2E', 'timezone' => 'Europe/Paris',
+    'app_name' => 'UptimeEZ E2E', 'timezone' => 'Europe/Paris',
     'vitals_enabled' => '1', 'crux_key' => 'cle-de-test-e2e', 'form_factor' => 'DESKTOP',
     'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 14,
     'def_slow' => 3000, 'def_css_drop' => 35, 'def_parallel' => 10, 'def_retention' => 45]);
@@ -859,7 +859,7 @@ ok('appareil de référence relu', $has($r, 'value="DESKTOP" selected')
     || preg_match('~value="DESKTOP"[^>]*selected~', $r['body']) === 1);
 // Et on la retire : le reste du banc ne doit pas partir interroger Google.
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
-    'app_name' => 'Uptimeez E2E', 'timezone' => 'Europe/Paris',
+    'app_name' => 'UptimeEZ E2E', 'timezone' => 'Europe/Paris',
     'vitals_enabled' => '1', 'crux_key' => '', 'form_factor' => 'PHONE',
     'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 14,
     'def_slow' => 3000, 'def_css_drop' => 35, 'def_parallel' => 10, 'def_retention' => 45]);
@@ -1050,7 +1050,7 @@ ok('onglet Clients dans la navigation', $has($r, 'p=clients'));
 // =========================================================================
 title('Réglages');
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
-    'app_name' => 'Uptimeez E2E renommée', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
+    'app_name' => 'UptimeEZ E2E renommée', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
     'def_interval' => 300, 'def_timeout' => 15, 'def_retries' => 2, 'def_ssl_days' => 21,
     'def_slow' => 4000, 'def_css_drop' => 30, 'def_parallel' => 8, 'def_retention' => 45,
     'resend_after' => 30, 'notify_recovery' => 1, 'public_token' => 'jeton-e2e', 'cron_key' => 'cle-e2e',
@@ -1058,7 +1058,7 @@ $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'save_settings',
 ok('réglages enregistrés', $has($r, 'Réglages enregistrés'));
 $cfg = require $cfgFile;
 ok('écrits dans le fichier de configuration',
-    ($cfg['app']['name'] ?? '') === 'Uptimeez E2E renommée' && (int)($cfg['defaults']['def_retention'] ?? 45) !== 0
+    ($cfg['app']['name'] ?? '') === 'UptimeEZ E2E renommée' && (int)($cfg['defaults']['def_retention'] ?? 45) !== 0
     || ($cfg['defaults']['retention_days'] ?? 0) === 45,
     ($cfg['app']['name'] ?? '?') . ' · rétention ' . ($cfg['defaults']['retention_days'] ?? '?') . ' j');
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'test_notify', 'channel' => 'webhook']);

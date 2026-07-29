@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Uptimeez\Notify;
 
+use Uptimeez\I18n;
+
 use Uptimeez\Config;
 use Uptimeez\Http;
 
@@ -25,13 +27,13 @@ final class Discord
         }
         $link = Notifier::monitorLink($mon);
 
-        $payload = ['username' => 'Uptimeez', 'embeds' => [[
+        $payload = ['username' => I18n::APP, 'embeds' => [[
             'title'       => str_cut($title, 240),
             'description' => $link ? '[' . t('Ouvrir la fiche de surveillance') . '](' . $link . ')' : null,
             'color'       => Notifier::COLORS[$sev] ?? Notifier::COLORS['info'],
             'fields'      => $fields,
             'timestamp'   => date('c'),
-            'footer'      => ['text' => 'Uptimeez · ' . date('d/m/Y H:i')],
+            'footer'      => ['text' => 'UptimeEZ · ' . date('d/m/Y H:i')],
         ]]];
 
         $res = Http::fetch($url, [

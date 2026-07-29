@@ -56,7 +56,7 @@ final class Db
             // soit écrit : sur une base déjà créée, le PRAGMA est accepté sans
             // effet et sans erreur. Or « journal_mode = WAL » écrit justement
             // cet en-tête. Placé après lui, auto_vacuum restait donc à 0 sur
-            // TOUTES les bases jamais créées par Uptimeez, et compact() ne
+            // TOUTES les bases jamais créées par UptimeEZ, et compact() ne
             // rendait pas un octet : après une purge de 4,5 millions de mesures,
             // le fichier gardait 585 Mo de pages libres. Il passe donc en
             // premier, avant toute écriture.
@@ -257,7 +257,7 @@ final class Db
             css_drop_pct {$int} NOT NULL DEFAULT 35,
             auto_slow {$bool} NOT NULL DEFAULT 1,          /* seuil de lenteur auto-ajusté */
             tuned_at {$ts} DEFAULT NULL,
-            decisions {$txt},                              /* journal des décisions de Uptimeez */
+            decisions {$txt},                              /* journal des décisions de UptimeEZ */
             heartbeat_token {$str(40)} DEFAULT NULL,       /* sonde battement : clé du signal */
             heartbeat_at {$ts} DEFAULT NULL,               /* dernier signal reçu */
             heartbeat_grace {$int} NOT NULL DEFAULT 300,   /* tolérance avant alerte */

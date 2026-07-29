@@ -149,7 +149,7 @@ final class Http
             // l'aller comme sur les redirections.
             CURLOPT_PROTOCOLS       => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_USERAGENT      => (string)($opt['ua'] ?? (Config::get('defaults.user_agent') ?: 'UptimeezBot/1.0')),
+            CURLOPT_USERAGENT      => (string)($opt['ua'] ?? (Config::get('defaults.user_agent') ?: 'UptimeEZBot/1.0')),
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_SSL_VERIFYPEER => !($opt['insecure'] ?? false),
             CURLOPT_SSL_VERIFYHOST => ($opt['insecure'] ?? false) ? 0 : 2,

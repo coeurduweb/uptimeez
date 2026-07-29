@@ -1,4 +1,4 @@
-# Tout ce qu'Uptimeez surveille
+# Tout ce qu'UptimeEZ surveille
 
 **La liste complète, couche par couche, avec ce que chaque contrôle attrape et ce qu'il coûte.**
 
@@ -30,13 +30,13 @@ maintenance qui doit renvoyer 503 se surveille aussi bien qu'une page normale.
 qui distingue « le serveur est lent » de « la résolution DNS met deux secondes ».
 
 **Chaîne de redirections.** Suivie jusqu'à la cible, avec détection de boucle. Si un site redirige durablement
-(`http` vers `https`, ajout de `www`), Uptimeez le signale et propose d'aligner la sonde sur la cible en un clic.
+(`http` vers `https`, ajout de `www`), UptimeEZ le signale et propose d'aligner la sonde sur la cible en un clic.
 
 **Relances avant alerte.** Un hoquet réseau de deux secondes n'est pas une panne. Une sonde ne devient hors
 service qu'après N échecs consécutifs, N étant réglable par sonde.
 
 **Adresse réellement contactée.** L'IP est enregistrée à chaque mesure. Quand dix sites tombent ensemble sur la
-même IP, Uptimeez envoie **une** alerte groupée en disant que le problème est très probablement l'hébergement.
+même IP, UptimeEZ envoie **une** alerte groupée en disant que le problème est très probablement l'hébergement.
 
 **Fenêtres de maintenance.** `02:00-04:00`, `mon-fri 02:00-04:00` ou `sat,sun 01:00-06:00` : pendant ces plages,
 rien n'alerte.
@@ -62,7 +62,7 @@ C'est la partie qu'aucun outil d'uptime ne fait sans qu'on écrive du code. Le p
 | Media queries | La mise en page responsive envolée |
 | Blocs en attente d'animation | Du contenu masqué par un script de révélation qui n'a pas chargé : une page *invisible* |
 
-**Messages de console reconstitués.** Uptimeez réécrit ce que le navigateur aurait affiché :
+**Messages de console reconstitués.** UptimeEZ réécrit ce que le navigateur aurait affiché :
 `net::ERR_ABORTED 404`, `Refused to apply style from …`, `Mixed Content: …`,
 `Failed to find a valid digest in the 'integrity' attribute …`. Le ticket transmis au développeur contient déjà
 la preuve.
@@ -158,7 +158,7 @@ verdict le dit au lieu de rendre le message brut d'OpenSSL.
 croise avec OSV.dev et api.wordpress.org. « Faille publiée » et « version en retard » ne sont jamais confondus.
 Voir [Veille de sécurité](veille-securite.md).
 
-**Battement dead-man.** Votre sauvegarde, votre export, votre tâche nocturne appelle Uptimeez quand elle a fini.
+**Battement dead-man.** Votre sauvegarde, votre export, votre tâche nocturne appelle UptimeEZ quand elle a fini.
 C'est le **silence** qui déclenche l'alerte, la seule panne qu'aucune requête HTTP ne peut voir.
 
 ---
@@ -177,21 +177,21 @@ Une sonde principale porte l'état du site ; les autres pages du même site sont
 
 ---
 
-## Ce qu'Uptimeez ne surveille volontairement pas
+## Ce qu'UptimeEZ ne surveille volontairement pas
 
 Un outil qui prétend tout faire ne fait rien de bien. Ce qui est hors de son champ, et pourquoi :
 
-- **Les ports TCP, le ping ICMP, le DNS, le SMTP.** Uptimeez surveille en HTTP. Un port ouvert ne dit pas qu'un
+- **Les ports TCP, le ping ICMP, le DNS, le SMTP.** UptimeEZ surveille en HTTP. Un port ouvert ne dit pas qu'un
   site fonctionne, et une sonde HTTP ne remplace pas un test de port : ce serait mentir sur ce qui est vérifié.
 - **Les métriques serveur** (charge, disque, mémoire). Il faudrait un agent sur la machine. Zabbix fait ça très
   bien.
 - **Les parcours scriptés** (se connecter, ajouter au panier, payer). Il faudrait un navigateur. Checkly fait ça
   très bien.
 - **La trace applicative** dans votre code. New Relic fait ça très bien.
-- **L'audit SEO complet.** Uptimeez signale un `noindex` oublié parce que c'est un accident d'exploitation, pas
+- **L'audit SEO complet.** UptimeEZ signale un `noindex` oublié parce que c'est un accident d'exploitation, pas
   parce qu'il fait de l'audit.
 
-Uptimeez fait une chose : **garder en vie les sites des autres, sans qu'un humain surveille un tableau de bord à
+UptimeEZ fait une chose : **garder en vie les sites des autres, sans qu'un humain surveille un tableau de bord à
 plein temps.**
 
 ---

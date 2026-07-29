@@ -1,8 +1,8 @@
 <?php
 /**
- * Uptimeez : ce qu'on voit quand Uptimeez lui-même est en panne.
+ * UptimeEZ : ce qu'on voit quand UptimeEZ lui-même est en panne.
  *
- * Les autres suites vérifient qu'Uptimeez marche. Celle-ci vérifie qu'il sait
+ * Les autres suites vérifient qu'UptimeEZ marche. Celle-ci vérifie qu'il sait
  * tomber. La distinction n'est pas rhétorique : l'audit a mesuré huit pannes
  * d'infrastructure distinctes qui rendaient toutes exactement la même chose,
  * un HTTP 500 sans un octet de corps. Sur un hébergement mutualisé,
@@ -61,11 +61,11 @@ $writeCfg = function (array $db) use ($cfg, $PASS): void {
     file_put_contents($cfg, "<?php return " . var_export([
         'db'   => $db,
         'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeezinfra'],
-        'app'  => ['name' => 'Uptimeez Infra', 'base_url' => 'http://127.0.0.1', 'timezone' => 'Europe/Paris',
+        'app'  => ['name' => 'UptimeEZ Infra', 'base_url' => 'http://127.0.0.1', 'timezone' => 'Europe/Paris',
                    'public_token' => 'jeton-infra', 'cron_key' => 'cle-infra'],
         'defaults' => ['interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'slow_ms' => 9000,
                        'max_parallel' => 6, 'retention_days' => 60, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
-                       'user_agent' => 'UptimeezBot/1.0 (Infra)'],
+                       'user_agent' => 'UptimeEZBot/1.0 (Infra)'],
         'notify' => ['discord' => ['enabled' => false, 'webhook' => ''], 'slack' => ['enabled' => false, 'webhook' => ''],
                      'mail' => ['enabled' => false, 'to' => ''], 'webhook' => ['enabled' => false, 'url' => ''],
                      'resend_after_min' => 60, 'notify_recovery' => true, 'notify_degraded' => true, 'quiet_hours' => ''],
@@ -312,6 +312,6 @@ ok('chaque cause propose un geste', $sansRemede === [], implode(', ', $sansRemed
 echo "\n" . str_repeat('═', 68) . "\n";
 echo "$pass contrôle(s) réussi(s), $fail échec(s)\n";
 echo $fail === 0
-    ? "✅ Une panne d'Uptimeez s'explique, et ne s'échappe jamais côté public.\n"
+    ? "✅ Une panne d'UptimeEZ s'explique, et ne s'échappe jamais côté public.\n"
     : "⚠️  Une panne d'infrastructure reste muette ou trop bavarde.\n";
 exit($fail === 0 ? 0 : 1);

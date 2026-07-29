@@ -1,6 +1,6 @@
 # Reprendre un parc surveillé ailleurs
 
-**Déposez l'export de votre outil actuel. Uptimeez le reconnaît, vous montre ce qu'il va créer, et vous dit ce
+**Déposez l'export de votre outil actuel. UptimeEZ le reconnaît, vous montre ce qu'il va créer, et vous dit ce
 qu'il ne peut pas reprendre.**
 
 [← Documentation](README.md) · [English version](../en/migrate.md)
@@ -33,7 +33,7 @@ comme en anglais, dans n'importe quel ordre.
 ## Comment ça se passe
 
 1. **Écran Ajouter des sites** → *Ou déposez l'export de votre outil actuel*.
-2. Uptimeez reconnaît le format **au contenu**, jamais au nom du fichier : un export renommé fonctionne, et un
+2. UptimeEZ reconnaît le format **au contenu**, jamais au nom du fichier : un export renommé fonctionne, et un
    fichier appelé `uptimerobot.json` qui n'en est pas ne trompe personne.
 3. L'aperçu s'affiche : ce qui sera créé, avec quelle cadence, quelle chaîne de contrôle, et ce qui ne peut pas
    être repris.
@@ -49,7 +49,7 @@ Rien n'est créé avant votre validation.
 | Réglage | Comportement |
 |---|---|
 | Adresse | Reprise telle quelle. Pingdom stocke le nom d'hôte et le chemin séparément : l'adresse est reconstruite, chiffrement compris. |
-| Nom | Repris. À défaut, Uptimeez en déduit un du domaine. |
+| Nom | Repris. À défaut, UptimeEZ en déduit un du domaine. |
 | Cadence | **Reprise telle quelle**, et signalée comme telle dans l'aperçu. Une cadence d'une minute chez le voisin reste une minute ici : c'est un choix que quelqu'un a fait. |
 | Mot-clé attendu | Devient la chaîne de contrôle. |
 | Mot-clé qui déclenche l'alerte | Devient une **chaîne interdite**, ce qui n'est pas la même chose. Voir ci-dessous. |
@@ -68,13 +68,13 @@ Les outils n'emploient pas la même convention, et se tromper inverse l'alerte :
 - **Pingdom** : `shouldcontain` est une chaîne de contrôle, `shouldnotcontain` une chaîne interdite.
 - **Site24x7** : `matching_keyword` est attendu, `unmatching_keyword` est interdit.
 
-Uptimeez respecte chaque convention. C'est vérifié par les tests, pour chacun des cinq outils.
+UptimeEZ respecte chaque convention. C'est vérifié par les tests, pour chacun des cinq outils.
 
 ---
 
 ## Ce qui n'est pas repris, et pourquoi
 
-**Les sondes sans équivalent.** Un port TCP, un ping ICMP, une résolution DNS, un test SMTP : Uptimeez surveille en
+**Les sondes sans équivalent.** Un port TCP, un ping ICMP, une résolution DNS, un test SMTP : UptimeEZ surveille en
 HTTP. Ces sondes apparaissent dans une liste, avec la raison, et ne sont pas créées. Un import qui perd six sondes
 sur quarante sans le dire est pire qu'un import qui refuse.
 
@@ -84,7 +84,7 @@ Voir [Sondes](sondes.md).
 
 **L'historique de mesures.** C'est le point le plus important, et le plus tentant à ignorer. Ces mesures ont été
 prises par un autre outil, avec d'autres seuils, depuis un autre réseau, à une autre fréquence. Les afficher comme
-les siennes serait un mensonge : un « 99,98 % » repris de Pingdom ne dirait rien de ce qu'Uptimeez aurait mesuré.
+les siennes serait un mensonge : un « 99,98 % » repris de Pingdom ne dirait rien de ce qu'UptimeEZ aurait mesuré.
 Le compteur de disponibilité repart donc de zéro, et c'est écrit avant l'import.
 
 **Les contacts d'alerte.** Les canaux se configurent une fois pour toute l'installation, pas par sonde. Voir
@@ -96,9 +96,9 @@ Le compteur de disponibilité repart donc de zéro, et c'est écrit avant l'impo
 
 La bonne façon de changer d'outil n'est pas de couper l'ancien :
 
-1. Reprenez le parc dans Uptimeez et laissez la tâche planifiée tourner.
+1. Reprenez le parc dans UptimeEZ et laissez la tâche planifiée tourner.
 2. Gardez l'ancien outil actif quelques jours, alertes comprises.
-3. Comparez : sur un incident réel, les deux doivent alerter. Si Uptimeez voit une panne que l'autre a manquée,
+3. Comparez : sur un incident réel, les deux doivent alerter. Si UptimeEZ voit une panne que l'autre a manquée,
    c'est le cas le plus fréquent, et souvent une mise en page cassée ou une base tombée derrière un code 200.
 4. Coupez l'ancien quand vous n'avez plus de doute.
 

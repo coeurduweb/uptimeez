@@ -103,7 +103,7 @@ final class Smtp
             'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
             'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $ehlo . '>',
             'MIME-Version: 1.0',
-            'X-Mailer: Uptimeez',
+            'X-Mailer: UptimeEZ',
             'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
         ];
         $body = implode("\r\n", $headers) . "\r\n\r\n"

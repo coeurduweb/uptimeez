@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez - configuration.
+ * UptimeEZ - configuration.
  * Copiez ce fichier en config.php (l'installeur le fait pour vous) et adaptez.
  */
 return [
@@ -36,7 +36,7 @@ return [
 
     // --- Application -------------------------------------------------------
     'app' => [
-        'name'      => 'Uptimeez',
+        'name'      => 'UptimeEZ',
         'base_url'  => '',        // ex: https://monitoring.example.com  (pour les liens dans les alertes)
         'timezone'  => 'Europe/Paris',
         'locale'    => 'fr',
@@ -54,7 +54,7 @@ return [
         'retry_delay_ms' => 1500,
         'ssl_warn_days'  => 14,
         'slow_ms'        => 3000,  // au-delà : "dégradé"
-        'user_agent'     => 'Mozilla/5.0 (compatible; UptimeezBot/1.0; +monitoring)',
+        'user_agent'     => 'Mozilla/5.0 (compatible; UptimeEZBot/1.0; +monitoring)',
         'css_drop_pct'   => 35,    // chute de poids CSS tolérée avant alerte
         'max_parallel'   => 10,    // requêtes simultanées par passe de cron
         'retention_days' => 60,   // purge des checks unitaires au-delà
@@ -77,7 +77,7 @@ return [
             'enabled' => false,
             'to'      => '',                     // séparés par des virgules
             'from'    => '',
-            'from_name' => 'Uptimeez',
+            'from_name' => 'UptimeEZ',
             // 'mail' = fonction mail() PHP (o2switch OK), 'smtp' = SMTP direct
             'transport' => 'mail',
             'smtp' => ['host' => '', 'port' => 587, 'user' => '', 'pass' => '', 'secure' => 'tls'],

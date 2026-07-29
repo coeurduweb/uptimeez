@@ -8,7 +8,7 @@ namespace Uptimeez;
  *
  * Principe : un seuil ne doit jamais être un chiffre rond choisi au hasard. Le
  * seuil de lenteur d'un site est déduit de ce que ce site fait réellement, et
- * chaque décision prise par Uptimeez est écrite en clair pour être relisible : * personne ne doit avoir à deviner pourquoi une sonde est réglée comme elle l'est.
+ * chaque décision prise par UptimeEZ est écrite en clair pour être relisible : * personne ne doit avoir à deviner pourquoi une sonde est réglée comme elle l'est.
  */
 final class Tune
 {

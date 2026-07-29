@@ -66,7 +66,7 @@ final class Auth
     /**
      * Ouvre une session depuis un jeton signé, au lieu d'un mot de passe.
      *
-     * À quoi ça sert. Quand plusieurs instances d'Uptimeez sont pilotées depuis un
+     * À quoi ça sert. Quand plusieurs instances d'UptimeEZ sont pilotées depuis un
      * tableau de bord commun (une agence qui en gère une par client, un service
      * hébergé), demander le mot de passe de chacune à chaque ouverture est
      * intenable. Le tableau de bord signe un jeton très court avec un secret

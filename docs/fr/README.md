@@ -1,7 +1,7 @@
-# Documentation d'Uptimeez
+# Documentation d'UptimeEZ
 
 **La surveillance de sites qui vous dit quoi faire.** Tout ce qu'il faut pour installer, exploiter et faire
-confiance à Uptimeez.
+confiance à UptimeEZ.
 
 [← Retour au projet](../../README.fr.md) · [English version](../en/README.md)
 
@@ -37,13 +37,13 @@ php bin/demo.php --purge    # puis repartez proprement avec install.php
 
 ## L'idée en une page
 
-Uptimeez fait trois hypothèses sur vous.
+UptimeEZ fait trois hypothèses sur vous.
 
 **1. Vous vous occupez de sites qui appartiennent à d'autres.** Une panne n'est donc pas une abstraction, c'est un
 appel téléphonique. L'écran d'accueil est pour cette raison une liste de tâches et non un tableau de bord : chaque
 entrée dit ce qui est cassé, pourquoi c'est un problème, quoi faire, et porte les boutons qui le font.
 
-**2. Vous n'avez pas le temps de configurer quoi que ce soit.** Uptimeez décide donc pour vous, et vous dit ce qu'il
+**2. Vous n'avez pas le temps de configurer quoi que ce soit.** UptimeEZ décide donc pour vous, et vous dit ce qu'il
 a décidé. Collez une liste de domaines : il identifie la technologie, choisit des pages représentatives dans le
 sitemap, déduit une chaîne de preuve du contenu du site, règle la cadence selon l'importance de la page, et cale le
 seuil de lenteur sur le p95 mesuré. Chaque décision est consignée dans un journal lisible, et chacune peut être

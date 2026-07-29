@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : point d'entrée web (routeur simple, sans réécriture d'URL requise).
+ * UptimeEZ : point d'entrée web (routeur simple, sans réécriture d'URL requise).
  */
 declare(strict_types=1);
 
@@ -369,7 +369,7 @@ function handle_post(): ?array
         case 'save_settings':
             $patch = [
                 'app' => [
-                    'name'         => trim((string)($_POST['app_name'] ?? 'Uptimeez')) ?: 'Uptimeez',
+                    'name'         => trim((string)($_POST['app_name'] ?? I18n::APP)) ?: I18n::APP,
                     'base_url'     => rtrim(trim((string)($_POST['base_url'] ?? '')), '/'),
                     'timezone'     => trim((string)($_POST['timezone'] ?? 'Europe/Paris')) ?: 'Europe/Paris',
                     'locale'       => in_array((string)($_POST['locale'] ?? 'auto'),
@@ -409,7 +409,7 @@ function handle_post(): ?array
                         'enabled'   => isset($_POST['mail_enabled']),
                         'to'        => trim((string)($_POST['mail_to'] ?? '')),
                         'from'      => trim((string)($_POST['mail_from'] ?? '')),
-                        'from_name' => trim((string)($_POST['mail_from_name'] ?? 'Uptimeez')),
+                        'from_name' => trim((string)($_POST['mail_from_name'] ?? I18n::APP)),
                         'transport' => ($_POST['mail_transport'] ?? 'mail') === 'smtp' ? 'smtp' : 'mail',
                         'smtp'      => [
                             'host'   => trim((string)($_POST['smtp_host'] ?? '')),

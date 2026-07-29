@@ -68,7 +68,7 @@ mise en page a dérivé.
 Le courrier est composé pour des clients de messagerie et non pour un navigateur :
 tableaux et styles en ligne, aucune feuille externe, aucune image distante, aucun SVG.
 La comparaison visuelle d'une mise en page cassée reste sur le rapport en ligne, vers
-lequel le courrier renvoie quand une page d'état publique est activée. Uptimeez ne met
+lequel le courrier renvoie quand une page d'état publique est activée. UptimeEZ ne met
 jamais dans la boîte d'un client un lien qui demande le mot de passe de l'agence.
 
 Forcer un envoi à la main :
@@ -132,7 +132,7 @@ Vérifications en échec : 8
 24 heures : 97,58 % (35 min hors service)
 Temps de réponse moyen : 334 ms · p95 512 ms
 
-Rapport produit par Uptimeez
+Rapport produit par UptimeEZ
 ```
 
 Aucun HTML, aucun balisage à nettoyer. Ça part dans un ticket, un e-mail ou un message Slack tel quel : avec la

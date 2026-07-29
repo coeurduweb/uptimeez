@@ -1,9 +1,9 @@
 <?php
 /**
- * Uptimeez : le mode démonstration publique, et ses verrous.
+ * UptimeEZ : le mode démonstration publique, et ses verrous.
  *
  * Une démo publique d'un outil de supervision n'est pas une vitrine anodine :
- * **c'est un relais ouvert**. Uptimeez va chercher les URL qu'on lui donne, c'est
+ * **c'est un relais ouvert**. UptimeEZ va chercher les URL qu'on lui donne, c'est
  * son métier. Sur une instance privée c'est normal ; sur une démo où n'importe
  * qui peut ajouter une sonde, ça permet de faire balayer les ports internes de la
  * machine qui l'héberge, de refléter du trafic vers un tiers depuis notre adresse,

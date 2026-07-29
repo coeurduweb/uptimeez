@@ -2,7 +2,7 @@
 
 [← Documentation](README.md) · [Getting started →](getting-started.md)
 
-Uptimeez is a plain PHP application. There is no build step, no package manager and no container. If you can
+UptimeEZ is a plain PHP application. There is no build step, no package manager and no container. If you can
 upload files by FTP and add a cron entry, you can run it.
 
 ---
@@ -60,7 +60,7 @@ This is the primary target, not an afterthought.
    copy it from there rather than guessing.
 
 **o2switch specifics.** The PHP binary is usually `/usr/local/bin/php`. LiteSpeed ignores some `.htaccess`
-rewrite flags, which is why Uptimeez never relies on URL rewriting: every URL is a plain
+rewrite flags, which is why UptimeEZ never relies on URL rewriting: every URL is a plain
 `index.php?p=…`. Nothing to configure.
 
 **No crontab at all?** Settings → *Trigger over URL* gives you a secret URL:
@@ -76,7 +76,7 @@ crontab). Without the correct key the endpoint answers 403 and does nothing.
 
 ## Protecting the installation
 
-Uptimeez is password-protected and sends `noindex, nofollow` on every page. For a belt-and-braces setup:
+UptimeEZ is password-protected and sends `noindex, nofollow` on every page. For a belt-and-braces setup:
 
 - Put it on a subdomain you do not advertise, or in a folder with a non-obvious name.
 - Add HTTP authentication on top (cPanel → *Directory Privacy*) if you like.

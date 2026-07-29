@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : le pilote MySQL / MariaDB, vérifié pour de vrai.
+ * UptimeEZ : le pilote MySQL / MariaDB, vérifié pour de vrai.
  *
  * Les huit autres suites tournent sur SQLite, parce qu'un fichier jetable rend
  * chaque test isolé et instantané. Conséquence longtemps ignorée : le pilote

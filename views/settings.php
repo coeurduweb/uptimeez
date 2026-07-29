@@ -25,7 +25,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
 ?>
 <div class="row-between mt">
   <h1><?= te('Réglages') ?></h1>
-  <span class="muted small">Uptimeez <?= UPTIMEEZ_VERSION ?> · PHP <?= PHP_VERSION ?>
+  <span class="muted small">UptimeEZ <?= UPTIMEEZ_VERSION ?> · PHP <?= PHP_VERSION ?>
     · <?= te('base {driver}', ['driver' => Db::driver()]) ?></span>
 </div>
 

@@ -45,7 +45,7 @@ wins, permanently.
 | Field | Default | Touch it when |
 |---|---|---|
 | Name | the site name | It should read well in an alert |
-| Monitored address | as pasted | A bare domain becomes `https://`, redirects are followed. If HTTPS does not answer at all, Uptimeez retries over HTTP, says so, and monitors anyway |
+| Monitored address | as pasted | A bare domain becomes `https://`, redirects are followed. If HTTPS does not answer at all, UptimeEZ retries over HTTP, says so, and monitors anyway |
 | Check frequency | **auto** by importance | You want a pricing page every minute. Shorter means faster detection and more load on the site |
 | Group | empty | You want to filter the wall by client |
 | Monitor enabled | on | Unchecking keeps the monitor and its history but stops checking it |
@@ -60,7 +60,7 @@ wins, permanently.
 Why it matters: without it, an empty page returning `200` passes as valid. With it, a database outage is caught
 in one check even though the HTTP status is perfect.
 
-Uptimeez derives it in this order of preference: footer copyright (which comes from the site settings, hence from
+UptimeEZ derives it in this order of preference: footer copyright (which comes from the site settings, hence from
 the database) → `og:site_name` → page title → first navigation entry → H1. Boilerplate is rejected ("all rights
 reserved", "home"), and it is never taken from a page that looks like an error page. If nothing distinctive is
 found, the monitor appears in *Coming up* asking you to set it by hand.

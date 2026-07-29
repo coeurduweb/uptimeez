@@ -1,6 +1,6 @@
 <?php
 /**
- * Uptimeez : recherche de code mort.
+ * UptimeEZ : recherche de code mort.
  *
  * Cinq familles, cinq questions :
  *   1. quelles méthodes publiques ne sont appelées nulle part ?

@@ -63,6 +63,37 @@ final class Ui
     }
 
     /**
+     * Le sigle du produit : quatre barres, dont une plus haute.
+     *
+     * C'est la frise 30 jours de l'interface, le seul élément visuel qui
+     * appartienne déjà au produit. Et il ne dit pas « tout va bien » : il dit
+     * « voilà la seule chose à regarder », donc le positionnement lui-même.
+     *
+     * Pourquoi une fonction à part et non une entrée de ICONS : le jeu d'icônes
+     * est fait de tracés au trait dans une grille 24, sans remplissage, colorés par
+     * « currentColor ». Le sigle est fait de rectangles pleins et de trois couleurs
+     * fixes. L'y faire entrer aurait demandé d'affaiblir le gabarit commun pour un
+     * seul cas.
+     *
+     * Les couleurs ne sont pas paramétrables : le vert et l'ambre du sigle sont la
+     * marque, pas un thème. Un sigle qui change de couleur avec l'interface ne se
+     * reconnaît plus.
+     */
+    public static function brand(int $height = 21): string
+    {
+        return '<svg width="' . $height . '" height="' . $height . '" viewBox="0 0 64 64"'
+            . ' aria-hidden="true" style="vertical-align:-.18em;flex:0 0 auto">'
+            . '<rect width="64" height="64" rx="14" fill="#080b12"/>'
+            . '<g fill="#34c785">'
+            . '<rect x="9" y="16" width="8" height="32" rx="4"/>'
+            . '<rect x="20.5" y="16" width="8" height="32" rx="4"/>'
+            . '<rect x="43.5" y="16" width="8" height="32" rx="4"/>'
+            . '</g>'
+            . '<rect x="32" y="10" width="8" height="44" rx="4" fill="#f0ad3c"/>'
+            . '</svg>';
+    }
+
+    /**
      * Cadences proposées, libellées et traduites.
      *
      * Une seule liste pour l'écran d'import et pour la fiche d'une sonde : deux

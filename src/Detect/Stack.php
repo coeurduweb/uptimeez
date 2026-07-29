@@ -6,7 +6,7 @@ namespace Uptimeez\Detect;
 /**
  * Inventaire logiciel d'une page : cœur, extensions, thème, et leurs versions.
  *
- * Pourquoi ici. Uptimeez récupère déjà le HTML de chaque page surveillée. Ce HTML
+ * Pourquoi ici. UptimeEZ récupère déjà le HTML de chaque page surveillée. Ce HTML
  * dit presque toujours quelle version tourne : la balise generator, les
  * paramètres de cache sur les fichiers statiques, les chemins d'extensions. Il
  * n'y a donc rien de plus à demander au serveur pour savoir ce qu'il exécute.
