@@ -47,6 +47,32 @@ Uptimer est né de trois constats faits en gérant un parc d'agence avec les alt
 
 ---
 
+## Tout ce qu'il surveille
+
+La plupart des outils surveillent une chose : est-ce que le serveur répond. Uptimer surveille **cinq couches**,
+sur chaque page qu'il vérifie, sans vous demander d'en configurer une seule.
+
+| | Ce qu'il surveille | Ce que ça attrape |
+|---|---|---|
+| **Est-ce que ça répond ?** | Code HTTP comparé à une plage attendue, temps de DNS, de connexion, de TLS et de premier octet, chaîne de redirections, relances avant d'alerter | Une panne, un délai dépassé, une négociation de certificat qui échoue, une boucle de redirection, un site passé en `www` |
+| **Est-ce que la page est juste ?** | Chaque feuille de style, script et police : disponibilité, type MIME, `nosniff`, contenu mixte, CSP, SRI, poids comparé à une référence apprise, couverture des classes, media queries, blocs en attente d'animation | Un déploiement qui met le CSS en 404, la moitié de la feuille disparue, la mise en page responsive perdue, une page *invisible* |
+| **Est-ce que les données répondent ?** | Environ 45 signatures de panne de base, une sonde CMS qui traverse réellement la base, et une chaîne de preuve déduite du contenu du site | WordPress qui sert une page d'erreur avec un `200` impeccable, une table tronquée, un disque plein |
+| **Est-ce rapide pour le visiteur ?** | Temps de réponse du serveur en millisecondes, fichiers qui bloquent l'affichage avec leur poids exact, image du haut de page et son poids, images sans dimensions, polices sans `font-display`, scripts tiers. Et les vrais LCP, INP et CLS avec une clé gratuite du Chrome UX Report | Une image de bandeau en chargement différé, 400 Ko de CSS bloquant, une page qui saute pendant le chargement |
+| **Est-ce que ça va casser bientôt ?** | Expiration du certificat (inspection TLS en deux passes), expiration du domaine par RDAP, failles publiées sur les versions lues dans le HTML, et un battement dead-man pour les tâches qui doivent tourner | Un certificat expiré un samedi, un domaine que personne n'a renouvelé, une extension avec un avis de trois jours, une sauvegarde arrêtée en silence |
+
+**Cinq types de sondes**, chacune avec ses réglages : une **page**, une **API JSON** (chemin du champ, valeur
+attendue, en-têtes, corps, n'importe quelle méthode), un **fichier** (une ressource qui doit rester joignable et
+inchangée), un **mot-clé** (un texte qui doit apparaître, ou ne jamais apparaître) et un **battement** (votre
+script appelle Uptimer quand il a fini ; c'est le silence qui alerte).
+
+Et ce qu'il fait de tout ça : les pannes qui partagent une IP deviennent **une seule** alerte, les seuils se
+règlent sur le p95 mesuré, chaque décision est consignée dans un journal lisible, et l'écran d'accueil transforme
+l'ensemble en liste de tâches.
+
+→ **[Tout ce qu'il surveille, en détail](docs/fr/etendue.md)**
+
+---
+
 ## À quoi ça ressemble
 
 <table>

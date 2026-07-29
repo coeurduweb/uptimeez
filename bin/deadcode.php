@@ -182,6 +182,33 @@ if ($orphans) {
 } else echo "  aucune\n";
 
 // =========================================================================
+title('Liens internes de la documentation');
+// =========================================================================
+// Un lien mort dans un README est le premier signe d'un dépôt à l'abandon, et
+// c'est ce qu'un visiteur clique en premier.
+$docs = array_merge(glob($ROOT . '/docs/*/*.md') ?: [],
+                    [$ROOT . '/README.md', $ROOT . '/README.fr.md',
+                     $ROOT . '/SECURITY.md', $ROOT . '/BACKLOG.md']);
+$broken = [];
+foreach ($docs as $doc) {
+    if (!is_file($doc)) continue;
+    $dir = dirname($doc);
+    if (preg_match_all('~\[[^\]]+\]\(([^)#\s]+)(?:#[^)]*)?\)~', (string)file_get_contents($doc), $mm)) {
+        foreach ($mm[1] as $target) {
+            if (preg_match('~^(?:https?:|mailto:)~', $target)) continue;
+            $path = $dir . '/' . $target;
+            if (!file_exists($path)) {
+                $broken[] = basename(dirname($doc)) . '/' . basename($doc) . ' → ' . $target;
+            }
+        }
+    }
+}
+if ($broken) {
+    $issues += count($broken);
+    foreach ($broken as $b) echo "  MORT  $b\n";
+} else echo "  aucun\n";
+
+// =========================================================================
 title('Fichiers jamais inclus ni servis');
 // =========================================================================
 $entry = ['index.php', 'api.php', 'cron.php', 'beat.php', 'install.php'];

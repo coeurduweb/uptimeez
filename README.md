@@ -46,6 +46,32 @@ Uptimer was built around three findings from running an agency portfolio on the 
 
 ---
 
+## Everything it watches
+
+Most tools watch one thing: does the server answer. Uptimer watches **five layers**, on every page it checks,
+without asking you to configure any of them.
+
+| | What it watches | What that catches |
+|---|---|---|
+| **Does it answer?** | Status code against an expected range, DNS, connect, TLS and first-byte timings, redirect chain, retries before alerting | Downtime, timeouts, a certificate handshake failing, a redirect loop, a site that moved to `www` |
+| **Is the page right?** | Every stylesheet, script and font: availability, MIME type, `nosniff`, mixed content, CSP, SRI, weight against a learned baseline, class coverage, media queries, blocks awaiting an animation | A deployment that 404s the CSS, half the stylesheet gone, a responsive layout lost, an *invisible* page |
+| **Does the data answer?** | ≈45 database-failure signatures, a CMS probe that really traverses the database, and a proof string derived from the site's own content | WordPress serving a cheerful error page with a perfect `200`, a truncated table, a full disk |
+| **Is it fast for visitors?** | Server response time in milliseconds, render-blocking files with their exact weight, the top-of-page image and its weight, images without dimensions, fonts without `font-display`, third-party scripts. Plus real LCP, INP and CLS with a free Chrome UX Report key | A lazy-loaded hero image, 400 kB of blocking CSS, a page that jumps while loading |
+| **Will it break soon?** | Certificate expiry (two-pass TLS inspection), domain expiry over RDAP, published vulnerabilities on the versions detected in the HTML, and a dead-man heartbeat for jobs that must run | An expired certificate on a Saturday, a domain nobody renewed, a plugin with a three-day-old advisory, a backup that stopped silently |
+
+**Five kinds of monitor**, each with its own settings: a **page**, a **JSON API** (field path, expected value,
+headers, body, any method), an **asset** (a file that must stay reachable and unchanged), a **keyword** (a text
+that must appear, or must never appear), and a **heartbeat** (your script calls Uptimer when it finishes; silence
+raises the alert).
+
+And what it does with all that: outages sharing one IP become **one** alert, thresholds tune themselves from
+measured p95, every decision is written down in a journal you can read, and the home screen turns the whole lot
+into a list of things to do.
+
+→ **[Everything it watches, in detail](docs/en/coverage.md)**
+
+---
+
 ## See it
 
 <table>

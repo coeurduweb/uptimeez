@@ -10,6 +10,7 @@
 
 | I want to… | Read |
 |---|---|
+| Know everything that is watched | **[Coverage](coverage.md)** : the five layers, check by check, and what is out of scope |
 | Get it running on my hosting | **[Installation](installation.md)** : requirements, shared hosting, cPanel/o2switch, MySQL |
 | Bring over a portfolio monitored elsewhere | **[Migrate](migrate.md)** : the five exports read directly, what carries over and what does not |
 | Add my first sites and understand the screens | **[Getting started](getting-started.md)** : the 5-minute tour |

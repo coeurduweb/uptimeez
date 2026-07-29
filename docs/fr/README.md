@@ -11,6 +11,7 @@ confiance à Uptimer.
 
 | Je veux… | Lire |
 |---|---|
+| Savoir tout ce qui est surveillé | **[Étendue](etendue.md)** : les cinq couches, contrôle par contrôle, et ce qui est hors champ |
 | L'installer sur mon hébergement | **[Installation](installation.md)** : prérequis, mutualisé, cPanel/o2switch, MySQL |
 | Reprendre un parc déjà surveillé ailleurs | **[Reprise](reprise.md)** : les cinq exports lus directement, ce qui passe et ce qui ne passe pas |
 | Ajouter mes premiers sites et comprendre les écrans | **[Prise en main](prise-en-main.md)** : la visite en 5 minutes |
