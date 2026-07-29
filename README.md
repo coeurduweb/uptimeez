@@ -189,6 +189,30 @@ That string is **derived automatically**, in this order of preference: footer co
 title, first nav item, H1. It is never taken from an error page. If it vanishes while the page still answers 200, the data layer is
 gone and you know within one check.
 
+### Leaving another tool takes five minutes
+
+The obstacle to switching is not the price, it is the evening spent retyping forty monitors. So Uptimer reads the
+export of the tool you are leaving: **UptimeRobot, Uptime Kuma, Better Stack, Pingdom, Site24x7**, plus a generic
+CSV for everything else.
+
+![Migration preview](docs/img/import-reprise.png)
+
+Drop the file. The format is recognised **by its content**, not by its name. Check rates, names, keywords, accepted
+status codes, retries and paused monitors carry over as they are, and the preview labels what came from the export
+rather than from your defaults.
+
+Two things it refuses to fudge. **Monitors with no equivalent** (TCP port, ICMP ping, DNS, SMTP) are listed with
+the reason and not created, because an import that silently loses six monitors out of forty is worse than one that
+refuses. And **the keyword direction is honoured per tool**: UptimeRobot's "exists", Kuma's `invertKeyword`, Better
+Stack's `keyword_absence` and Pingdom's `shouldnotcontain` all mean "alert when the text is *there*", which becomes
+a forbidden string here, not a proof string. Getting that backwards would invert every alert.
+
+**The measurement history is never imported.** It was taken by another tool, with other thresholds, from another
+network. A "99.98 %" carried over from Pingdom would say nothing about what Uptimer measured, so the counter starts
+at zero and the screen says so before you confirm.
+
+→ **[Migrate](docs/en/migrate.md)**
+
 ### Why a page is slow, and what to change
 
 Core Web Vitals come from real Chrome browsers. A PHP tool cannot compute them, and Uptimer will not pretend
@@ -304,6 +328,8 @@ request; the table lives in this file.
 | Database down behind a 200 | ✅ signatures + proof string | ⚠️ manual keyword | ⚠️ manual assertion | ⚠️ manual keyword | ⚠️ manual keyword | ⚠️ build it yourself | ⚠️ manual assertion |
 | Proof string inferred automatically | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Forgotten `noindex` alert | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
+| Import from a competitor's export | ✅ 5 tools, auto-detected | ❌ | ❌ | ⚠️ CSV of URLs | ⚠️ its own backup | ❌ | ❌ |
+| Says what it could not import, and why | ✅ | n/a | n/a | ❌ | ❌ | n/a | n/a |
 | Bulk add with CMS detection and auto-setup | ✅ paste anything | ⚠️ CSV, no detection | ❌ code-first | ⚠️ CSV | ❌ one by one | ❌ | ❌ |
 | Preview before monitors are created | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Core Web Vitals with the causes explained | ✅ measured + read from the page | ❌ | ⚠️ Lighthouse score only | ⚠️ score only | ❌ | ❌ | ⚠️ score only |
@@ -506,7 +532,6 @@ uptimer/
 
 The [backlog](BACKLOG.md) holds the competitor research and the user stories behind each decision. Next up:
 
-- Importers for the main competing tools, so migrating is a five-minute job
 - A daily digest instead of per-event alerts, for people who prefer one e-mail
 
 ---

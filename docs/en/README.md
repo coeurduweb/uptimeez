@@ -11,6 +11,7 @@
 | I want to… | Read |
 |---|---|
 | Get it running on my hosting | **[Installation](installation.md)** : requirements, shared hosting, cPanel/o2switch, MySQL |
+| Bring over a portfolio monitored elsewhere | **[Migrate](migrate.md)** : the five exports read directly, what carries over and what does not |
 | Add my first sites and understand the screens | **[Getting started](getting-started.md)** : the 5-minute tour |
 | Know what each option does | **[Monitors](monitors.md)** : types, rates, proof strings, every setting |
 | Understand *how* it detects things | **[Detection](detection.md)** : the nine layout signals, database failures, certificates |

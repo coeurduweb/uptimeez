@@ -136,15 +136,29 @@ function handle_post(): ?array
     switch ($action) {
         // ---- Aperçu avant création : on ne crée rien à l'aveugle ---------
         case 'preview':
-            $list = (string)($_POST['list'] ?? '');
-            $prev = Importer::preview($list, [
-                'interval_sec' => max(30, (int)($_POST['interval_sec'] ?? 300)),
-                'pages'        => max(1, min(12, (int)($_POST['pages'] ?? 4))),
-            ]);
+            $list = import_payload();
+            $opt  = ['interval_sec' => max(30, (int)($_POST['interval_sec'] ?? 300)),
+                     'pages'        => max(1, min(12, (int)($_POST['pages'] ?? 4)))];
+            // Un export d'outil concurrent est reconnu à son contenu : l'aperçu
+            // est le même, avec en plus ce qui n'a pas pu être repris.
+            $foreign = Uptimer\Import\Foreign::detect($list);
+            if ($foreign !== null) {
+                $f = Uptimer\Import\Foreign::parse($list, $foreign);
+                $prev = Importer::previewRows($f['rows'], $opt);
+                $prev['errors']  = $f['errors'];
+                $prev['skipped'] = $f['skipped'];
+                $prev['source']  = $f['source'];
+                $prev['label']   = $f['label'];
+            } else {
+                $prev = Importer::preview($list, $opt);
+            }
             $prev['raw']  = $list;
             $prev['opt']  = $_POST;
             $GLOBALS['uptimer_preview'] = $prev;
             if (!$prev['rows']) {
+                if (trim($list) === '') {
+                    return ['bad', t('Collez une liste d\'adresses, ou déposez l\'export de votre outil actuel.')];
+                }
                 return ['bad', 'Aucune adresse exploitable dans ce texte. '
                     . implode(' ', array_slice($prev['errors'], 0, 2))];
             }
@@ -152,7 +166,18 @@ function handle_post(): ?array
 
         // ---- Import de masse -------------------------------------------
         case 'import':
-            $parsed = Importer::parse((string)($_POST['list'] ?? ''));
+            $payload = import_payload();
+            $src = Uptimer\Import\Foreign::detect($payload);
+            if ($src !== null) {
+                $f = Uptimer\Import\Foreign::parse($payload, $src);
+                $parsed = ['rows' => $f['rows'], 'errors' => $f['errors']];
+                $foreignSkipped = count($f['skipped']);
+                $foreignLabel = $f['label'];
+            } else {
+                $parsed = Importer::parse($payload);
+                $foreignSkipped = 0;
+                $foreignLabel = '';
+            }
             if (!$parsed['rows']) {
                 return ['bad', 'Aucune URL exploitable. ' . implode(' ', array_slice($parsed['errors'], 0, 3))];
             }
@@ -168,8 +193,10 @@ function handle_post(): ?array
                 'check_noindex' => isset($_POST['check_noindex']) ? 1 : 0,
                 'check_content' => isset($_POST['check_content']) ? 1 : 0,
             ]);
-            $msg = $r['created'] . ' sonde(s) créée(s)'
+            $msg = ($foreignLabel !== '' ? 'Reprise depuis ' . $foreignLabel . ' : ' : '')
+                 . $r['created'] . ' sonde(s) créée(s)'
                  . ($r['skipped'] ? ', ' . $r['skipped'] . ' déjà présente(s)' : '')
+                 . ($foreignSkipped ? ', ' . $foreignSkipped . ' non reprise(s) faute d\'équivalent' : '')
                  . ($parsed['errors'] ? ', ' . count($parsed['errors']) . ' ligne(s) ignorée(s)' : '') . '.';
             $_SESSION['uptimer_setup_queue'] = $r['ids'];
             return [$r['created'] ? 'ok' : 'warn', $msg];

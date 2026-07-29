@@ -132,6 +132,19 @@ final class Importer
     public static function preview(string $text, array $opt = []): array
     {
         $parsed = self::parse($text);
+        return self::previewRows($parsed['rows'], $opt) + ['errors' => $parsed['errors']];
+    }
+
+    /**
+     * Enrichit des lignes déjà lues : doublons, cadence retenue, domaine.
+     *
+     * Séparé de parse() parce que les lignes peuvent venir d'ailleurs : l'export
+     * d'un outil concurrent est lu par Import\Foreign, qui produit exactement
+     * cette forme. Une seule logique d'aperçu, quelle que soit la source.
+     */
+    public static function previewRows(array $rows, array $opt = []): array
+    {
+        $parsed = ['rows' => $rows, 'errors' => []];
         $base   = max(30, (int)($opt['interval_sec'] ?? Config::get('defaults.interval_sec', 300)));
         $pages  = max(1, (int)($opt['pages'] ?? 4));
 
@@ -145,7 +158,12 @@ final class Importer
             $parsed['rows'][$i]['host']     = $host;
             $parsed['rows'][$i]['domain']   = $reg;
             $parsed['rows'][$i]['exists']   = $dup;
-            $parsed['rows'][$i]['interval'] = Tune::intervalFor($row['url'], $base, null, true);
+            // Une cadence venue de l'export est conservée telle quelle : c'est
+            // un choix humain, pas une valeur à recalculer.
+            $parsed['rows'][$i]['interval'] = (int)($row['interval'] ?? 0) > 0
+                ? (int)$row['interval']
+                : Tune::intervalFor($row['url'], $base, null, true);
+            $parsed['rows'][$i]['kept'] = (int)($row['interval'] ?? 0) > 0;
             $parsed['rows'][$i]['pages']    = $pages;
             $parsed['rows'][$i]['proof']    = $row['expect'] !== '' ? $row['expect'] : null;
             $byDomain[$reg] = ($byDomain[$reg] ?? 0) + 1;
@@ -183,13 +201,21 @@ final class Importer
                     'url'            => $url,
                     'kind'           => self::guessKind($url),
                     'role'           => 'primary',
-                    'method'         => 'GET',
-                    'interval_sec'   => max(30, (int)($opt['interval_sec'] ?? $d['interval_sec'] ?? 300)),
-                    'timeout_sec'    => (int)($opt['timeout_sec'] ?? $d['timeout_sec'] ?? 15),
-                    'retries'        => (int)($opt['retries'] ?? $d['retries'] ?? 2),
+                    'method'         => in_array(strtoupper((string)($row['method'] ?? 'GET')),
+                                            ['GET', 'HEAD', 'POST'], true)
+                                        ? strtoupper((string)($row['method'] ?? 'GET')) : 'GET',
+                    // Une valeur portée par la ligne gagne sur le réglage global :
+                    // c'est ce qui permet de reprendre un parc importé sans
+                    // écraser les cadences que quelqu'un avait choisies.
+                    'interval_sec'   => max(30, (int)($row['interval'] ?? 0)
+                                        ?: max(30, (int)($opt['interval_sec'] ?? $d['interval_sec'] ?? 300))),
+                    'timeout_sec'    => (int)($row['timeout'] ?? $opt['timeout_sec'] ?? $d['timeout_sec'] ?? 15),
+                    'retries'        => (int)($row['retries'] ?? $opt['retries'] ?? $d['retries'] ?? 2),
                     'slow_ms'        => (int)($opt['slow_ms'] ?? $d['slow_ms'] ?? 3000),
-                    'expect_status'  => '200-299',
+                    'expect_status'  => (string)($row['status_spec'] ?? '200-299'),
                     'expect_string'  => $row['expect'] !== '' ? $row['expect'] : null,
+                    'forbid_string'  => trim((string)($row['forbid'] ?? '')) !== ''
+                                        ? str_cut(trim((string)$row['forbid']), 255) : null,
                     'check_ssl'      => (int)($opt['check_ssl'] ?? 1),
                     'check_css'      => (int)($opt['check_css'] ?? 1),
                     'check_db'       => (int)($opt['check_db'] ?? 1),
@@ -199,7 +225,9 @@ final class Importer
                     'css_drop_pct'   => (int)($d['css_drop_pct'] ?? 35),
                     'notify_channels'=> ($opt['notify_channels'] ?? '') ?: null,
                     'follow_redirects' => 1,
-                    'enabled'        => 1,
+                    // Une sonde en pause chez le voisin arrive en pause ici :
+                    // la réactiver serait décider à la place de l'utilisateur.
+                    'enabled'        => isset($row['enabled']) ? (int)$row['enabled'] : 1,
                     'status'         => 'unknown',
                     'setup_state'    => 'pending',
                     'created_at'     => now(),

@@ -453,6 +453,68 @@ ok('A01', 'cron par URL sans clé refusé', $r['code'] === 403 || str_contains($
 $r = $req('/cron.php?key=mauvaise');
 ok('A01', 'cron par URL avec mauvaise clé refusé', $r['code'] === 403 || str_contains($r['body'], 'Clé'));
 
+title('A03 et A08 Dépôt de fichier : reprise d\'un autre outil');
+// =========================================================================
+// Un formulaire qui accepte un fichier est une surface d'attaque classique :
+// exécution du contenu, chemin traversé par le nom, débordement mémoire.
+$up = function (string $content, string $name, string $type = 'application/json') use ($APP, $jar, $csrf): array {
+    $f = tempnam(sys_get_temp_dir(), 'sec');
+    file_put_contents($f, $content);
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $APP . '/index.php?p=import', CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HEADER => true, CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar,
+        CURLOPT_POST => true, CURLOPT_TIMEOUT => 40,
+        CURLOPT_POSTFIELDS => ['csrf' => $csrf, 'action' => 'preview', 'list' => '',
+                               'file' => new CURLFile($f, $type, $name)],
+    ]);
+    $raw = (string)curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hlen = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    curl_close($ch);
+    @unlink($f);
+    return ['code' => $code, 'body' => substr($raw, $hlen), 'head' => substr($raw, 0, $hlen)];
+};
+
+// Du code dans le fichier : il est lu comme du texte, jamais inclus.
+$r = $up("<?php echo 'EXECUTE-MOI'; ?>", 'charge.php', 'application/x-php');
+ok('A03', 'un fichier PHP déposé n\'est pas exécuté',
+    !str_contains($r['body'], 'EXECUTE-MOI') || str_contains($r['body'], '&lt;?php'));
+ok('A03', 'et rien n\'est écrit dans l\'arborescence servie',
+    !is_file($ROOT . '/charge.php') && !is_file($ROOT . '/views/charge.php'));
+
+// Le nom du fichier ne sert à rien : ni à choisir un analyseur, ni à écrire.
+$r = $up('{"monitors":[]}', '../../../../etc/passwd');
+ok('A03', 'un nom de fichier traversant ne casse rien',
+    $r['code'] === 200 && !str_contains($r['body'], 'root:x:'));
+$r = $up('url,name' . "\n" . 'https://sec-a.test/,A', 'export.json');
+ok('A03', 'le format est reconnu au contenu, pas à l\'extension',
+    str_contains($r['body'], 'CSV') || str_contains($r['body'], 'sec-a.test'));
+
+// Une charge XSS dans un nom de sonde ressort échappée.
+$r = $up('{"monitors":[{"friendly_name":"<img src=x onerror=alert(1)>","url":"https://sec-b.test/","type":1}]}', 'x.json');
+ok('A03', 'un nom de sonde hostile est échappé à l\'affichage',
+    !str_contains($r['body'], '<img src=x onerror'), 'HTTP ' . $r['code']);
+
+// Débordement : au-delà du plafond, refus net et pas d'épuisement mémoire.
+$r = $up(str_repeat('a', 5 * 1024 * 1024), 'gros.json');
+ok('A08', 'un fichier au-delà du plafond est refusé',
+    $r['code'] === 200 && !str_contains($r['body'], 'Fatal error')
+    && !str_contains($r['body'], 'Allowed memory size'), 'HTTP ' . $r['code']);
+// JSON très imbriqué : json_decode a une limite de profondeur, elle doit tenir.
+$r = $up('{"monitorList":' . str_repeat('[', 2000) . str_repeat(']', 2000) . '}', 'profond.json');
+ok('A08', 'un JSON très imbriqué ne fait pas tomber le processus',
+    $r['code'] === 200 && !str_contains($r['body'], 'Fatal error'), 'HTTP ' . $r['code']);
+// Un fichier binaire n'est pas donné à manger aux analyseurs.
+$r = $up("\x00\x01\x02" . str_repeat("\xff", 500), 'image.json');
+ok('A08', 'un fichier binaire est écarté avant analyse',
+    $r['code'] === 200 && !str_contains($r['body'], 'Fatal error'));
+
+// Sans session, le dépôt n'est pas atteignable du tout.
+$r2 = $req('/index.php?p=import', ['action' => 'preview', 'list' => 'exemple.fr'], ['nojar' => true]);
+ok('A01', 'l\'import n\'est pas atteignable sans session',
+    $r2['code'] !== 200 || str_contains($r2['body'], 'type="password"'), 'HTTP ' . $r2['code']);
+
 title('A04 CSRF sur toutes les écritures');
 $writes = [
     ['/index.php?p=settings', ['action' => 'save_settings', 'app_name' => 'PIRATÉ']],

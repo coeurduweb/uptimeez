@@ -24,18 +24,26 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
   </div>
 </div>
 
-<form method="post" class="panel">
+<form method="post" class="panel" enctype="multipart/form-data">
   <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
   <input type="hidden" name="action" value="preview">
   <div class="panel-body">
 
     <div class="field">
       <label for="list"><?= te('Liste à surveiller') ?><span class="req" aria-hidden="true">*</span></label><?= hint('Collez ce que vous avez sous la main : une liste de domaines, un tableau, un e-mail client. {app} y récupère les adresses, écarte les doublons et vous montre un aperçu avant de créer quoi que ce soit.') ?>
-      <textarea id="list" name="list" rows="9" required autofocus spellcheck="false"
+      <textarea id="list" name="list" rows="9" autofocus spellcheck="false"
                 placeholder="<?= te('exemple.fr https://autre-client.com/ boutique.fr | Boutique Dupont api.exemple.fr/health ; API interne ; &quot;status&quot;:&quot;ok&quot;') ?>"><?= e((string)($preview['raw'] ?? '')) ?></textarea>
       <span class="hint"><?= te('Un élément par ligne. Vous pouvez ajouter un nom et une chaîne de contrôle en séparant par') ?> <span class="mono">|</span>, <span class="mono">;</span> <?= te('ou une tabulation :') ?>
         <span class="mono">URL | nom | <?= te('chaîne de contrôle') ?></span><?= te('. Les lignes commençant par {char} sont ignorées.', ['char' => '#']) ?>
         <span class="mono">#</span> <?= te('sont ignorées, les doublons aussi.') ?></span>
+    </div>
+
+    <div class="field">
+      <label for="file"><?= te('Ou déposez l\'export de votre outil actuel') ?></label><?= hint('Les exports d\'UptimeRobot, Uptime Kuma, Better Stack, Pingdom et Site24x7 sont reconnus au contenu, sans rien choisir. Un CSV avec une colonne d\'adresses fonctionne aussi. Cadences, mots-clés et sondes en pause sont reprises telles quelles.') ?>
+      <input id="file" type="file" name="file" accept=".json,.csv,.txt,.tsv,application/json,text/csv,text/plain">
+      <span class="hint"><?= te('{list} sont lus directement. Ce qui n\'a pas d\'équivalent, comme un port TCP ou un ping, est listé sans être créé : rien ne disparaît en silence.',
+            ['list' => implode(', ', array_slice(Uptimer\Import\Foreign::SOURCES, 0, 5))]) ?>
+        <br><?= te('Seule la configuration est reprise, jamais l\'historique de mesures : il a été pris par un autre outil, avec d\'autres seuils, depuis un autre réseau.') ?></span>
     </div>
 
     <div class="field-row">
@@ -114,7 +122,10 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
 ?>
 <div class="panel" id="preview" style="border-color:color-mix(in srgb,var(--accent) 40%,var(--border))">
   <div class="panel-head">
-    <h2><?= Ui::icon('eye', 15) ?> <?= te('Aperçu') ?> : <?= tne($toCreate, 'une sonde principale à créer', '{n} sondes principales à créer') ?></h2>
+    <h2><?= Ui::icon('eye', 15) ?> <?= te('Aperçu') ?> : <?= tne($toCreate, 'une sonde principale à créer', '{n} sondes principales à créer') ?>
+      <?php if (!empty($preview['label'])): ?>
+        <?= Ui::badge(t('repris de {tool}', ['tool' => (string)$preview['label']]), 'info') ?>
+      <?php endif; ?></h2>
     <span class="muted small">
       <?= count($preview['rows']) ?> <?= te('adresse(s) reconnue(s)') ?><?php
       if ($preview['existing']) echo ' · ' . (int)$preview['existing'] . t('déjà surveillée(s)');
@@ -135,15 +146,40 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
               <div class="tiny muted"><?= te('regroupé avec') ?> <?= (int)$preview['groups'][$r['domain']] - 1 ?> <?= te('autre(s) du même domaine') ?></div>
             <?php endif; ?></td>
           <td class="tiny mono"><?= e(str_cut($r['url'], 70)) ?></td>
-          <td class="num small"><?= e(human_duration((int)$r['interval'])) ?></td>
+          <td class="num small"><?= e(human_duration((int)$r['interval'])) ?>
+            <?php if (!empty($r['kept'])): ?>
+              <div class="tiny muted"><?= te('reprise de l\'export') ?></div>
+            <?php endif; ?></td>
           <td class="num small"><?= !empty($r['exists']) ? '—' : te('jusqu\'à {n}', ['n' => (int)$r['pages']]) ?></td>
           <td class="small"><?= $r['proof'] ? e(str_cut((string)$r['proof'], 30))
               : '<span class="muted">déduite du contenu</span>' ?></td>
-          <td class="num"><?= !empty($r['exists']) ? Ui::badge(t('déjà présente'), 'neutral') : Ui::badge(t('à créer'), 'ok') ?></td>
+          <td class="num nowrap"><?php
+            if (!empty($r['exists'])) echo Ui::badge(t('déjà présente'), 'neutral');
+            elseif (isset($r['enabled']) && (int)$r['enabled'] === 0)
+                echo Ui::badge(t('à créer, en pause'), 'warn');
+            else echo Ui::badge(t('à créer'), 'ok'); ?></td>
         </tr>
       <?php endforeach; ?>
       </tbody>
     </table></div>
+    <?php if (!empty($preview['skipped'])): ?>
+      <?php /* Ce qui n'a pas d'équivalent est montré, jamais escamoté : un
+               import qui perd six sondes sur quarante sans le dire est pire
+               qu'un import qui refuse. */ ?>
+      <div class="imp-skip">
+        <strong><?= e(tn(count($preview['skipped']), 'Une sonde ne peut pas être reprise',
+                                                     '{n} sondes ne peuvent pas être reprises')) ?></strong>
+        <ul>
+          <?php foreach (array_slice($preview['skipped'], 0, 12) as $sk): ?>
+            <li><span class="imp-skip-name"><?= e((string)$sk['name']) ?></span>
+              <span class="muted"><?= e((string)$sk['why']) ?></span></li>
+          <?php endforeach; ?>
+        </ul>
+        <?php if (count($preview['skipped']) > 12): ?>
+          <p class="tiny muted mb0"><?= te('et {n} autre(s).', ['n' => count($preview['skipped']) - 12]) ?></p>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
     <?php if ($preview['errors']): ?>
       <div style="padding:12px 16px">
         <details class="small">

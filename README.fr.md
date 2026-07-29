@@ -195,6 +195,31 @@ Cette chaîne est **déduite automatiquement**, dans cet ordre de préférence :
 d'erreur. Si elle disparaît alors que la page
 répond encore 200, la couche données est tombée et vous le savez en une vérification.
 
+### Quitter un autre outil prend cinq minutes
+
+Le frein au changement n'est pas le prix, c'est la soirée à ressaisir quarante sondes. Uptimer lit donc l'export de
+l'outil que vous quittez : **UptimeRobot, Uptime Kuma, Better Stack, Pingdom, Site24x7**, et un CSV générique pour
+tout le reste.
+
+![Aperçu d'une reprise](docs/img/import-reprise.png)
+
+Déposez le fichier. Le format est reconnu **au contenu**, pas au nom. Cadences, noms, mots-clés, codes HTTP
+acceptés, relances et sondes en pause sont repris tels quels, et l'aperçu distingue ce qui vient de l'export de ce
+qui vient de vos valeurs par défaut.
+
+Deux choses qu'il refuse d'arranger. **Les sondes sans équivalent** (port TCP, ping ICMP, DNS, SMTP) sont listées
+avec la raison et ne sont pas créées, parce qu'un import qui perd six sondes sur quarante en silence est pire qu'un
+import qui refuse. Et **le sens du mot-clé est respecté outil par outil** : le « exists » d'UptimeRobot, le
+`invertKeyword` de Kuma, le `keyword_absence` de Better Stack et le `shouldnotcontain` de Pingdom veulent tous dire
+« alerter quand le texte *est* là », ce qui devient une chaîne interdite ici, pas une chaîne de contrôle. Se
+tromper inverserait chaque alerte.
+
+**L'historique de mesures n'est jamais importé.** Il a été pris par un autre outil, avec d'autres seuils, depuis un
+autre réseau. Un « 99,98 % » repris de Pingdom ne dirait rien de ce qu'Uptimer a mesuré : le compteur repart de
+zéro, et l'écran le dit avant que vous validiez.
+
+→ **[Reprise](docs/fr/reprise.md)**
+
 ### Pourquoi une page est lente, et quoi changer
 
 Les Core Web Vitals viennent de vrais navigateurs Chrome. Un outil en PHP ne peut pas les calculer, et Uptimer ne
@@ -313,6 +338,8 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Base de données tombée derrière un 200 | ✅ signatures + chaîne de preuve | ⚠️ mot-clé manuel | ⚠️ assertion manuelle | ⚠️ mot-clé manuel | ⚠️ mot-clé manuel | ⚠️ à construire | ⚠️ assertion manuelle |
 | Chaîne de preuve déduite automatiquement | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Alerte sur un `noindex` oublié | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
+| Import depuis l'export d'un concurrent | ✅ 5 outils, reconnus seuls | ❌ | ❌ | ⚠️ CSV d'URLs | ⚠️ sa propre sauvegarde | ❌ | ❌ |
+| Dit ce qu'il n'a pas pu importer, et pourquoi | ✅ | n/a | n/a | ❌ | ❌ | n/a | n/a |
 | Ajout en masse avec détection du CMS | ✅ collez n'importe quoi | ⚠️ CSV, sans détection | ❌ orienté code | ⚠️ CSV | ❌ un par un | ❌ | ❌ |
 | Aperçu avant création des sondes | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Core Web Vitals avec les causes expliquées | ✅ mesuré + lu dans la page | ❌ | ⚠️ score Lighthouse seulement | ⚠️ score seulement | ❌ | ❌ | ⚠️ score seulement |
@@ -519,7 +546,6 @@ uptimer/
 Le [backlog](BACKLOG.md) contient la recherche concurrentielle et les user stories derrière chaque décision.
 À suivre :
 
-- Import depuis les principaux outils concurrents, pour que migrer prenne cinq minutes
 - Résumé quotidien au lieu d'une alerte par évènement, pour ceux qui préfèrent un seul e-mail
 
 ---

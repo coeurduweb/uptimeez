@@ -447,6 +447,33 @@ try {
   ok('réglages remis dans leur état initial',
     (await page.textContent('body')).includes('enregistr'));
 
+  title('Reprise d\'un autre outil');
+  await page.goto(BASE + '/index.php?p=import', { waitUntil: 'networkidle' });
+  ok('champ de dépôt présent', (await page.$('input[type=file][name=file]')) !== null);
+  // La zone de texte ne doit pas être obligatoire : sinon déposer un fichier
+  // seul est refusé par le navigateur avant même d'atteindre le serveur.
+  ok('la liste collée n\'est pas obligatoire',
+    !(await page.$eval('#list', (el) => el.required)));
+  const exportPath = '/tmp/claude-1000/uptimer-e2e-export.json';
+  const fs = require('node:fs');
+  fs.mkdirSync('/tmp/claude-1000', { recursive: true });
+  fs.writeFileSync(exportPath, JSON.stringify({ stat: 'ok', monitors: [
+    { id: 1, friendly_name: 'Navigateur A', url: 'https://nav-a.test/', type: 1, interval: 600, status: 2 },
+    { id: 2, friendly_name: 'Navigateur B', url: 'https://nav-b.test/', type: 2,
+      keyword_type: 1, keyword_value: 'Erreur', interval: 900, status: 0 },
+    { id: 3, friendly_name: 'Navigateur port', url: 'mail.nav.test', type: 4 },
+  ] }));
+  await page.setInputFiles('input[type=file][name=file]', exportPath);
+  await page.click('form.panel button.btn-primary');
+  await page.waitForLoadState('networkidle');
+  ok('aperçu affiché après dépôt', (await page.$('#preview')) !== null);
+  const previewTxt = (await page.textContent('#preview')) || '';
+  ok('la source est nommée', previewTxt.includes('UptimeRobot'));
+  ok('la cadence de l\'export est reprise', previewTxt.includes('10 min'));
+  ok('la sonde en pause est annoncée', previewTxt.includes('en pause'));
+  ok('ce qui n\'a pas d\'équivalent est listé',
+    (await page.$('.imp-skip')) !== null && previewTxt.includes('port TCP'));
+
   title('Import');
   await page.setViewportSize({ width: 1440, height: 950 });
   await page.goto(BASE + '/index.php?p=import', { waitUntil: 'networkidle' });

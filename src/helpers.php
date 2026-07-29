@@ -57,6 +57,36 @@ function hint(string $msgid, array $vars = []): string
          . '<span class="hint-t" id="' . $id . '" role="tooltip">' . $txt . '</span></span>';
 }
 
+/**
+ * Le contenu à importer : le champ collé, ou le fichier déposé.
+ *
+ * Un export fait plusieurs milliers de lignes : personne ne le colle à la main.
+ * Le fichier est lu ici, avec les mêmes garde-fous que le reste : taille
+ * plafonnée, aucune confiance dans le nom ni dans le type annoncé par le
+ * navigateur, lecture en texte brut et rien d'autre.
+ */
+function import_payload(): string
+{
+    $pasted = trim((string)($_POST['list'] ?? ''));
+    $f = $_FILES['file'] ?? null;
+    if (is_array($f) && (int)($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+        $tmp = (string)($f['tmp_name'] ?? '');
+        $size = (int)($f['size'] ?? 0);
+        // is_uploaded_file : la seule garantie que ce chemin vient bien d'un
+        // envoi HTTP et pas d'une valeur fabriquée.
+        if ($tmp !== '' && is_uploaded_file($tmp) && $size > 0
+            && $size <= \Uptimer\Import\Foreign::MAX_BYTES) {
+            $raw = (string)file_get_contents($tmp, false, null, 0, \Uptimer\Import\Foreign::MAX_BYTES);
+            // Un fichier binaire n'a rien à faire ici : on le refuse au lieu de
+            // le donner à manger aux analyseurs.
+            if ($raw !== '' && !str_contains(substr($raw, 0, 4096), "\0")) {
+                return $pasted !== '' ? $pasted . "\n" . $raw : $raw;
+            }
+        }
+    }
+    return $pasted;
+}
+
 /** URL interne. */
 function u(string $page, array $params = []): string
 {

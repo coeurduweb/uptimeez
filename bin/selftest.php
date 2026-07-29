@@ -878,6 +878,188 @@ Uptimer\Config::set('db.sqlite', $prevDb);
 @unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
 
 // =========================================================================
+section('Reprise d\'un parc surveillé ailleurs');
+// =========================================================================
+use Uptimer\Import\Foreign;
+
+// Les cinq exports, dans la forme que les outils produisent réellement.
+$exp = [];
+$exp['uptimerobot'] = jenc(['stat' => 'ok', 'monitors' => [
+    ['id' => 1, 'friendly_name' => 'Vitrine', 'url' => 'https://vitrine.test/', 'type' => 1,
+     'interval' => 300, 'status' => 2],
+    ['id' => 2, 'friendly_name' => 'Mot-clé attendu', 'url' => 'https://vitrine.test/a', 'type' => 2,
+     'keyword_type' => 2, 'keyword_value' => 'Bienvenue', 'interval' => 600, 'status' => 2],
+    ['id' => 3, 'friendly_name' => 'Mot-clé interdit', 'url' => 'https://vitrine.test/b', 'type' => 2,
+     'keyword_type' => 1, 'keyword_value' => 'Erreur', 'interval' => 900, 'status' => 0],
+    ['id' => 4, 'friendly_name' => 'Port IMAP', 'url' => 'mail.vitrine.test', 'type' => 4, 'port' => 993],
+    ['id' => 5, 'friendly_name' => 'Ping', 'url' => '192.0.2.1', 'type' => 3],
+    ['id' => 6, 'friendly_name' => 'Battement', 'url' => 'https://vitrine.test/beat', 'type' => 5],
+]]);
+$exp['kuma'] = jenc(['version' => '1.23.13', 'monitorList' => [
+    '1' => ['name' => 'Http simple', 'url' => 'https://k.test/', 'type' => 'http', 'interval' => 60,
+            'active' => 1, 'maxretries' => 3, 'timeout' => 20, 'method' => 'HEAD',
+            'accepted_statuscodes' => ['200-299', '301']],
+    '2' => ['name' => 'Mot-clé', 'url' => 'https://k.test/a', 'type' => 'keyword', 'keyword' => 'ok',
+            'invertKeyword' => false, 'interval' => 120, 'active' => 1],
+    '3' => ['name' => 'Mot-clé inversé', 'url' => 'https://k.test/b', 'type' => 'keyword',
+            'keyword' => 'Fatal', 'invertKeyword' => true, 'interval' => 300, 'active' => 0],
+    '4' => ['name' => 'Port', 'hostname' => 'db.k.test', 'port' => 5432, 'type' => 'port'],
+    '5' => ['name' => 'Poussé', 'type' => 'push'],
+]]);
+$exp['betterstack'] = jenc(['data' => [
+    ['id' => '1', 'attributes' => ['url' => 'https://b.test', 'pronounceable_name' => 'Bee',
+      'monitor_type' => 'keyword', 'required_keyword' => 'Salut', 'check_frequency' => 180,
+      'paused' => false, 'request_method' => 'get', 'expected_status_codes' => [200, 204]]],
+    ['id' => '2', 'attributes' => ['url' => 'https://b.test/x', 'pronounceable_name' => 'Absence',
+      'monitor_type' => 'keyword_absence', 'required_keyword' => 'Oups', 'check_frequency' => 300,
+      'paused' => true]],
+    ['id' => '3', 'attributes' => ['url' => 'tcp://b.test:25', 'pronounceable_name' => 'Smtp',
+      'monitor_type' => 'tcp', 'check_frequency' => 60]],
+]]);
+$exp['pingdom'] = jenc(['checks' => [
+    ['id' => 1, 'name' => 'Accueil', 'hostname' => 'p.test', 'resolution' => 1, 'type' => 'http'],
+    ['id' => 2, 'name' => 'Panier', 'hostname' => 'p.test', 'resolution' => 5,
+     'type' => ['http' => ['url' => '/panier', 'encryption' => true, 'shouldcontain' => 'Panier']]],
+    ['id' => 3, 'name' => 'Clair', 'hostname' => 'p.test', 'resolution' => 5,
+     'type' => ['http' => ['url' => '/clair', 'encryption' => false]]],
+    ['id' => 4, 'name' => 'Smtp', 'hostname' => 'mail.p.test', 'resolution' => 5, 'type' => 'smtp'],
+]]);
+$exp['site24x7'] = jenc(['code' => 0, 'data' => [
+    ['monitor_id' => '1', 'display_name' => 'Portail', 'website' => 'https://s.test/',
+     'monitor_type' => 'URL', 'check_frequency' => '300',
+     'matching_keyword' => ['severity' => 2, 'value' => 'Espace'], 'status' => '1'],
+    ['monitor_id' => '2', 'display_name' => 'Suspendu', 'website' => 'https://s.test/x',
+     'monitor_type' => 'URL', 'check_frequency' => '600', 'status' => '5',
+     'unmatching_keyword' => ['severity' => 2, 'value' => 'Indispo']],
+    ['monitor_id' => '3', 'display_name' => 'Ping', 'monitor_type' => 'PING', 'check_frequency' => '60'],
+]]);
+$exp['csv'] = "Nom;URL;Intervalle;Mot-clé;Actif\n"
+            . "Cabinet;https://cab.test;5;Rendez-vous;oui\n"
+            . "Étude;etude.test;15;;non\n"
+            . "Cassée;pas une adresse;5;;oui\n";
+
+// --- Reconnaissance : le contenu décide, jamais le nom du fichier --------
+foreach ($exp as $src => $raw) {
+    check('export reconnu : ' . $src, Foreign::detect($raw), $src);
+}
+check('texte quelconque non reconnu', Foreign::detect('bonjour, ceci est un e-mail'), null);
+check('HTML non reconnu', Foreign::detect('<!doctype html><html><body>x</body></html>'), null);
+check('JSON hors sujet non reconnu', Foreign::detect('{"foo":[1,2,3]}'), null);
+check('chaîne vide non reconnue', Foreign::detect(''), null);
+check('liste d\'URL simple laissée à l\'import classique',
+    Foreign::detect("exemple.fr\nautre.fr"), null);
+
+// --- UptimeRobot ---------------------------------------------------------
+$r = Foreign::parse($exp['uptimerobot']);
+check('UptimeRobot : trois sondes reprises', count($r['rows']), 3);
+check('UptimeRobot : trois écartées', count($r['skipped']), 3);
+check('UptimeRobot : cadence reprise', $r['rows'][0]['interval'], 300);
+// « not exists » veut dire « alerter si absent » : c'est notre chaîne de contrôle.
+check('UptimeRobot : mot-clé attendu devient chaîne de contrôle', $r['rows'][1]['expect'], 'Bienvenue');
+check('UptimeRobot : mot-clé « exists » devient chaîne interdite', $r['rows'][2]['forbid'], 'Erreur');
+check('UptimeRobot : une sonde en pause reste en pause', $r['rows'][2]['enabled'], 0);
+$whys = implode(' ', array_column($r['skipped'], 'why'));
+check('UptimeRobot : le port TCP est écarté avec sa raison', str_contains($whys, 'port TCP'), true);
+check('UptimeRobot : le ping est écarté avec sa raison', str_contains($whys, 'ping ICMP'), true);
+check('UptimeRobot : le battement est écarté avec sa raison', str_contains($whys, 'battement'), true);
+check('UptimeRobot : rien n\'est écarté sans nom',
+    count(array_filter($r['skipped'], fn($s) => trim((string)$s['name']) === '')), 0);
+
+// --- Uptime Kuma ---------------------------------------------------------
+$r = Foreign::parse($exp['kuma']);
+check('Kuma : trois sondes reprises', count($r['rows']), 3);
+check('Kuma : port et push écartés', count($r['skipped']), 2);
+check('Kuma : méthode reprise', $r['rows'][0]['method'], 'HEAD');
+check('Kuma : relances reprises', $r['rows'][0]['retries'], 3);
+check('Kuma : délai repris', $r['rows'][0]['timeout'], 20);
+check('Kuma : codes acceptés repris', $r['rows'][0]['status_spec'], '200-299,301');
+check('Kuma : mot-clé simple attendu', $r['rows'][1]['expect'], 'ok');
+check('Kuma : mot-clé inversé interdit', $r['rows'][2]['forbid'], 'Fatal');
+check('Kuma : sonde inactive reprise en pause', $r['rows'][2]['enabled'], 0);
+
+// --- Better Stack --------------------------------------------------------
+$r = Foreign::parse($exp['betterstack']);
+check('Better Stack : deux sondes reprises', count($r['rows']), 2);
+check('Better Stack : le TCP est écarté', count($r['skipped']), 1);
+check('Better Stack : cadence reprise', $r['rows'][0]['interval'], 180);
+check('Better Stack : codes attendus repris', $r['rows'][0]['status_spec'], '200,204');
+check('Better Stack : keyword devient chaîne de contrôle', $r['rows'][0]['expect'], 'Salut');
+check('Better Stack : keyword_absence devient chaîne interdite', $r['rows'][1]['forbid'], 'Oups');
+check('Better Stack : sonde en pause reprise en pause', $r['rows'][1]['enabled'], 0);
+
+// --- Pingdom -------------------------------------------------------------
+$r = Foreign::parse($exp['pingdom']);
+check('Pingdom : trois sondes reprises', count($r['rows']), 3);
+check('Pingdom : le SMTP est écarté', count($r['skipped']), 1);
+// La résolution est en minutes : une minute vaut soixante secondes.
+check('Pingdom : résolution convertie en secondes', $r['rows'][0]['interval'], 60);
+check('Pingdom : cinq minutes deviennent 300 secondes', $r['rows'][1]['interval'], 300);
+check('Pingdom : adresse reconstruite avec le chemin',
+    $r['rows'][1]['url'], 'https://p.test/panier');
+check('Pingdom : chiffrement respecté', $r['rows'][2]['url'], 'http://p.test/clair');
+check('Pingdom : shouldcontain devient chaîne de contrôle', $r['rows'][1]['expect'], 'Panier');
+
+// --- Site24x7 ------------------------------------------------------------
+$r = Foreign::parse($exp['site24x7']);
+check('Site24x7 : deux sondes reprises', count($r['rows']), 2);
+check('Site24x7 : le ping est écarté', count($r['skipped']), 1);
+check('Site24x7 : fréquence en secondes reprise', $r['rows'][0]['interval'], 300);
+check('Site24x7 : mot-clé attendu repris', $r['rows'][0]['expect'], 'Espace');
+check('Site24x7 : mot-clé contraire devient chaîne interdite', $r['rows'][1]['forbid'], 'Indispo');
+check('Site24x7 : sonde suspendue reprise en pause', $r['rows'][1]['enabled'], 0);
+
+// --- CSV générique -------------------------------------------------------
+$r = Foreign::parse($exp['csv']);
+check('CSV : deux lignes reprises', count($r['rows']), 2);
+check('CSV : la ligne illisible est écartée avec sa raison', count($r['skipped']), 1);
+check('CSV : en-têtes accentués reconnus', $r['rows'][0]['expect'], 'Rendez-vous');
+// Un chiffre sous soixante dans une colonne de cadence, c'est des minutes.
+check('CSV : 5 se lit comme cinq minutes', $r['rows'][0]['interval'], 300);
+check('CSV : « non » se lit comme une pause', $r['rows'][1]['enabled'], 0);
+check('CSV : nom d\'hôte nu complété en https', $r['rows'][1]['url'], 'https://etude.test/');
+$r2 = Foreign::parse("Nom,Ville\nDupont,Fréjus\n");
+check('CSV sans colonne d\'adresse : refus explicite', count($r2['errors']) >= 1, true);
+check('CSV sans colonne d\'adresse : aucune ligne inventée', count($r2['rows']), 0);
+$r3 = Foreign::parse("url\thostname\nhttps://tab.test/\tx\n");
+check('CSV en tabulations reconnu', count($r3['rows']), 1);
+
+// --- Ce qui doit échouer proprement -------------------------------------
+check('JSON tronqué : erreur annoncée, rien créé',
+    count(Foreign::parse('{"monitors":[{"friendly_name":"x"', 'uptimerobot')['rows']), 0);
+check('format imposé mais contenu vide', count(Foreign::parse('', 'kuma')['rows']), 0);
+$huge = str_repeat('a', Foreign::MAX_BYTES + 10);
+$big = Foreign::parse($huge);
+check('fichier trop gros : refusé avec un message', count($big['errors']) >= 1, true);
+check('fichier trop gros : rien lu', count($big['rows']), 0);
+check('source inconnue : message d\'aide', count(Foreign::parse('nawak')['errors']), 1);
+
+// --- Reprise complète en base -------------------------------------------
+// Le contrat : la configuration passe, l'historique non.
+$before = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks');
+$rows = Foreign::parse($exp['uptimerobot'])['rows'];
+$res = Uptimer\Importer::createMonitors($rows, ['group' => 'Reprise UR']);
+check('trois sondes créées', $res['created'], 3);
+$m = Uptimer\Db::one('SELECT * FROM monitors WHERE url = ?', ['https://vitrine.test/b']);
+check('la chaîne interdite est enregistrée', $m['forbid_string'], 'Erreur');
+check('la sonde importée en pause est bien en pause', (int)$m['enabled'], 0);
+check('la cadence de l\'export est appliquée', (int)$m['interval_sec'], 900);
+check('aucune mesure historique inventée',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks'), $before);
+check('aucun incident historique inventé',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ?', [(int)$m['id']]), 0);
+check('la disponibilité repart de zéro', $m['uptime_30d'], null);
+// Un deuxième import du même export ne duplique rien.
+$res2 = Uptimer\Importer::createMonitors($rows, ['group' => 'Reprise UR']);
+check('deuxième import : rien de dupliqué', $res2['created'], 0);
+check('et les sondes déjà présentes sont comptées', $res2['skipped'], 3);
+
+// Nettoyage.
+foreach (['https://vitrine.test/', 'https://vitrine.test/a', 'https://vitrine.test/b'] as $u) {
+    Uptimer\Db::q('DELETE FROM monitors WHERE url = ?', [$u]);
+}
+Uptimer\Db::q('DELETE FROM sites WHERE domain = ?', ['vitrine.test']);
+
+// =========================================================================
 section('Le pouls du parc : le pire cas décide');
 // =========================================================================
 // Une tranche est rouge dès qu'un seul site était hors service pendant cette

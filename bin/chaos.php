@@ -418,6 +418,53 @@ foreach (['1h', '24h', '7j', '30j', '90j', '120j', '180j', '365j', '', 'siècle'
 ok('toutes les périodes, y compris impossibles', $bad === 0, '48 requête(s)');
 
 // =========================================================================
+title('Exports d\'autres outils, déposés n\'importe comment');
+// =========================================================================
+// Le dépôt de fichier est une porte d'entrée : un utilisateur y mettra son
+// export, mais aussi une photo, un tableur, un fichier tronqué à mi-chemin.
+$upl = function (string $content, string $name) use ($APP, $jar, $csrf): array {
+    $tmpF = tempnam(sys_get_temp_dir(), 'chaos');
+    file_put_contents($tmpF, $content);
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $APP . '/index.php?p=import', CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HEADER => true, CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar,
+        CURLOPT_POST => true, CURLOPT_TIMEOUT => 30,
+        CURLOPT_POSTFIELDS => ['csrf' => $csrf, 'action' => 'preview', 'list' => '',
+                               'file' => new CURLFile($tmpF, 'application/octet-stream', $name)],
+    ]);
+    $raw = (string)curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hlen = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    curl_close($ch);
+    @unlink($tmpF);
+    return ['code' => $code, 'body' => substr($raw, $hlen), 'head' => substr($raw, 0, $hlen)];
+};
+$bad = 0;
+$files = [
+    ['{"monitors":[{"friendly_name":"tronqué"', 'tronque.json'],
+    ['{"monitorList":' . str_repeat('[', 400) . str_repeat(']', 400) . '}', 'profond.json'],
+    ["\x00\x01\x02\x03binaire", 'photo.jpg'],
+    [str_repeat("url,name\n", 40000), 'enorme.csv'],
+    ['url;name' . "\n" . str_repeat('a', 100000) . ';x', 'ligne-longue.csv'],
+    ['<?php system($_GET["c"]); ?>', 'porte.php'],
+    ['{"monitors":[{"friendly_name":"<script>alert(1)</script>","url":"https://x.test/","type":1}]}', 'xss.json'],
+    ['{"data":[{"attributes":{"url":"javascript:alert(1)","monitor_type":"status"}}]}', 'js.json'],
+    ['{"checks":[{"hostname":"' . str_repeat('x', 5000) . '","type":"http"}]}', 'hote-long.json'],
+    ['url,name' . "\n" . '=cmd|calc,injection', 'formule.csv'],
+    ['', 'vide.json'],
+];
+foreach ($files as [$content, $name]) {
+    $r = $upl($content, $name);
+    if (!$survives($r, $name)) { $bad++; echo "      import $name → HTTP {$r['code']}\n"; }
+    // Aucun contenu déposé ne doit ressortir exécutable ni non échappé.
+    if (str_contains($r['body'], '<?php') || str_contains($r['body'], '<script>alert(1)</script>')) {
+        $bad++; echo "      import $name → contenu renvoyé sans échappement\n";
+    }
+}
+ok('exports absurdes, tronqués ou hostiles : l\'écran tient', $bad === 0);
+
+// =========================================================================
 title('Points d\'entrée publics');
 // =========================================================================
 $bad = 0;

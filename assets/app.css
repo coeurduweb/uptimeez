@@ -918,3 +918,12 @@ fieldset.fs legend { padding: 0 6px; font-size: 12.5px; font-weight: 650;
 .vit-high { border-inline-start-color: var(--bad); }
 .vit-medium { border-inline-start-color: var(--warn); }
 .vit-low { border-inline-start-color: var(--border-strong); }
+
+/* Reprise d'un autre outil : ce qui n'a pas pu être repris se lit sans être
+   dramatisé. Ce n'est pas une erreur, c'est une limite annoncée. */
+.imp-skip { padding: var(--s3) var(--s4); border-top: 1px solid var(--border);
+            background: var(--surface-2); font-size: 13px; }
+.imp-skip > strong { display: block; margin-bottom: 6px; }
+.imp-skip ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.imp-skip li { display: flex; gap: var(--s3); flex-wrap: wrap; font-size: 12.5px; }
+.imp-skip-name { font-weight: 600; min-width: 12ch; }

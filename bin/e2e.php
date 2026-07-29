@@ -198,6 +198,22 @@ $req = function (string $path, ?array $post = null, bool $follow = false) use ($
     $loc  = preg_match('~^location:\s*(\S+)~im', $head, $m) ? trim($m[1]) : null;
     return ['code' => $code, 'body' => substr($raw, $hlen), 'head' => $head, 'location' => $loc, 'error' => $err];
 };
+/** POST multipart, pour tester un dépôt de fichier tel qu'un navigateur l'envoie. */
+$upload = function (string $path, array $fields, string $fileField, string $filePath) use ($APP, $jar): array {
+    $ch = curl_init();
+    $post = $fields;
+    $post[$fileField] = new CURLFile($filePath, 'application/octet-stream', basename($filePath));
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $APP . $path, CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true,
+        CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar,
+        CURLOPT_POST => true, CURLOPT_POSTFIELDS => $post, CURLOPT_TIMEOUT => 60,
+    ]);
+    $raw  = (string)curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hlen = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    curl_close($ch);
+    return ['code' => $code, 'body' => substr($raw, $hlen), 'head' => substr($raw, 0, $hlen)];
+};
 $csrf = function () use ($req): string {
     $r = $req('/index.php?p=dashboard');
     return preg_match('~csrf:\s*"([a-f0-9]+)"~', $r['body'], $m) ? $m[1] : '';
@@ -648,6 +664,104 @@ $out = shell_exec('UPTIMER_CONFIG=' . escapeshellarg($cfgFile) . ' '
     . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --report 2>&1');
 ok('cron --report s\'exécute sans erreur',
    $out !== null && !preg_match('~Fatal|Uncaught~', (string)$out), str_cut(trim((string)$out), 60));
+
+// =========================================================================
+title('Reprise d\'un parc surveillé ailleurs');
+// =========================================================================
+// Chaque export est réellement déposé sur l'écran d'import, comme le ferait
+// un navigateur, puis les sondes créées sont relues en base.
+$fixtures = $tmp . '/exports';
+@mkdir($fixtures, 0775, true);
+$exports = [
+  'uptimerobot' => ['UptimeRobot', 'ur.json', jenc(['stat' => 'ok', 'monitors' => [
+      ['id' => 1, 'friendly_name' => 'E2E Vitrine', 'url' => 'https://e2e-ur-a.test/', 'type' => 1,
+       'interval' => 600, 'status' => 2],
+      ['id' => 2, 'friendly_name' => 'E2E Interdit', 'url' => 'https://e2e-ur-b.test/', 'type' => 2,
+       'keyword_type' => 1, 'keyword_value' => 'Erreur fatale', 'interval' => 900, 'status' => 0],
+      ['id' => 3, 'friendly_name' => 'E2E Port', 'url' => 'mail.e2e.test', 'type' => 4],
+  ]])],
+  'kuma' => ['Uptime Kuma', 'kuma.json', jenc(['version' => '1.23.13', 'monitorList' => [
+      '1' => ['name' => 'E2E Kuma', 'url' => 'https://e2e-kuma.test/', 'type' => 'keyword',
+              'keyword' => 'ok', 'interval' => 120, 'active' => 1, 'maxretries' => 3],
+      '2' => ['name' => 'E2E Kuma port', 'type' => 'port', 'hostname' => 'db.e2e.test'],
+  ]])],
+  'betterstack' => ['Better Stack', 'bs.json', jenc(['data' => [
+      ['id' => '1', 'attributes' => ['url' => 'https://e2e-bs.test', 'pronounceable_name' => 'E2E BS',
+        'monitor_type' => 'keyword', 'required_keyword' => 'Salut', 'check_frequency' => 180]],
+  ]])],
+  'pingdom' => ['Pingdom', 'pd.json', jenc(['checks' => [
+      ['id' => 1, 'name' => 'E2E Pingdom', 'hostname' => 'e2e-pd.test', 'resolution' => 5,
+       'type' => ['http' => ['url' => '/etat', 'encryption' => true, 'shouldcontain' => 'En ligne']]],
+  ]])],
+  'site24x7' => ['Site24x7', 's24.json', jenc(['data' => [
+      ['monitor_id' => '1', 'display_name' => 'E2E S24', 'website' => 'https://e2e-s24.test/',
+       'monitor_type' => 'URL', 'check_frequency' => '300',
+       'matching_keyword' => ['severity' => 2, 'value' => 'Espace client']],
+  ]])],
+  'csv' => ['CSV', 'parc.csv', "Nom;URL;Intervalle;Mot-clé\nE2E CSV;https://e2e-csv.test;15;Accueil\n"],
+];
+foreach ($exports as $k => [$label, $file, $content]) {
+    file_put_contents($fixtures . '/' . $file, $content);
+}
+
+$fields = ['csrf' => $tok, 'action' => 'preview', 'list' => '', 'interval_sec' => '300', 'pages' => '2'];
+foreach ($exports as $k => [$label, $file, $content]) {
+    $r = $upload('/index.php?p=import', $fields, 'file', $fixtures . '/' . $file);
+    ok('export ' . $label . ' reconnu au dépôt',
+        $r['code'] === 200 && $has($r, 'repris de ' . $label), 'HTTP ' . $r['code']);
+    ok('aperçu rendu jusqu\'au bout pour ' . $label, $complete($r) && $noPhpError($r));
+}
+
+// Un export déposé sans rien coller : le champ texte ne doit pas être requis.
+$r = $upload('/index.php?p=import', $fields, 'file', $fixtures . '/ur.json');
+ok('le dépôt seul suffit, sans texte collé', $has($r, 'sondes principales à créer'));
+// Le pluriel dépend du nombre écarté, et l'apostrophe est échappée dans le HTML :
+// les deux formes sont acceptées.
+ok('ce qui n\'a pas d\'équivalent est listé',
+    (str_contains($r['body'], 'ne peuvent pas être reprises')
+      || str_contains($r['body'], 'ne peut pas être reprise'))
+    && $has($r, 'port TCP'));
+ok('la cadence reprise est signalée comme telle', $has($r, 'reprise de l&#039;export'));
+ok('une sonde en pause est annoncée avant création', $has($r, 'à créer, en pause'));
+
+// Création réelle depuis l'export UptimeRobot.
+$before = (int)$val('SELECT COUNT(*) FROM monitors');
+$r = $upload('/index.php?p=import', ['csrf' => $tok, 'action' => 'import', 'list' => '',
+    'interval_sec' => '300', 'pages' => '1', 'group' => 'Reprise E2E'],
+    'file', $fixtures . '/ur.json');
+ok('import confirmé depuis le fichier', $has($r, 'Reprise depuis UptimeRobot'),
+    preg_match('~Reprise depuis [^<.]{0,60}\.~', strip_tags($r['body']), $mm) ? $mm[0] : 'HTTP ' . $r['code']);
+$a = $db('SELECT * FROM monitors WHERE url = ?', ['https://e2e-ur-a.test/'])[0] ?? null;
+$b = $db('SELECT * FROM monitors WHERE url = ?', ['https://e2e-ur-b.test/'])[0] ?? null;
+ok('les deux sondes HTTP existent', $a !== null && $b !== null);
+ok('la cadence de l\'export est appliquée', (int)($a['interval_sec'] ?? 0) === 600,
+    ($a['interval_sec'] ?? '?') . ' s');
+ok('la chaîne interdite est enregistrée', ($b['forbid_string'] ?? '') === 'Erreur fatale');
+ok('la sonde en pause est créée en pause', (int)($b['enabled'] ?? 1) === 0);
+ok('la sonde de port n\'est pas créée',
+    (int)$val('SELECT COUNT(*) FROM monitors WHERE url LIKE ?', ['%mail.e2e.test%']) === 0);
+ok('le groupe demandé est appliqué',
+    (string)$val('SELECT group_name FROM sites WHERE id = ?', [(int)$a['site_id']]) === 'Reprise E2E');
+// L'historique n'est jamais importé : c'est le point de crédibilité.
+ok('aucune mesure historique créée',
+    (int)$val('SELECT COUNT(*) FROM checks WHERE monitor_id = ?', [(int)$a['id']]) === 0);
+ok('aucune disponibilité affichée sans mesure', $a['uptime_30d'] === null);
+
+// Un fichier hostile ne doit ni s'exécuter ni faire tomber la page.
+file_put_contents($fixtures . '/piege.json', "<?php echo 'PIRATE'; ?>\n{\"monitors\":[]}");
+$r = $upload('/index.php?p=import', $fields, 'file', $fixtures . '/piege.json');
+// Le contenu déposé est réaffiché dans la zone de saisie, c'est voulu : on voit
+// ce qu'on a envoyé. Ce qui compte est qu'il soit échappé et jamais exécuté.
+ok('un fichier contenant du PHP ne s\'exécute pas',
+    !str_contains($r['body'], '<?php') && $noPhpError($r));
+ok('et son contenu est réaffiché échappé', str_contains($r['body'], '&lt;?php'));
+ok('un format non reconnu le dit au lieu de deviner',
+    $has($r, 'Format non reconnu') || $has($r, 'Aucune adresse exploitable'));
+file_put_contents($fixtures . '/binaire.json', "\x00\x01\x02" . str_repeat("\xff", 200));
+$r = $upload('/index.php?p=import', $fields, 'file', $fixtures . '/binaire.json');
+ok('un fichier binaire est refusé sans erreur', $r['code'] === 200 && $noPhpError($r));
+$r = $upload('/index.php?p=import', $fields, 'file', $fixtures . '/parc.csv');
+ok('un CSV reste accepté après un fichier refusé', $has($r, 'repris de CSV'));
 
 // =========================================================================
 title('Écran d\'accueil : le pouls et la preuve');
