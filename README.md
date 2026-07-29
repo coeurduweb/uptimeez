@@ -480,20 +480,22 @@ A monitoring tool that lies to you is worse than no monitoring tool. So the dete
 real failures, and the interface is tested in a real browser.
 
 ```
-php bin/selftest.php      305 checks   detection logic, offline, no network needed
-php bin/bench.php          44 checks   real failures reproduced end to end (incl. badssl.com)
-php bin/e2e.php           116 checks   full user journey over real HTTP, isolated instance
-node bin/e2e-browser.mjs   57 checks   real Chromium: rendering, keyboard, mobile, contrast
-php bin/chaos.php          33 checks   825 hostile requests from a user doing everything wrong
-php bin/security.php       86 checks   OWASP Top 10, three depths, against a hostile local site
+php bin/selftest.php      694 checks   detection logic, offline, no network needed
+php bin/bench.php          73 checks   real failures reproduced end to end (incl. badssl.com)
+php bin/e2e.php           227 checks   full user journey over real HTTP, isolated instance
+node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
+php bin/chaos.php          35 checks   859 hostile requests from a user doing everything wrong
+php bin/security.php      105 checks   OWASP Top 10, three depths, against a hostile local site
+php bin/infra.php          61 checks   Uptimer itself down: what it says, and what it never leaks
+php bin/mysql.php          43 checks   the MySQL / MariaDB driver, on a real server
 php bin/mcp.php            n/a         MCP server for agents (27 of the checks above exercise it)
 php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, msgids, files
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**641 checks, all green**, plus zero dead code and a complete default catalogue.
+**1,343 checks, all green**, plus zero dead code and a complete default catalogue.
 
-Two suites deserve a word.
+Four suites deserve a word.
 
 **`bin/chaos.php`** plays a user who types badly, clicks everywhere, ignores every instruction, submits empty
 and monstrous forms, and actively tries to break things: SQL injection, XSS, path traversal, 5 KB inputs, arrays
@@ -508,6 +510,20 @@ consistent database afterwards.
 | **1, light** | Configuration, secrets, cookie flags, exposed surface, dependency surface, static injection review |
 | **2, deep** | OWASP Top 10 as *active* tests on a live isolated instance: unauthenticated access to every screen and API action, forced browsing to source files, path traversal, CSRF on every write, 11 SQL-injection payloads across 5 parameters, reflected / stored / attribute XSS, response-header injection, session fixation, brute-force lockout, logout invalidation |
 | **3, very deep** | What targets the collector itself: SSRF (a monitored site that redirects to `file://`), XXE through a hostile sitemap, a 40 MB response, pathological content against the regexes, constant-time token comparison, indistinguishable heartbeat responses, spreadsheet formula injection, dynamic SQL identifiers |
+
+**`bin/infra.php`** checks that Uptimer knows how to fall over. A tool whose job is to say "this site is broken,
+here is why" has no business returning a blank page when it is the one going down. Eight infrastructure failures
+are provoked for real — `data/` not writable, a corrupt database, a read-only file, a MySQL server that is off,
+stale credentials, a `config.php` that is unreadable, broken, or not returning an array — and each one has to
+satisfy three requirements: a correct response code (503 "try again", not 500), the cause **named** with the
+command that fixes it for the signed-in operator, and **nothing technical** for a public visitor. A status page
+must never display "Access denied for user 'someone'@'localhost'".
+
+**`bin/mysql.php`** runs the MySQL driver against a real server, with `ONLY_FULL_GROUP_BY` on. Every other suite
+works on SQLite, because a throwaway file makes each test isolated and instant; the consequence stayed invisible
+for a long time: the MySQL driver was documented, and offered by the installer, without a single line ever
+having run on it. Two defects were hiding there, both impossible to see on SQLite. The suite skips cleanly when
+no test database is configured: nobody needs a MySQL server to contribute.
 
 That is the point of having them.
 
@@ -529,11 +545,12 @@ uptimer/
 │   ├── Diagnose.php          23 causes → what it means, what to do
 │   ├── Tune.php              self-tuning thresholds + decisions journal
 │   ├── Heartbeat.php         the dead-man switch
+│   ├── Fail.php              Uptimer's own failure: cause, remedy, and nothing public
 │   └── I18n.php              10 languages, RTL, plural rules
 ├── lang/                     one catalogue per language
 ├── views/                    templates, no framework, no build
 ├── assets/                   one CSS file, one JS file, no dependency
-└── bin/                      the five test suites, demo data, i18n audit
+└── bin/                      the eight test suites, demo data, i18n audit
 ```
 
 **Design constraints, on purpose:**

@@ -26,6 +26,9 @@ use Uptimer\Runner;
 use Uptimer\Stats;
 
 $isCli = PHP_SAPI === 'cli';
+// La passe rend du texte : une erreur fatale doit rester lisible dans le mail
+// que le planificateur envoie.
+Uptimer\Fail::asText();
 
 if (!$isCli) {
     header('Content-Type: text/plain; charset=utf-8');
@@ -34,7 +37,14 @@ if (!$isCli) {
         http_response_code(403);
         exit("Accès refusé. Définissez une clé de cron dans les réglages, puis appelez cron.php?key=...\n");
     }
+    // La clé de cron est un secret d'exploitation : le détail technique peut sortir.
+    Uptimer\Fail::trusted();
     ignore_user_abort(true);
+    // La sortie est mise en tampon pour pouvoir répondre 500 sur échec : sinon
+    // le premier octet écrit fige le code à 200 et la supervision de la
+    // supervision ne voit jamais rien. La passe web est bornée à 25 s, il n'y a
+    // donc pas de risque de coupure par un proxy en attendant la fin.
+    ob_start();
 }
 
 if (!Config::isInstalled()) {
@@ -185,10 +195,19 @@ try {
 } catch (Throwable $e) {
     $out('ERREUR : ' . $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')');
     try { Db::setSetting('cron_last_error', date('Y-m-d H:i:s') . ' : ' . $e->getMessage()); } catch (Throwable) {}
-    if ($isCli) exit(1);
+    $failed = true;
+    if ($isCli) { flock($lock, LOCK_UN); fclose($lock); exit(1); }
 } finally {
     flock($lock, LOCK_UN);
     fclose($lock);
 }
 
 $out(sprintf('Terminé en %.1fs', microtime(true) - $t0));
+
+// Un appel web qui a échoué doit le dire par son code de réponse : c'est ce que
+// lit un « curl -fsS » de surveillance, et ce qui déclenche le mail du
+// planificateur. Une passe partielle reste un succès.
+if (!$isCli) {
+    if (!empty($failed)) http_response_code(500);
+    ob_end_flush();
+}

@@ -24,6 +24,11 @@ spl_autoload_register(function (string $class): void {
 require_once UPTIMER_ROOT . '/src/helpers.php';
 
 use Uptimer\Config;
+use Uptimer\Fail;
+
+// Avant Config::load() : un config.php cassé est justement une des pannes que
+// cette garde doit savoir expliquer.
+Fail::install();
 
 Config::load();
 date_default_timezone_set(Config::get('app.timezone', 'Europe/Paris'));

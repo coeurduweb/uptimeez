@@ -41,7 +41,7 @@ function ui_files(): array
     return array_values(array_filter($out, 'is_file'));
 }
 
-/** Extrait les msgid de tous les appels t()/te()/tn()/tne()/hint(). */
+/** Extrait les msgid de tous les appels t()/te()/tn()/tne()/hint()/Fail::tr(). */
 function extract_msgids(array $files): array
 {
     $ids = [];
@@ -55,7 +55,10 @@ function extract_msgids(array $files): array
         $len = strlen($src);
         // Le mot doit être isolé : « complète (… » n'est pas un appel à te().
         // \b ne suffit pas, un octet accentué compte comme frontière de mot.
-        $call = '~(?:\bI18n::[tn]|(?<![\w\x80-\xFF$>\-])(?:te|t|tne|tn|hint))\s*\(~';
+        // « tr » est le traducteur de Fail : même rôle que t(), mais incapable
+        // d'échouer, parce qu'il sert à afficher une panne. Ses phrases
+        // appartiennent aux catalogues comme les autres.
+        $call = '~(?:\bI18n::[tn]|(?<![\w\x80-\xFF$>\-])(?:te|tne|tn|hint|tr|t))\s*\(~';
         if (preg_match_all($call, $src, $mm, PREG_OFFSET_CAPTURE)) {
             foreach ($mm[0] as [$open, $at]) {
                 $i = $at + strlen($open);

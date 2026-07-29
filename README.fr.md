@@ -491,20 +491,22 @@ Un outil de surveillance qui vous ment est pire que pas d'outil du tout. La logi
 testée contre de vraies pannes, et l'interface est testée dans un vrai navigateur.
 
 ```
-php bin/selftest.php      305 contrôles   logique de détection, hors ligne, sans réseau
-php bin/bench.php          44 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
-php bin/e2e.php           116 contrôles   parcours complet en HTTP réel, instance isolée
-node bin/e2e-browser.mjs   57 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
-php bin/chaos.php          33 contrôles   825 requêtes hostiles d'un utilisateur qui fait tout de travers
-php bin/security.php       86 contrôles   OWASP Top 10, trois profondeurs, face à un site hostile local
+php bin/selftest.php      694 contrôles   logique de détection, hors ligne, sans réseau
+php bin/bench.php          73 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
+php bin/e2e.php           227 contrôles   parcours complet en HTTP réel, instance isolée
+node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
+php bin/chaos.php          35 contrôles   859 requêtes hostiles d'un utilisateur qui fait tout de travers
+php bin/security.php      105 contrôles   OWASP Top 10, trois profondeurs, face à un site hostile local
+php bin/infra.php          61 contrôles   Uptimer en panne : ce qu'il dit, et ce qu'il ne divulgue pas
+php bin/mysql.php          43 contrôles   le pilote MySQL / MariaDB, sur un vrai serveur
 php bin/mcp.php            n/a            serveur MCP pour les agents (27 des contrôles ci-dessus le testent)
 php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, msgid et fichiers inutilisés
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**641 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**1 343 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
-Deux suites méritent un mot.
+Quatre suites méritent un mot.
 
 **`bin/chaos.php`** joue un utilisateur qui écrit mal, clique partout, ne suit aucune consigne, envoie des
 formulaires vides ou monstrueux, et cherche activement à casser : injection SQL, XSS, traversée de répertoire,
@@ -519,6 +521,21 @@ que l'utilisateur a tapé réinjecté dans le HTML, et une base cohérente à l'
 | **1, léger** | Configuration, secrets, drapeaux de cookie, surface exposée, surface de dépendances, revue statique des injections |
 | **2, profond** | L'OWASP Top 10 en tests *actifs* sur une instance réelle isolée : accès non authentifié à chaque écran et chaque action d'API, accès direct aux fichiers source, traversée de chemin, CSRF sur chaque écriture, 11 charges d'injection SQL sur 5 paramètres, XSS réfléchie / stockée / par attribut, injection d'en-tête de réponse, fixation de session, verrou de force brute, invalidation à la déconnexion |
 | **3, très profond** | Ce qui vise le collecteur lui-même : SSRF (un site surveillé qui redirige vers `file://`), XXE par un sitemap hostile, réponse de 40 Mo, contenu pathologique face aux expressions régulières, comparaison de jeton en temps constant, réponses de battement indiscernables, injection de formule dans le tableur, identifiants SQL dynamiques |
+
+**`bin/infra.php`** vérifie qu'Uptimer sait tomber. Un outil dont le métier est de dire « ce site est cassé,
+voilà pourquoi » n'a pas le droit de rendre une page blanche quand c'est lui qui tombe. Huit pannes
+d'infrastructure sont provoquées pour de vrai — dossier `data/` non inscriptible, base corrompue, fichier en
+lecture seule, serveur MySQL éteint, identifiants périmés, `config.php` illisible, cassé, ou ne renvoyant pas un
+tableau — et pour chacune trois choses sont exigées : un code de réponse juste (503 « réessayez » et non 500),
+la cause **nommée** avec la commande qui la répare pour l'exploitant connecté, et **rien de technique** pour un
+visiteur public. Une page de statut ne doit jamais afficher « Access denied for user 'untel'@'localhost' ».
+
+**`bin/mysql.php`** fait tourner le pilote MySQL sur un vrai serveur, en mode `ONLY_FULL_GROUP_BY`. Les autres
+suites travaillent sur SQLite, parce qu'un fichier jetable rend chaque test isolé et instantané ; la
+conséquence est restée invisible longtemps : le pilote MySQL était documenté et proposé par l'installeur sans
+qu'une ligne n'ait jamais été exécutée dessus. Deux défauts s'y cachaient, tous deux impossibles à voir sur
+SQLite. Cette suite est ignorée proprement quand aucune base de test n'est configurée : personne n'a besoin
+d'un serveur MySQL pour contribuer.
 
 C'est exactement à ça qu'elles servent.
 
@@ -540,11 +557,12 @@ uptimer/
 │   ├── Diagnose.php          23 causes → ce que ça veut dire, quoi faire
 │   ├── Tune.php              seuils auto-ajustés + journal des décisions
 │   ├── Heartbeat.php         le dead-man switch
+│   ├── Fail.php              la panne d'Uptimer lui-même : cause, remède, et rien de public
 │   └── I18n.php              10 langues, RTL, règles de pluriel
 ├── lang/                     un catalogue par langue
 ├── views/                    gabarits, aucun framework, aucune compilation
 ├── assets/                   un fichier CSS, un fichier JS, zéro dépendance
-└── bin/                      les cinq suites de tests, la démo, l'audit i18n
+└── bin/                      les huit suites de tests, la démo, l'audit i18n
 ```
 
 **Contraintes de conception, assumées :**

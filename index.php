@@ -102,6 +102,9 @@ if ($page === 'login') {
 }
 
 Auth::requireLogin();
+// À partir d'ici le visiteur est l'exploitant : une panne d'infrastructure peut
+// lui montrer les chemins et la commande qui la répare.
+Uptimer\Fail::trusted();
 Db::migrate();
 
 // --- Actions POST --------------------------------------------------------

@@ -158,7 +158,11 @@ function human_bytes(?int $b): string
         return \Uptimer\Ui::num($r, $dec);
     };
     if ($b < 1048576) return $show($b / 1024, $b < 10240 ? 1 : 0) . ' Ko';
-    return $show($b / 1048576, 2) . ' Mo';
+    // L'échelle monte jusqu'au téraoctet : l'espace disque libre et un an
+    // d'historique se comptent en gigaoctets, et « 14 346 Mo » ne se lit pas.
+    if ($b < 1073741824)    return $show($b / 1048576, 2) . ' Mo';
+    if ($b < 1099511627776) return $show($b / 1073741824, 2) . ' Go';
+    return $show($b / 1099511627776, 2) . ' To';
 }
 
 /** Normalise une saisie utilisateur en URL http(s). */

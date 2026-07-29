@@ -25,11 +25,18 @@ php bin/security.php              # three depths, OWASP Top 10 references
 php bin/security.php --niveau=1   # configuration, secrets, exposed surface
 php bin/security.php --niveau=2   # active OWASP tests on an isolated instance
 php bin/security.php --niveau=3   # SSRF, XXE, bombs, timing, formula injection
-php bin/chaos.php                 # 825 hostile requests; nothing may break
+php bin/chaos.php                 # 859 hostile requests; nothing may break
+php bin/infra.php                 # a broken install must not leak paths or credentials
 ```
 
 Levels 2 and 3 build an isolated instance and a deliberately hostile local site. Nothing touches your
 installation and nothing leaves your machine.
+
+**A failure of Uptimer itself discloses nothing publicly.** When the storage layer is down, the status page, the
+client space and the heartbeat endpoint answer 503 with a neutral sentence: no file path, no database engine, no
+database user name, and no PHP stack trace. The cause, the remedy and the trace are shown to the signed-in
+operator only, and written to `data/erreurs.log`. `bin/infra.php` provokes eight real infrastructure failures and
+asserts the non-disclosure for each one.
 
 ## Known and accepted design decisions
 

@@ -16,11 +16,15 @@ use Uptimer\Runner;
 use Uptimer\Stats;
 use Uptimer\Ui;
 
+// Un appelant JSON qui reçoit une page HTML d'erreur n'affiche rien du tout.
+Uptimer\Fail::asJson();
+
 if (!Config::isInstalled()) json_out(['error' => 'not_installed'], 503);
 
 Auth::start();
 I18n::init();
 if (!Auth::check()) json_out(['error' => 'auth', 'message' => t('Session expirée, rechargez la page.')], 401);
+Uptimer\Fail::trusted();
 Db::migrate();
 
 $action  = (string)($_REQUEST['action'] ?? '');

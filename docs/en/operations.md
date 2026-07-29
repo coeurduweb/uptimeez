@@ -44,13 +44,15 @@ connections, lower *simultaneous requests* to 5 in the settings.
 ## Command line
 
 ```bash
-php bin/selftest.php          # 305 checks: detection logic, offline, no network
-php bin/bench.php             # 44 checks: real failures reproduced end to end
-php bin/e2e.php               # 116 checks: full user journey, isolated instance
-node bin/e2e-browser.mjs      # 57 checks: real Chromium
-php bin/chaos.php             # 33 checks: 825 hostile requests, nothing must break
+php bin/selftest.php          # 694 checks: detection logic, offline, no network
+php bin/bench.php             # 73 checks: real failures reproduced end to end
+php bin/e2e.php               # 227 checks: full user journey, isolated instance
+node bin/e2e-browser.mjs      # 105 checks: real Chromium
+php bin/chaos.php             # 35 checks: 859 hostile requests, nothing must break
 php bin/chaos.php --long      # adds the bulky payloads
-php bin/security.php          # 86 checks: OWASP Top 10, three depths
+php bin/infra.php             # 61 checks: Uptimer down, what it says and what it withholds
+php bin/mysql.php             # 43 checks: the MySQL driver, skipped without a test database
+php bin/security.php          # 105 checks: OWASP Top 10, three depths
 php bin/security.php --niveau=1   # light only: configuration, secrets, surface
 php bin/security.php --niveau=2   # deep only: active OWASP tests
 php bin/security.php --niveau=3   # very deep only: SSRF, XXE, bombs, timing
@@ -66,6 +68,30 @@ node bin/shots.mjs            # regenerate the documentation screenshots
 
 Everything runs offline except `bin/bench.php` (which deliberately reaches badssl.com to verify certificate
 detection against real broken certificates).
+
+`bin/mysql.php` needs a test database, which it **empties on every run**. Without one it skips cleanly, and the
+rest of the product stays covered by the other suites, on SQLite:
+
+```bash
+UPTIMER_TEST_MYSQL_NAME=uptimer_test UPTIMER_TEST_MYSQL_USER=root \
+UPTIMER_TEST_MYSQL_PASS=secret php bin/mysql.php
+```
+
+### When Uptimer itself goes down
+
+A storage-layer failure no longer shows a blank page. The screen names the cause and gives the command that
+fixes it: `data/` not writable, a database corrupted by an FTP transfer in text mode, a read-only file, a full
+disk, a locked database, a MySQL server that is off, stale credentials, a missing database, an overloaded
+server, a broken `config.php`. The response code is a 503 with `Retry-After`, not a 500: the failure is
+temporary by nature.
+
+Two rules govern that screen:
+
+- **the detail is for the operator only.** A status page, a client space and a heartbeat are public: they answer
+  503 with a neutral sentence, no path, no engine, no database user name;
+- **the full detail goes to `data/erreurs.log`**, with the stack trace, capped at 2 MB so a failure in a loop
+  does not fill the very disk it may be reporting on. If that folder is precisely the problem, the message
+  falls back to PHP's own error log.
 
 ### Demo mode
 

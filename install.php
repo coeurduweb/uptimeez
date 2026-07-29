@@ -8,6 +8,9 @@ declare(strict_types=1);
 require __DIR__ . '/src/bootstrap.php';
 
 \Uptimer\I18n::init();   // l'installeur parle déjà la langue du navigateur
+// L'installeur montre déjà les chemins et les droits : c'est précisément son
+// travail de diagnostic. Une panne y sort donc en clair.
+\Uptimer\Fail::trusted();
 
 use Uptimer\Config;
 use Uptimer\Db;

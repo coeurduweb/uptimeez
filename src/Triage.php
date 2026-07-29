@@ -218,7 +218,7 @@ final class Triage
                     (SELECT AVG(d.avg_ms) FROM daily_stats d
                        WHERE d.monitor_id = m.id AND d.day >= ? AND d.avg_ms IS NOT NULL) AS recent,
                     (SELECT AVG(d.avg_ms) FROM daily_stats d
-                       WHERE d.monitor_id = m.id AND d.day < ? AND d.day >= ? AND d.avg_ms IS NOT NULL) AS before
+                       WHERE d.monitor_id = m.id AND d.day < ? AND d.day >= ? AND d.avg_ms IS NOT NULL) AS earlier
              FROM monitors m LEFT JOIN sites s ON s.id = m.site_id
              WHERE m.enabled = 1 AND m.status <> 'down'",
             [date('Y-m-d', time() - 3 * 86400), date('Y-m-d', time() - 3 * 86400), date('Y-m-d', time() - 10 * 86400)]
@@ -226,7 +226,7 @@ final class Triage
         $out = [];
         foreach ($rows as $m) {
             $recent = $m['recent'] !== null ? (float)$m['recent'] : null;
-            $before = $m['before'] !== null ? (float)$m['before'] : null;
+            $before = $m['earlier'] !== null ? (float)$m['earlier'] : null;
             if ($recent === null || $before === null || $before <= 0) continue;
             if ($recent < self::SLOWDOWN_MIN_MS) continue;
             $pct = (int)round(($recent / $before - 1) * 100);

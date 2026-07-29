@@ -25,7 +25,20 @@ final class Config
         self::$data = is_file($sample) ? (require $sample) : [];
         if (is_file($file)) {
             self::$installed = true;
-            self::$data = self::merge(self::$data, (require $file));
+            // Trois défauts distincts se ressemblaient à l'usage : fichier
+            // illisible, fichier syntaxiquement cassé, fichier qui ne renvoie
+            // pas un tableau. Les trois donnaient une page blanche. On les
+            // nomme, et le nom contient « config.php » pour que le diagnostic
+            // les reconnaisse.
+            if (!is_readable($file)) {
+                throw new \RuntimeException('config.php existe mais n\'est pas lisible par le serveur web : ' . $file);
+            }
+            $loaded = require $file;
+            if (!is_array($loaded)) {
+                throw new \RuntimeException('config.php doit renvoyer un tableau, or il renvoie '
+                    . get_debug_type($loaded) . ' : ' . $file);
+            }
+            self::$data = self::merge(self::$data, $loaded);
         }
     }
 

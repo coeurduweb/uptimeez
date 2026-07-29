@@ -20,6 +20,10 @@ use Uptimer\Heartbeat;
 header('Content-Type: text/plain; charset=utf-8');
 header('Cache-Control: no-store');
 
+// Le script appelant lit du texte, pas du HTML. Et la clé de battement n'est pas
+// une authentification d'exploitant : aucun détail technique ne sort d'ici.
+Uptimer\Fail::asText();
+
 if (!Config::isInstalled()) {
     http_response_code(503);
     exit(t('{app} n\'est pas installé.') . "\n");
