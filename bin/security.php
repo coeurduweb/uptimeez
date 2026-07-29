@@ -164,8 +164,22 @@ ok('A06', 'aucune dépendance à installer',
    !is_file($ROOT . '/composer.json') && !is_file($ROOT . '/package.json'));
 ok('A06', 'aucun code tiers embarqué (vendor, node_modules)',
    !is_dir($ROOT . '/vendor') && !is_dir($ROOT . '/node_modules'));
-ok('A06', 'version minimale de PHP vérifiée au démarrage',
-   str_contains((string)file_get_contents($ROOT . '/src/bootstrap.php'), 'PHP_VERSION_ID < 80100'));
+// Ce contrôle codait en dur « < 80100 », ce qui en faisait un miroir de la
+// constante plutôt qu'un test : relever légitimement le plancher ressemblait à
+// une régression de sécurité, et laisser le plancher sur une version en fin de
+// vie ne déclenchait rien. Il vérifie donc maintenant les deux choses qui
+// comptent : qu'un plancher existe, et qu'il porte sur une version qui reçoit
+// encore des correctifs de sécurité.
+//
+// À relever quand PHP 8.2 sortira du support de sécurité (31/12/2026). L'échec
+// de ce contrôle est alors le rappel, et c'est voulu.
+$PHP_FLOOR_MIN = 80200;
+$boot = (string)file_get_contents($ROOT . '/src/bootstrap.php');
+$hasFloor = (bool)preg_match('~PHP_VERSION_ID\s*<\s*(\d{5})~', $boot, $mFloor);
+ok('A06', 'un plancher de version PHP est vérifié au démarrage', $hasFloor);
+ok('A06', 'et ce plancher reçoit encore des correctifs de sécurité',
+   $hasFloor && (int)$mFloor[1] >= $PHP_FLOOR_MIN,
+   $hasFloor ? 'plancher ' . $mFloor[1] . ', minimum attendu ' . $PHP_FLOOR_MIN : 'aucun plancher');
 
 title('A09 Journalisation');
 ok('A09', 'les tentatives de connexion sont enregistrées',

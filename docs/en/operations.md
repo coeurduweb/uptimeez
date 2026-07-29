@@ -117,6 +117,21 @@ node bin/shots.mjs            # regenerate the documentation screenshots
 Everything runs offline except `bin/bench.php` (which deliberately reaches badssl.com to verify certificate
 detection against real broken certificates).
 
+### Verified PHP versions
+All ten suites run on **8.2, 8.3, 8.4 and 8.5**, with `error_reporting` set to `E_ALL`: zero
+failures and no deprecation raised on any of them.
+
+The floor is **8.2**, not 8.1: security support for 8.1 ended on 31 December 2025 and the
+version is no longer distributed by the repositories, so the requirement could not be verified.
+A requirement you cannot exercise is not a requirement.
+
+There is **no ceiling**: the code depends on nothing that has since been removed, and nothing
+stops you running it on the newest release. That is in fact what we do on our own servers.
+
+```bash
+for V in 8.2 8.3 8.4 8.5; do php$V bin/selftest.php; done   # the matrix, in one line
+```
+
 `bin/mysql.php` needs a test database, which it **empties on every run**. Without one it skips cleanly, and the
 rest of the product stays covered by the other suites, on SQLite:
 

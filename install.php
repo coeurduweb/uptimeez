@@ -21,7 +21,7 @@ $notice = null;
 
 // --- Diagnostic de l'environnement ---------------------------------------
 $checks = [];
-$checks[] = [t('PHP 8.1 ou plus récent'), PHP_VERSION_ID >= 80100, PHP_VERSION];
+$checks[] = [t('PHP 8.2 ou plus récent'), PHP_VERSION_ID >= 80200, PHP_VERSION];
 foreach (['curl' => t('requêtes HTTP'), 'pdo' => t('base de données'), 'openssl' => 'certificats SSL',
           'mbstring' => 'texte UTF-8', 'json' => t('échanges JSON')] as $ext => $why) {
     $checks[] = ['Extension ' . $ext . ' (' . $why . ')', extension_loaded($ext), extension_loaded($ext) ? t('présente') : t('absente')];

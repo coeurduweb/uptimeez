@@ -684,7 +684,7 @@ return [
     'Ouvrir le site dans un onglet' => 'Open the site in a tab',
     'PANNE GROUPÉE' => 'GROUPED OUTAGE',
     'PDOException' => 'PDOException',
-    'PHP 8.1 ou plus récent' => 'PHP 8.1 or newer',
+    'PHP 8.2 ou plus récent' => 'PHP 8.2 or newer',
     'Page' => 'Page',
     'Page de statut non activée.' => 'Status page not enabled.',
     'Page en noindex' => 'Page set to noindex',

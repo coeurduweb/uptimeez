@@ -391,7 +391,8 @@ without a full-time human watching dashboards.**
 
 ## Install in 60 seconds
 
-**Requirements:** PHP 8.1 or newer with `curl`, `pdo_sqlite` (or `pdo_mysql`) and `json`. That is the whole
+**Requirements:** PHP 8.2 or newer with `curl`, `pdo_sqlite` (or `pdo_mysql`) and `json`. Verified on 8.2, 8.3,
+8.4 and 8.5, by running all ten suites on each. That is the whole
 list. No Composer, no Node, no Docker, no build step.
 
 ```bash

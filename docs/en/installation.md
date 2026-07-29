@@ -11,7 +11,7 @@ upload files by FTP and add a cron entry, you can run it.
 
 | | |
 |---|---|
-| **PHP** | 8.1 or newer, CLI *and* web |
+| **PHP** | 8.2 or newer, CLI *and* web. Verified on 8.2, 8.3, 8.4 and 8.5 |
 | **Extensions** | `curl`, `json`, `mbstring`, and `pdo_sqlite` (default) or `pdo_mysql` |
 | **Write access** | the `data/` folder, and the root folder once (to create `config.php`) |
 | **Cron** | one entry per minute : or any external scheduler able to call a URL |

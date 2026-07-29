@@ -11,7 +11,7 @@ savez envoyer des fichiers par FTP et ajouter une tâche cron, vous savez l'inst
 
 | | |
 |---|---|
-| **PHP** | 8.1 ou plus récent, en ligne de commande *et* en web |
+| **PHP** | 8.2 ou plus récent, en ligne de commande *et* en web. Vérifié sur 8.2, 8.3, 8.4 et 8.5 |
 | **Extensions** | `curl`, `json`, `mbstring`, et `pdo_sqlite` (par défaut) ou `pdo_mysql` |
 | **Droits d'écriture** | le dossier `data/`, et la racine une fois (pour créer `config.php`) |
 | **Cron** | une ligne par minute : ou n'importe quel planificateur capable d'appeler une URL |

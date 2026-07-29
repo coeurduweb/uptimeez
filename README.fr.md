@@ -401,7 +401,8 @@ chose : **garder en vie les sites des autres sans qu'un humain passe sa journée
 
 ## Installation en 60 secondes
 
-**Prérequis :** PHP 8.1 ou plus récent avec `curl`, `pdo_sqlite` (ou `pdo_mysql`) et `json`. C'est toute la
+**Prérequis :** PHP 8.2 ou plus récent avec `curl`, `pdo_sqlite` (ou `pdo_mysql`) et `json`. Vérifié sur 8.2,
+8.3, 8.4 et 8.5, en passant les dix suites sur chacune. C'est toute la
 liste. Pas de Composer, pas de Node, pas de Docker, aucune étape de compilation.
 
 ```bash
