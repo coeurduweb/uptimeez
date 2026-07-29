@@ -6,7 +6,7 @@
 declare(strict_types=1);
 
 define('UPTIMER_ROOT', dirname(__DIR__));
-define('UPTIMER_VERSION', '1.0.0');
+define('UPTIMER_VERSION', '1.0.1');
 
 if (PHP_VERSION_ID < 80100) {
     http_response_code(500);

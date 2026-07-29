@@ -511,9 +511,19 @@ function handle_post(): ?array
             return ['ok', 'Incident clos manuellement.'];
 
         case 'maintenance_cron':
-            $done = ['purge' => Stats::purge(), 'rollup' => Stats::rollup(), 'stats' => Stats::refreshStale(0, 500)];
-            return ['ok', t('Entretien exécuté : {purged} mesures purgées, {days} jours consolidés, {stats} agrégats recalculés.',
-                ['purged' => $done['purge'], 'days' => $done['rollup'], 'stats' => $done['stats']])];
+            // Budget serré : c'est une action déclenchée depuis un écran, elle
+            // doit rendre la main. Une purge trop grosse pour ce budget est
+            // reprise par les passes planifiées, et on le dit.
+            $done = ['purge' => Stats::purge(null, 3.0), 'rollup' => Stats::rollup(),
+                     'back' => Stats::rollupMissing(3), 'stats' => Stats::refreshStale(0, 500)];
+            $freed = Db::compact(2.0)['freed_bytes'];
+            $msg = t('Entretien exécuté : {purged} mesures purgées, {days} jours consolidés, {stats} agrégats recalculés.',
+                ['purged' => $done['purge'], 'days' => $done['rollup'] + $done['back'], 'stats' => $done['stats']]);
+            if ($freed > 0) $msg .= ' ' . t('{size} rendus au disque.', ['size' => human_bytes($freed)]);
+            if (Stats::purgePending()) {
+                $msg .= ' ' . t('La purge n\'est pas terminée : les passes planifiées la reprendront.');
+            }
+            return ['ok', $msg];
     }
     return null;
 }

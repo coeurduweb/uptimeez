@@ -1026,6 +1026,114 @@ check('et ne cache pas une vraie panne',
     Uptimer\Runner::statusMatches(503, 'n\'importe quoi'), false);
 
 // =========================================================================
+section('Durée : un an d\'historique, et la place rendue');
+// =========================================================================
+// Trois défauts sortis d'une mesure sur 300 sondes et 5,2 millions de mesures.
+// Aucun n'était visible sur une base neuve, et les trois avaient des
+// conséquences en exploitation réelle.
+
+$prevDbV = Uptimer\Config::get('db.sqlite');
+$tmpV = sys_get_temp_dir() . '/self-duree-' . bin2hex(random_bytes(4)) . '.sqlite';
+Uptimer\Db::disconnect();
+Uptimer\Config::set('db.sqlite', $tmpV);
+Uptimer\Db::migrate();
+
+// --- 1. L'ordre des PRAGMA de connexion ----------------------------------
+// « auto_vacuum » ne se règle qu'avant la première écriture de l'en-tête, et
+// « journal_mode = WAL » écrit cet en-tête. Placé après lui, le réglage était
+// accepté sans effet : aucune base créée par Uptimer ne rendait jamais l'espace
+// d'une purge. Une ligne de contrôle l'aurait vu dès le premier jour.
+check('une base neuve est en vacuum incrémental',
+    (int)Uptimer\Db::pdo()->query('PRAGMA auto_vacuum')->fetchColumn(), 2);
+check('et en mode WAL',
+    strtolower((string)Uptimer\Db::pdo()->query('PRAGMA journal_mode')->fetchColumn()), 'wal');
+
+// --- 2. Une purge ne tient jamais le verrou longtemps --------------------
+// Ramener la conservation de 60 à 7 jours supprimait des millions de lignes en
+// une seule requête : 51 secondes de verrou d'écriture mesurées, pendant
+// lesquelles chaque page échouait sur « database is locked » (busy_timeout vaut
+// 8 secondes). La purge travaille donc par tranches et note ce qui reste.
+$midV = Uptimer\Db::insert('monitors', ['name' => 'Durée', 'url' => 'https://duree.test/',
+    'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300,
+    'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299', 'enabled' => 1,
+    'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'next_check_at' => now()]);
+$pdoV = Uptimer\Db::pdo();
+$pdoV->beginTransaction();
+$insV = $pdoV->prepare('INSERT INTO checks (monitor_id, ts, state, total_ms) VALUES (?,?,?,?)');
+// 60 jours à raison de 24 mesures par jour : assez pour dépasser une tranche.
+for ($d = 60; $d >= 0; $d--) {
+    for ($h = 0; $h < 24; $h++) {
+        $insV->execute([$midV, date('Y-m-d H:i:s', time() - $d * 86400 - $h * 3600), 'up', 150 + $h]);
+    }
+}
+$pdoV->commit();
+$totalV = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks');
+check('mesures en place pour la mesure', $totalV > 1400, true);
+
+// Budget volontairement minuscule et tranche forcée : la purge doit rendre la
+// main avant d'avoir fini, et le dire.
+// Tranche réduite : la reprise s'éprouve sans fabriquer vingt mille mesures.
+$firstV = Uptimer\Stats::purge(7, 0.0, 300);
+check('un budget nul supprime quand même une tranche', $firstV, 300);
+check('et signale qu\'il reste du travail', Uptimer\Stats::purgePending(), true);
+$roundsV = 0;
+while (Uptimer\Stats::purgePending() && $roundsV < 50) { Uptimer\Stats::purge(7, 0.0, 300); $roundsV++; }
+check('les passes suivantes la terminent', Uptimer\Stats::purgePending(), false);
+check('et il en a fallu plusieurs', $roundsV > 1, true);
+$leftV = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks WHERE ts < ?',
+    [date('Y-m-d H:i:s', time() - 7 * 86400)]);
+check('plus une mesure au-delà de la conservation', $leftV, 0);
+check('les mesures récentes sont intactes',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks') > 100, true);
+// Conservation illimitée : rien ne doit disparaître, et rien ne reste en attente.
+$keptV = (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks');
+check('conservation illimitée ne purge rien', Uptimer\Stats::purge(0), 0);
+check('et ne laisse pas de travail en attente', Uptimer\Stats::purgePending(), false);
+check('les mesures sont toujours là', (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks'), $keptV);
+
+// --- 3. Un entretien manqué se rattrape ---------------------------------
+// La consolidation ne portait que sur la veille, et ne tournait qu'à 3 h du
+// matin. Une machine éteinte la nuit laissait donc des trous définitifs dans la
+// frise 30 jours, puisque les mesures unitaires finissaient purgées.
+Uptimer\Db::q('DELETE FROM daily_stats');
+$pdoV->beginTransaction();
+for ($d = 5; $d >= 1; $d--) {
+    for ($h = 0; $h < 24; $h++) {
+        $insV->execute([$midV, date('Y-m-d H:i:s', time() - $d * 86400 - $h * 3600), 'up', 200 + $h]);
+    }
+}
+$pdoV->commit();
+check('aucun jour consolidé au départ', (int)Uptimer\Db::val('SELECT COUNT(*) FROM daily_stats'), 0);
+// Le rattrapage est borné par appel : il ne monopolise pas une passe de cron.
+check('le rattrapage est plafonné à ce qu\'on lui demande', Uptimer\Stats::rollupMissing(2), 2);
+check('et il converge en quelques passes', (function () {
+    $tours = 0;
+    while (Uptimer\Stats::rollupMissing(5) > 0 && $tours < 30) $tours++;
+    return $tours < 30;
+})(), true);
+check('tous les jours mesurés ont leur résumé',
+    (int)Uptimer\Db::val('SELECT COUNT(DISTINCT day) FROM daily_stats') >= 5, true);
+check('un passage de plus ne refait pas le travail', Uptimer\Stats::rollupMissing(5), 0);
+// Un jour sans aucune mesure n'a rien à consolider : il ne doit pas produire
+// une ligne à zéro, qui se lirait comme « ce jour-là le site était injoignable ».
+$holeV = date('Y-m-d', time() - 40 * 86400);
+check('un jour sans mesure ne fabrique pas un faux zéro',
+    Uptimer\Db::val('SELECT 1 FROM daily_stats WHERE day = ?', [$holeV]), null);
+
+// --- 4. La place revient au disque --------------------------------------
+$cmpV = Uptimer\Db::compact(1.0);
+check('le compactage ne réclame pas de VACUUM sur une base neuve', $cmpV['needs_vacuum'], false);
+$vacV = Uptimer\Db::vacuum();
+check('le VACUUM complet aboutit', $vacV['ok'], true);
+check('et laisse la base en vacuum incrémental',
+    (int)Uptimer\Db::pdo()->query('PRAGMA auto_vacuum')->fetchColumn(), 2);
+
+Uptimer\Db::disconnect();
+Uptimer\Config::set('db.sqlite', $prevDbV);
+Uptimer\Db::migrate();
+foreach ([$tmpV, $tmpV . '-wal', $tmpV . '-shm'] as $f) @unlink($f);
+
+// =========================================================================
 section('Traductions : aucune phrase laissée en arrière');
 // =========================================================================
 // L'anglais est la langue par défaut du produit : une phrase qui retombe sur le

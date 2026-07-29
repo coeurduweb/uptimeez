@@ -50,12 +50,21 @@ final class Db
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             ]);
+            // L'ORDRE COMPTE, et il a longtemps été le mauvais.
+            //
+            // « auto_vacuum » ne se règle qu'avant que l'en-tête du fichier ne
+            // soit écrit : sur une base déjà créée, le PRAGMA est accepté sans
+            // effet et sans erreur. Or « journal_mode = WAL » écrit justement
+            // cet en-tête. Placé après lui, auto_vacuum restait donc à 0 sur
+            // TOUTES les bases jamais créées par Uptimer, et compact() ne
+            // rendait pas un octet : après une purge de 4,5 millions de mesures,
+            // le fichier gardait 585 Mo de pages libres. Il passe donc en
+            // premier, avant toute écriture.
+            self::$pdo->exec('PRAGMA auto_vacuum = INCREMENTAL');
             self::$pdo->exec('PRAGMA journal_mode = WAL');
             self::$pdo->exec('PRAGMA synchronous = NORMAL');
             self::$pdo->exec('PRAGMA busy_timeout = 8000');
             self::$pdo->exec('PRAGMA foreign_keys = ON');
-            // Permet de rendre l'espace disque après purge, sans VACUUM complet.
-            self::$pdo->exec('PRAGMA auto_vacuum = INCREMENTAL');
         }
         return self::$pdo;
     }
@@ -601,11 +610,131 @@ final class Db
         return $out;
     }
 
-    /** Récupère l'espace libéré après une purge (SQLite ne rend pas la place tout seul). */
-    public static function compact(): void
+    /**
+     * Rend au disque l'espace libéré par une purge. SQLite ne le fait pas seul.
+     *
+     * Trois cas, et il a fallu mesurer pour les distinguer :
+     *
+     *   - le journal WAL grossit pendant une grosse suppression et n'est pas
+     *     rendu à la fin de la transaction. Un point de contrôle tronquant le
+     *     règle, et c'est de loin le plus rentable : c'est lui qui expliquait
+     *     l'essentiel des 350 Mo gagnés par un fichier censé maigrir ;
+     *   - une base créée avec auto_vacuum incrémental rend ses pages libres par
+     *     tranches, sans verrou long : c'est le régime normal ;
+     *   - une base créée par une version antérieure a auto_vacuum à 0, et là
+     *     seul un VACUUM complet rend la place. Il réécrit tout le fichier, il
+     *     lui faut autant d'espace libre que la base pèse, et il verrouille
+     *     pendant tout ce temps. On ne le déclenche donc jamais tout seul : il
+     *     faut le demander (bin/cron.php --vacuum ou le bouton des réglages).
+     *
+     * L'ORDRE des deux opérations compte, et l'inverse ne rend presque rien : en
+     * mode WAL, les pages libérées par un vacuum incrémental atterrissent
+     * d'abord dans le journal. Faire le point de contrôle avant ne rendait donc
+     * que 5 Mo là où l'ordre correct en rend 480. Vacuum d'abord, journal
+     * ensuite.
+     *
+     * @param  float $budgetSec  temps maximal passé ici (le reste attend)
+     * @return array{freed_bytes:int,free_pages:int,needs_vacuum:bool}
+     */
+    public static function compact(float $budgetSec = 1.5): array
     {
-        if (self::driver() !== 'sqlite') return;
-        try { self::pdo()->exec('PRAGMA incremental_vacuum'); } catch (PDOException) {}
+        $out = ['freed_bytes' => 0, 'free_pages' => 0, 'needs_vacuum' => false];
+        if (self::driver() !== 'sqlite') return $out;
+
+        $file   = (string)(Config::get('db.sqlite') ?: UPTIMER_ROOT . '/data/uptimer.sqlite');
+        $weight = function () use ($file): int {
+            clearstatcache(true, $file);
+            clearstatcache(true, $file . '-wal');
+            return (int)@filesize($file) + (int)@filesize($file . '-wal');
+        };
+        $before = $weight();
+        $t0     = microtime(true);
+
+        try {
+            $mode = (int)self::pdo()->query('PRAGMA auto_vacuum')->fetchColumn();
+            $free = (int)self::pdo()->query('PRAGMA freelist_count')->fetchColumn();
+            $out['free_pages'] = $free;
+
+            if ($mode === 2) {
+                // Par petites tranches : chacune est sa propre transaction, donc
+                // le verrou d'écriture est rendu entre deux. Une page de
+                // l'interface qui écrit attend quelques dizaines de
+                // millisecondes, pas dix secondes.
+                while ($free > 0 && microtime(true) - $t0 < $budgetSec) {
+                    self::pdo()->exec('PRAGMA incremental_vacuum(500)');
+                    $now = (int)self::pdo()->query('PRAGMA freelist_count')->fetchColumn();
+                    if ($now >= $free) break;              // ne descend plus
+                    $free = $now;
+                }
+            } elseif ($free > 2000) {
+                // Plus de 8 Mo de pages libres inatteignables : seul un VACUUM
+                // complet les rend, et c'est à l'exploitant de choisir son
+                // moment. Le cas n'existe que pour une base créée avant la
+                // correction de l'ordre des PRAGMA de connexion.
+                $out['needs_vacuum'] = true;
+            }
+
+            // Le journal ne se rend qu'à un point de contrôle. Tronquer coûte
+            // proportionnellement à sa taille : on ne le fait que s'il pèse.
+            $wal = (int)@filesize($file . '-wal');
+            self::pdo()->exec($wal > 8 * 1024 * 1024
+                ? 'PRAGMA wal_checkpoint(TRUNCATE)'
+                : 'PRAGMA wal_checkpoint(PASSIVE)');
+        } catch (PDOException) {
+            return $out;
+        }
+
+        $out['freed_bytes'] = max(0, $before - $weight());
+        return $out;
+    }
+
+    /**
+     * VACUUM complet : la seule façon de récupérer la place sur une base créée
+     * avant la correction de l'ordre des PRAGMA. Il passe aussi la base en
+     * auto_vacuum incrémental, donc il n'est à faire qu'une fois.
+     *
+     * Long et verrouillant par nature : il n'est jamais appelé par une passe
+     * planifiée ordinaire.
+     *
+     * @return array{ok:bool,freed_bytes:int,seconds:float,error:string}
+     */
+    public static function vacuum(): array
+    {
+        $out = ['ok' => false, 'freed_bytes' => 0, 'seconds' => 0.0, 'error' => ''];
+        if (self::driver() !== 'sqlite') { $out['ok'] = true; return $out; }
+
+        $file   = (string)(Config::get('db.sqlite') ?: UPTIMER_ROOT . '/data/uptimer.sqlite');
+        $weight = function () use ($file): int {
+            clearstatcache(true, $file);
+            clearstatcache(true, $file . '-wal');
+            return (int)@filesize($file) + (int)@filesize($file . '-wal');
+        };
+        // Le journal compte dans ce que l'exploitant voit sur son disque : le
+        // mesurer sans lui annonçait 6 Mo rendus pour 480 Mo réellement libérés.
+        $before = $weight();
+        $size   = (int)@filesize($file);
+        $free   = (int)@disk_free_space(dirname($file));
+        // VACUUM réécrit le fichier à côté : sans la place pour deux copies, il
+        // échoue en cours de route, ce qui est la pire façon d'échouer.
+        if ($free > 0 && $free < $size * 1.2) {
+            $out['error'] = t('Espace disque insuffisant : {free} libres pour une base de {size}.',
+                              ['free' => human_bytes($free), 'size' => human_bytes($size)]);
+            return $out;
+        }
+
+        $t0 = microtime(true);
+        try {
+            self::pdo()->exec('PRAGMA auto_vacuum = INCREMENTAL');
+            self::pdo()->exec('VACUUM');           // applique le nouveau réglage
+            self::pdo()->exec('PRAGMA wal_checkpoint(TRUNCATE)');
+        } catch (PDOException $e) {
+            $out['error'] = $e->getMessage();
+            return $out;
+        }
+        $out['ok'] = true;
+        $out['seconds'] = microtime(true) - $t0;
+        $out['freed_bytes'] = max(0, $before - $weight());
+        return $out;
     }
 
     /**

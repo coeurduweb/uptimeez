@@ -28,10 +28,18 @@ What a pass does:
 **Useful flags:**
 
 ```bash
-php cron.php --once      # one pass, verbose output : what you run to debug
+php cron.php --once      # one monitoring pass only, no intermediate pass
 php cron.php --setup     # only finish pending automatic setups
-php cron.php --maint     # only the daily maintenance
+php cron.php --maint     # maintenance only: rollups, purge, RDAP, security watch
+php cron.php --vuln      # force a security-watch pass
+php cron.php --vitals    # force a field-measurement pass
+php cron.php --report    # force the monthly reports that are due
+php cron.php --vacuum    # compact the database (slow, run it off-peak)
+php cron.php 20          # cap the pass at 20 seconds
 ```
+
+An unknown flag stops the command and lists the known ones, rather than being silently ignored. `--setup`,
+`--maint` and `--vacuum` monitor nothing: they do not advance the monitors' schedule.
 
 A lock file in `data/` prevents two passes from overlapping. If a pass is killed, the lock expires on its own.
 
@@ -39,12 +47,52 @@ A lock file in `data/` prevents two passes from overlapping. If a pass is killed
 pass takes about as long as the slowest site, not the sum of all of them. If your host throttles outgoing
 connections, lower *simultaneous requests* to 5 in the settings.
 
+**Maintenance catches up.** It is scheduled for around 3 a.m., but the hour is a preference, not a condition: if
+the scheduled task was switched off, or the machine was down, the next pass takes the maintenance over whatever the
+hour once it is two days behind. Days left without a summary are rolled up five per pass, as long as their
+measurements are still retained.
+
+---
+
+## What it weighs
+
+Measured, not estimated: 300 monitors checked every 5 minutes, the default 60-day retention, one year of daily
+rollups. That is 5.2 million unit measurements and 109,500 day summaries.
+
+| What is measured | Value |
+|---|---|
+| Database size | **833 MB**, that is 168 bytes per measurement |
+| Home screen (all five queries) | under 10 ms |
+| Monitor wall, 300 sparklines | 134 ms |
+| One monitor's page, 30-day window | 11 ms |
+| Incident log | under 1 ms |
+| Rolling up one day | 285 ms |
+| Peak PHP memory | 20 MB |
+
+The formula, for your own portfolio: `monitors × (86,400 / interval in seconds) × retention days × 170 bytes`. A
+monitor at 5 minutes costs roughly 49 MB a year in unit measurements. The day summaries are negligible: 300
+monitors for ten years fit in 100 MB, and they are what carries the long strips and the reports.
+
+**Retention is the lever** (Settings → History retention). It only affects unit measurements: lowering it loses
+neither the uptime, nor the incidents, nor the strips, which all come from the day summaries. Going from 60 days to
+15 divides the size by four.
+
+**Lowering retention blocks nothing.** The purge works in slices of 20,000 rows and records what is left: taking
+the portfolio above from 60 days to 7 deletes 4.6 million measurements, in 200-millisecond slices that the
+following passes carry on with. The space comes back to the disk as it goes (833 MB → 89 MB in that measurement),
+without a single screen waiting.
+
+**A database created before version 1.0.1** needs one `php cron.php --vacuum`, once: the order of the connection
+settings prevented SQLite from returning freed pages. The maintenance pass tells you when that is the case, with
+the number of pages involved. VACUUM rewrites the whole file: it needs as much free space as the database weighs,
+and it locks for that time, which is why it never invites itself.
+
 ---
 
 ## Command line
 
 ```bash
-php bin/selftest.php          # 694 checks: detection logic, offline, no network
+php bin/selftest.php          # 715 checks: detection logic, offline, no network
 php bin/bench.php             # 73 checks: real failures reproduced end to end
 php bin/e2e.php               # 227 checks: full user journey, isolated instance
 node bin/e2e-browser.mjs      # 105 checks: real Chromium

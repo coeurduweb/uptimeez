@@ -455,17 +455,108 @@ final class Stats
         return $n;
     }
 
-    /** Purge des vérifications unitaires trop anciennes. */
-    public static function purge(?int $days = null): int
+    /**
+     * Consolide les jours qui ont des mesures mais pas encore de résumé.
+     *
+     * La passe quotidienne ne consolide que la veille. Si l'entretien n'a pas
+     * tourné pendant une semaine — machine éteinte la nuit, tâche planifiée
+     * coupée, hébergement migré — ces jours-là n'étaient jamais rattrapés :
+     * la frise sur 30 jours et le rapport mensuel gardaient un trou définitif,
+     * puisque les mesures unitaires finissaient purgées entre-temps.
+     *
+     * On ne remonte que dans la fenêtre encore conservée : au-delà, les mesures
+     * n'existent plus et il n'y a rien à consolider.
+     *
+     * @param  int $maxDays  jours traités au plus par appel (le reste attend)
+     * @return int           jours consolidés
+     */
+    public static function rollupMissing(int $maxDays = 5): int
+    {
+        $keep = (int)Config::get('defaults.retention_days', 60);
+        $keep = $keep > 0 ? min($keep, 120) : 120;
+        $done = 0;
+        // De la veille vers le passé : le jour le plus récent compte le plus.
+        for ($d = 1; $d <= $keep && $done < $maxDays; $d++) {
+            $day = date('Y-m-d', time() - $d * 86400);
+            if (Db::val('SELECT 1 FROM daily_stats WHERE day = ? LIMIT 1', [$day]) !== null) continue;
+            $has = Db::val('SELECT 1 FROM checks WHERE ts BETWEEN ? AND ? LIMIT 1',
+                           [$day . ' 00:00:00', $day . ' 23:59:59']);
+            if ($has === null) continue;
+            self::rollup($day);
+            $done++;
+        }
+        return $done;
+    }
+
+    /**
+     * Purge des vérifications unitaires trop anciennes, par tranches bornées.
+     *
+     * En régime courant la purge quotidienne enlève une journée de mesures :
+     * quelques milliers de lignes, quelques millisecondes. Le cas qui fait mal
+     * est ailleurs, et il a été mesuré : un exploitant ramène la conservation de
+     * 60 à 7 jours dans les réglages, et le seul « DELETE FROM checks WHERE ts <
+     * ? » d'avant supprimait 4,5 millions de lignes en 51 secondes. Sur SQLite
+     * une suppression tient le verrou d'écriture du début à la fin : pendant
+     * 51 secondes, chaque page de l'interface attendait, et comme busy_timeout
+     * vaut 8 secondes, elles échouaient sur « database is locked ». Le remède
+     * est censé libérer de la place, pas mettre l'outil par terre.
+     *
+     * On travaille donc par tranches, avec un budget de temps. Ce qui reste est
+     * noté, et la passe suivante continue : une réduction de conservation
+     * converge en quelques minutes sans jamais bloquer un écran.
+     *
+     * @param  int|null $days       conservation, en jours (0 = illimitée)
+     * @param  float    $budgetSec  temps maximal passé ici
+     * @param  int      $batch      lignes par tranche ; réduit par le banc
+     *                              d'essai pour éprouver la reprise sans
+     *                              fabriquer vingt mille mesures
+     * @return int                  mesures réellement supprimées
+     */
+    public static function purge(?int $days = null, float $budgetSec = 4.0, int $batch = 20000): int
     {
         $days = $days ?? (int)Config::get('defaults.retention_days', 60);
-        if ($days <= 0) return 0;
-        $cut = date('Y-m-d H:i:s', time() - $days * 86400);
-        $st  = Db::q('DELETE FROM checks WHERE ts < ?', [$cut]);
+        if ($days <= 0) {
+            Db::setSetting('purge_pending', '0');
+            return 0;
+        }
+        $cut   = date('Y-m-d H:i:s', time() - $days * 86400);
+        $t0    = microtime(true);
+        $total = 0;
+        $BATCH = max(100, $batch);
+
+        // Les identifiants suivent l'ordre d'insertion, donc l'ordre du temps :
+        // une borne haute d'identifiant délimite une tranche sans balayer la
+        // table. Le prédicat sur « ts » reste présent, il est ce qui est vrai.
+        //
+        // Une tranche est faite avant de regarder l'heure : avec un budget très
+        // serré, tester d'abord ne supprimait rien du tout, et l'arriéré ne se
+        // résorbait jamais quelle que soit la patience de l'exploitant.
+        do {
+            $edge = Db::one('SELECT MIN(id) AS lo, MAX(id) AS hi FROM (
+                                 SELECT id FROM checks WHERE ts < ? ORDER BY id LIMIT ' . $BATCH . '
+                             ) t', [$cut]);
+            if (!$edge || $edge['lo'] === null) break;         // plus rien d'assez vieux
+            $n = Db::q('DELETE FROM checks WHERE ts < ? AND id BETWEEN ? AND ?',
+                       [$cut, (int)$edge['lo'], (int)$edge['hi']])->rowCount();
+            $total += $n;
+            if ($n === 0) break;                      // rien ne bouge : on s'arrête
+        } while (microtime(true) - $t0 < $budgetSec);
+
+        // Reste-t-il du travail ? La passe suivante le reprendra.
+        $left = (int)Db::val('SELECT COUNT(*) FROM (SELECT 1 FROM checks WHERE ts < ? LIMIT 1) t', [$cut], 0);
+        Db::setSetting('purge_pending', $left > 0 ? '1' : '0');
+
+        // Ces deux tables sont petites par nature : une passe suffit.
         Db::q('DELETE FROM notifications WHERE ts < ?', [$cut]);
         Db::q('DELETE FROM events WHERE ts < ?', [$cut]);
-        Db::compact();
-        return $st->rowCount();
+        Db::compact(1.0);
+        return $total;
+    }
+
+    /** Une purge a-t-elle laissé du travail pour la passe suivante ? */
+    public static function purgePending(): bool
+    {
+        return (string)Db::setting('purge_pending', '0') === '1';
     }
 
     /** Classement des sondes les plus fragiles sur 30 jours. */
