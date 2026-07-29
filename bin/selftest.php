@@ -1171,6 +1171,107 @@ Uptimeez\Db::migrate();
 foreach ([$tmpI, $tmpI . '-wal', $tmpI . '-shm'] as $f) @unlink($f);
 
 // =========================================================================
+section('Pont d\'authentification : un jeton, une seule fois');
+// =========================================================================
+// Sert à ouvrir une instance depuis un tableau de bord commun, sans redemander
+// son mot de passe. Toute la valeur est dans ce qu'il REFUSE : le rejeu, le
+// jeton périmé, la signature falsifiée, la durée de vie allongée, et le secret
+// trop court pour être sérieux.
+
+$prevDbB = Uptimeez\Config::get('db.sqlite');
+$tmpB = sys_get_temp_dir() . '/self-pont-' . bin2hex(random_bytes(4)) . '.sqlite';
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $tmpB);
+Uptimeez\Db::migrate();
+
+// --- Désactivé par défaut : une installation ordinaire ne l'expose pas -----
+Uptimeez\Config::set('auth.bridge_secret', '');
+check('sans secret, aucun jeton ne se fabrique', Uptimeez\Auth::makeToken(), null);
+check('et aucun jeton n\'est accepté', Uptimeez\Auth::attemptToken('v1.eyJhIjoxfQ.zzz'), false);
+
+// --- Un secret court est refusé, plutôt que d'offrir la porte mal fermée ---
+Uptimeez\Config::set('auth.bridge_secret', str_repeat('x', 31));
+check('un secret de 31 caractères est refusé', Uptimeez\Auth::makeToken(), null);
+
+$secretB = bin2hex(random_bytes(32));
+Uptimeez\Config::set('auth.bridge_secret', $secretB);
+
+// --- Le cas nominal --------------------------------------------------------
+$jeton = Uptimeez\Auth::makeToken(60);
+check('un jeton se fabrique', is_string($jeton) && substr_count($jeton, '.') === 2, true);
+check('et il ouvre la session', Uptimeez\Auth::attemptToken((string)$jeton), true);
+
+// --- LE point qui compte : un jeton passe UNE fois ------------------------
+// Sans cela, un jeton capturé dans un journal d'accès ou dans un référent
+// rouvrirait la session pendant toute sa durée de vie.
+check('le même jeton ne repasse pas', Uptimeez\Auth::attemptToken((string)$jeton), false);
+
+// --- Signature falsifiée ---------------------------------------------------
+$morceaux = explode('.', (string)Uptimeez\Auth::makeToken(60));
+check('signature falsifiée refusée',
+    Uptimeez\Auth::attemptToken($morceaux[0] . '.' . $morceaux[1] . '.'
+        . Uptimeez\Auth::b64url(str_repeat("\x00", 32))), false);
+check('charge utile modifiée refusée (la signature ne suit pas)',
+    Uptimeez\Auth::attemptToken($morceaux[0] . '.'
+        . Uptimeez\Auth::b64url((string)jenc(['iat' => time(), 'exp' => time() + 60,
+                                             'nonce' => 'fabrique'])) . '.' . $morceaux[2]), false);
+
+// --- Un jeton signé avec un AUTRE secret ---------------------------------
+$autre = bin2hex(random_bytes(32));
+Uptimeez\Config::set('auth.bridge_secret', $autre);
+$jetonAutre = (string)Uptimeez\Auth::makeToken(60);
+Uptimeez\Config::set('auth.bridge_secret', $secretB);
+check('un jeton signé avec un autre secret est refusé',
+    Uptimeez\Auth::attemptToken($jetonAutre), false);
+
+// --- Périmé, daté du futur, durée de vie allongée -------------------------
+$forge = function (int $iat, int $exp) use ($secretB): string {
+    $b = Uptimeez\Auth::b64url((string)jenc(['iat' => $iat, 'exp' => $exp,
+                                            'nonce' => bin2hex(random_bytes(8))]));
+    return 'v1.' . $b . '.' . Uptimeez\Auth::b64url(hash_hmac('sha256', 'v1.' . $b, $secretB, true));
+};
+check('jeton expiré refusé', Uptimeez\Auth::attemptToken($forge(time() - 200, time() - 1)), false);
+check('jeton daté du futur refusé', Uptimeez\Auth::attemptToken($forge(time() + 600, time() + 660)), false);
+// La durée de vie annoncée est bornée : sinon un émetteur complaisant, ou
+// compromis, fabriquerait un jeton valable un an.
+check('durée de vie au-delà de la borne refusée',
+    Uptimeez\Auth::attemptToken($forge(time(), time() + Uptimeez\Auth::BRIDGE_MAX_TTL + 60)), false);
+check('mais juste en dessous de la borne, ça passe',
+    Uptimeez\Auth::attemptToken($forge(time(), time() + Uptimeez\Auth::BRIDGE_MAX_TTL - 5)), true);
+// Une tolérance de 30 s absorbe un décalage d'horloge : c'est voulu.
+check('un léger décalage d\'horloge est toléré',
+    Uptimeez\Auth::attemptToken($forge(time() + 20, time() + 80)), true);
+
+// --- Formes malformées ----------------------------------------------------
+foreach (['', 'v1', 'v1.a', 'v2.a.b', 'v1..', '....', 'v1.!!!.???'] as $mauvais) {
+    check('forme rejetée : « ' . str_cut($mauvais, 12) . ' »',
+        Uptimeez\Auth::attemptToken($mauvais), false);
+}
+
+// --- La liste des jetons employés ne gonfle pas ---------------------------
+// La propriété à vérifier n'est pas « la liste se vide » : les jetons encore
+// valides doivent y rester, sinon ils repasseraient. C'est « aucun jeton périmé
+// n'y survit », ce qui borne la liste par construction.
+for ($i = 0; $i < 20; $i++) Uptimeez\Auth::attemptToken((string)Uptimeez\Auth::makeToken(5));
+$usedB = jdec(Uptimeez\Db::setting('bridge_used'));
+check('les jetons employés sont mémorisés', count($usedB) >= 20, true);
+$courts = count(array_filter($usedB, fn($exp): bool => (int)$exp <= time() + 6));
+check('dont les vingt à courte durée de vie', $courts >= 20, true);
+
+sleep(7);
+Uptimeez\Auth::attemptToken((string)Uptimeez\Auth::makeToken(60));
+$apres = jdec(Uptimeez\Db::setting('bridge_used'));
+check('aucun jeton périmé ne survit à la purge',
+    count(array_filter($apres, fn($exp): bool => (int)$exp <= time())), 0);
+check('et les vingt jetons courts ont bien disparu', count($apres) < 20, true);
+
+Uptimeez\Config::set('auth.bridge_secret', '');
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.sqlite', $prevDbB);
+Uptimeez\Db::migrate();
+foreach ([$tmpB, $tmpB . '-wal', $tmpB . '-shm'] as $f) @unlink($f);
+
+// =========================================================================
 section('Réponse tronquée : ne rien conclure de ce qu\'on n\'a pas lu');
 // =========================================================================
 // Http marque les réponses coupées au-delà de 3 Mo, et personne ne lisait ce

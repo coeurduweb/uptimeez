@@ -127,11 +127,16 @@ file_put_contents("$tmp/site/router.php", "<?php\n"
     . "http_response_code(404); echo '<!doctype html><html><head><title>404 Not Found</title></head><body>Not Found</body></html>';\n"
     . "return true;\n");
 
+// Secret du pont d'authentification : la fonctionnalité n'existe que si un
+// secret est configuré, on en pose donc un pour pouvoir l'éprouver.
+$BRIDGE = bin2hex(random_bytes(32));
+
 // --- Configuration isolée -------------------------------------------------
 $cfgFile = $tmp . '/config.php';
 file_put_contents($cfgFile, "<?php return " . var_export([
     'db'   => ['driver' => 'sqlite', 'sqlite' => $tmp . '/e2e.sqlite'],
-    'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeeze2e'],
+    'auth' => ['password_hash' => password_hash($PASS, PASSWORD_DEFAULT), 'session_name' => 'uptimeeze2e',
+               'bridge_secret' => $BRIDGE],
     'app'  => ['name' => 'Uptimeez E2E', 'base_url' => $APP, 'timezone' => 'Europe/Paris',
                'public_token' => 'jeton-e2e', 'cron_key' => 'cle-e2e'],
     'defaults' => ['interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'slow_ms' => 9000,
@@ -1180,6 +1185,59 @@ foreach (['simple', 'expert'] as $mode) {
     if (!$complete($rr) || !$noPhpError($rr)) $incomplete[] = 'monitor/' . $mode;
 }
 ok('aucun écran interrompu en cours de rendu', $incomplete === [], implode(' ', $incomplete));
+
+// =========================================================================
+title('Pont d\'authentification : ouvrir sans mot de passe');
+// =========================================================================
+// Ce parcours a trouvé un défaut que le banc d'essai ne pouvait pas voir : le
+// pont exige un stockage pour garantir l'usage unique, or l'écran de connexion
+// s'affiche AVANT la migration du schéma. Sur une instance fraîche, l'écriture
+// échouait et le jeton était refusé : le pont ne fonctionnait pas du tout en
+// vrai, alors que les vingt contrôles unitaires passaient.
+$jar2 = $tmp . '/cookies-pont.txt';
+$reqPont = function (string $path) use ($APP, $jar2): array {
+    $ch = curl_init($APP . $path);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true,
+                            CURLOPT_COOKIEJAR => $jar2, CURLOPT_COOKIEFILE => $jar2,
+                            CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 30]);
+    $raw  = (string)curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $hlen = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    curl_close($ch);
+    $head = substr($raw, 0, $hlen);
+    return ['code' => $code, 'body' => substr($raw, $hlen),
+            'location' => preg_match('~^location:\s*(\S+)~im', $head, $m) ? trim($m[1]) : null];
+};
+
+// L'émetteur est un AUTRE programme que l'instance : ici le banc joue son rôle,
+// et il doit donc connaître le secret partagé, comme le fera la coque SaaS. La
+// configuration du banc n'est pas celle du serveur qu'il a lancé.
+Uptimeez\Config::set('auth.bridge_secret', $BRIDGE);
+$jeton = Uptimeez\Auth::makeToken(60);
+ok('un jeton se fabrique côté émetteur', is_string($jeton) && substr_count((string)$jeton, '.') === 2);
+
+$r = $reqPont('/index.php?p=login&t=' . urlencode((string)$jeton));
+ok('le lien d\'accès redirige au lieu d\'afficher la connexion',
+   $r['code'] === 302 && str_contains((string)$r['location'], 'p=today'),
+   'HTTP ' . $r['code'] . ' → ' . (string)$r['location']);
+$r = $reqPont('/index.php');
+ok('et la session est réellement ouverte', $r['code'] === 200 && str_contains($r['body'], '</html>'),
+   'HTTP ' . $r['code']);
+
+// Le point qui compte : le jeton ne repasse pas. Un jeton capturé dans un
+// journal d'accès ou dans un référent ne doit pas rouvrir la session.
+$r = $reqPont('/index.php?p=logout');
+$r = $reqPont('/index.php?p=login&t=' . urlencode((string)$jeton));
+ok('le rejeu du même jeton est refusé',
+   $r['code'] === 200 && !str_contains((string)$r['location'] ?? '', 'p=today'), 'HTTP ' . $r['code']);
+$r = $reqPont('/index.php');
+ok('et la session reste fermée', $r['code'] === 302, 'HTTP ' . $r['code']);
+
+$r = $reqPont('/index.php?p=login&t=' . urlencode('v1.eyJhIjoxfQ.faux'));
+ok('un jeton fabriqué est refusé', $r['code'] === 200 && $r['location'] === null, 'HTTP ' . $r['code']);
+$r = $reqPont('/index.php?p=login');
+ok('sans jeton, aucun message d\'erreur parasite',
+   !str_contains($r['body'], 'invalide ou expir'));
 
 // =========================================================================
 title('Déconnexion');

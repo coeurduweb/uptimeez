@@ -85,6 +85,17 @@ if ($page === 'logout') {
 
 if ($page === 'login') {
     $error = null;
+    // Ouverture par jeton signé : sert quand plusieurs instances sont pilotées
+    // depuis un tableau de bord commun. Inexistant tant qu'aucun secret n'est en
+    // configuration, donc invisible pour une installation ordinaire.
+    $bridge = trim((string)($_GET['t'] ?? ''));
+    if ($bridge !== '' && Auth::attemptToken($bridge)) {
+        // Redirection immédiate : le jeton ne doit pas rester dans la barre
+        // d'adresse, ni partir dans le référent des liens de la page.
+        header('Location: ' . u('today'));
+        exit;
+    }
+    if ($bridge !== '') $error = t('Lien d\'accès invalide ou expiré.');
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $wait = Auth::lockedFor();
         if ($wait > 0) {

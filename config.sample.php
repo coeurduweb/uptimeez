@@ -23,6 +23,14 @@ return [
         // Généré par l'installeur : password_hash('...', PASSWORD_DEFAULT)
         'password_hash' => '',
         'session_name'  => 'uptimeez',
+
+        /* Ouverture par jeton signé, pour piloter plusieurs instances depuis un
+           tableau de bord commun. Laisser vide désactive complètement la
+           fonctionnalité : une installation ordinaire n'en a pas besoin et ne
+           l'expose pas. 32 caractères minimum, tirés au hasard :
+              php -r 'echo bin2hex(random_bytes(32));'
+           Le même secret doit être connu de l'émetteur des jetons. */
+        'bridge_secret' => '',
         'session_ttl'   => 86400 * 30,
     ],
 

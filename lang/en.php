@@ -609,6 +609,7 @@ return [
     'Les {n} dernières tranches de temps, tous sites confondus' => 'The last {n} time slices, all sites combined',
     'Libérez de l\'espace, puis réduisez la durée de conservation dans Réglages : les mesures anciennes sont ce qui occupe le plus de place.' => 'Free some space, then shorten the retention period in Settings: old measurements are what takes up the most room.',
     'Lien consulté' => 'Link opened',
+    'Lien d\'accès invalide ou expiré.' => 'Access link invalid or expired.',
     'Lien invalide ou expiré.' => 'Invalid or expired link.',
     'Lien à envoyer au client' => 'Link to send to the client',
     'Ligne cron à copier' => 'Cron line to copy',

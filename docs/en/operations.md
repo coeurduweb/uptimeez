@@ -92,9 +92,9 @@ and it locks for that time, which is why it never invites itself.
 ## Command line
 
 ```bash
-php bin/selftest.php          # 749 checks: detection logic, offline, no network
+php bin/selftest.php          # 774 checks: detection logic, offline, no network
 php bin/bench.php             # 73 checks: real failures reproduced end to end
-php bin/e2e.php               # 233 checks: full user journey, isolated instance
+php bin/e2e.php               # 240 checks: full user journey, isolated instance
 node bin/e2e-browser.mjs      # 105 checks: real Chromium
 php bin/chaos.php             # 35 checks: 859 hostile requests, nothing must break
 php bin/chaos.php --long      # adds the bulky payloads
@@ -139,6 +139,41 @@ rest of the product stays covered by the other suites, on SQLite:
 UPTIMEEZ_TEST_MYSQL_NAME=uptimeez_test UPTIMEEZ_TEST_MYSQL_USER=root \
 UPTIMEEZ_TEST_MYSQL_PASS=secret php bin/mysql.php
 ```
+
+### Opening an instance without a password (auth bridge)
+
+When several instances are driven from one dashboard (an agency running one per client, a hosted
+service), asking for each one's password every time is unworkable. The dashboard signs a very
+short-lived token, and the instance accepts it in place of the password.
+
+**It does not exist while `auth.bridge_secret` is empty.** An ordinary installation never sees
+this feature, and therefore never exposes it.
+
+```php
+// the instance's config.php
+'auth' => ['bridge_secret' => '…64 hex characters…'],
+```
+```bash
+php -r 'echo bin2hex(random_bytes(32));'    # to draw a secret
+```
+
+The issuer builds the token with the same secret, then opens
+`https://instance/index.php?p=login&t=<token>`. The token is redirected away immediately so it
+does not linger in the address bar or leak through the referrer.
+
+What is refused, which is where the value is:
+
+| Refusal | Why |
+|---|---|
+| Secret shorter than 32 characters | A short secret is a breakable secret: better to refuse the feature than offer it badly |
+| Invalid signature | Constant-time comparison (`hash_equals`) |
+| **Token already used** | A token passes **once**. Without that, a token captured in an access log or a referrer would reopen the session for its whole lifetime |
+| Expired token, or dated in the future | 30 s of tolerance to absorb clock skew, no more |
+| Declared lifetime over 120 s | Otherwise a lenient, or compromised, issuer could mint a token valid for a year |
+
+Verified by 26 checks in `bin/selftest.php` and 7 in `bin/e2e.php`, including replay over HTTP.
+That last one found a defect the unit checks could not see: single use requires storage, and the
+login screen renders before the schema is migrated. The bridge did not work at all in reality.
 
 ### Public demo mode
 
