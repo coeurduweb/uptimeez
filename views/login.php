@@ -15,6 +15,16 @@ use Uptimeez\Ui;
           <?= Ui::icon('alert', 18) ?><div><?= e($error) ?></div>
         </div>
       <?php endif; ?>
+      <?php if (Uptimeez\Demo::on()): ?>
+        <?php /* Une démo publique doit donner sa clé : la chercher ailleurs fait
+                 partir le visiteur. Le mot de passe n'y protège rien, il évite
+                 seulement qu'un robot indexe l'intérieur. */ ?>
+        <div class="alert alert-warn" role="note" style="margin-top:0">
+          <?= Ui::icon('info', 18) ?>
+          <div><?= te('Démonstration : le mot de passe est {password}. Tout est remis à zéro chaque heure.',
+                      ['password' => 'demo1234']) ?></div>
+        </div>
+      <?php endif; ?>
       <form method="post">
         <div class="field">
           <label for="pw"><?= te('Mot de passe') ?></label>

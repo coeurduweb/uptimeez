@@ -353,6 +353,7 @@ return [
     'Délai dépassé (timeout)' => 'Timed out',
     'Délai maximum' => 'Timeout',
     'Délai maximum des interrogations' => 'Lookup timeout',
+    'Démonstration : le mot de passe est {password}. Tout est remis à zéro chaque heure.' => 'Demo: the password is {password}. Everything resets every hour.',
     'Détail' => 'Details',
     'Détail technique' => 'Technical detail',
     'Détecter la technologie et déduire la chaîne de contrôle après création' => 'Detect the technology and infer the proof string after creation',
