@@ -222,7 +222,11 @@ function handle_post(): ?array
                 'timeout_sec'     => max(3, min(60, (int)($_POST['timeout_sec'] ?? 15))),
                 'retries'         => max(0, min(5, (int)($_POST['retries'] ?? 2))),
                 'slow_ms'         => max(0, min(60000, (int)($_POST['slow_ms'] ?? 3000))),
-                'expect_status'   => trim((string)($_POST['expect_status'] ?? '200-299')) ?: '200-299',
+                // Une spécification illisible mettait la sonde hors service pour
+                // toujours : on la refuse à la saisie plutôt que de la subir.
+                'expect_status'   => Runner::validStatusSpec((string)($_POST['expect_status'] ?? ''))
+                                     ? (trim((string)($_POST['expect_status'] ?? '200-299')) ?: '200-299')
+                                     : '200-299',
                 'expect_string'   => trim((string)($_POST['expect_string'] ?? '')) ?: null,
                 'forbid_string'   => trim((string)($_POST['forbid_string'] ?? '')) ?: null,
                 'json_path'       => trim((string)($_POST['json_path'] ?? '')) ?: null,
@@ -288,12 +292,7 @@ function handle_post(): ?array
             return ['ok', t('Empreinte CSS de référence effacée : elle sera réapprise à la prochaine analyse.')];
 
         case 'delete_monitor':
-            $id = (int)($_POST['id'] ?? 0);
-            Db::q('DELETE FROM checks WHERE monitor_id = ?', [$id]);
-            Db::q('DELETE FROM incidents WHERE monitor_id = ?', [$id]);
-            Db::q('DELETE FROM events WHERE monitor_id = ?', [$id]);
-            Db::q('DELETE FROM daily_stats WHERE monitor_id = ?', [$id]);
-            Db::q('DELETE FROM monitors WHERE id = ?', [$id]);
+            Db::deleteMonitors([(int)($_POST['id'] ?? 0)]);
             header('Location: ' . u('monitors', ['deleted' => 1]));
             exit;
 
@@ -310,11 +309,15 @@ function handle_post(): ?array
                     Db::q("UPDATE monitors SET enabled = 0, status = 'paused' WHERE id IN ($in)", $ids);
                     return ['ok', tn(count($ids), 'Une sonde mise en pause.', '{n} sondes mises en pause.')];
                 case 'delete':
-                    foreach (['checks', 'incidents', 'events', 'daily_stats'] as $t) {
-                        Db::q("DELETE FROM $t WHERE monitor_id IN ($in)", $ids);
+                    $del = Db::deleteMonitors($ids);
+                    $msg = tn($del['monitors'], 'Une sonde supprimée.', '{n} sondes supprimées.');
+                    // Un site vidé de ses sondes part avec elles : sinon son
+                    // inventaire logiciel resterait interrogé chaque jour.
+                    if ($del['sites'] > 0) {
+                        $msg .= ' ' . tn($del['sites'], 'Un site devenu vide a été retiré.',
+                                                        '{n} sites devenus vides ont été retirés.');
                     }
-                    Db::q("DELETE FROM monitors WHERE id IN ($in)", $ids);
-                    return ['ok', tn(count($ids), 'Une sonde supprimée.', '{n} sondes supprimées.')];
+                    return ['ok', $msg];
                 case 'check':
                     // Au-delà de quelques sondes, on programme au lieu d'exécuter :
                     // une requête web n'a pas le temps de vérifier 100 sites.
@@ -398,7 +401,10 @@ function handle_post(): ?array
                     'resend_after_min' => max(0, (int)($_POST['resend_after'] ?? 60)),
                     'notify_recovery'  => isset($_POST['notify_recovery']),
                     'notify_degraded'  => isset($_POST['notify_degraded']),
-                    'quiet_hours'      => trim((string)($_POST['quiet_hours'] ?? '')),
+                    // Une plage impossible désactivait les heures calmes en
+                    // silence : on la refuse plutôt que de la subir.
+                    'quiet_hours'      => Notifier::validQuietHours((string)($_POST['quiet_hours'] ?? ''))
+                                          ? trim((string)$_POST['quiet_hours']) : '',
                 ],
             ];
             if (($_POST['smtp_pass'] ?? '') === '') {
@@ -409,8 +415,12 @@ function handle_post(): ?array
                 if (strlen($newPass) < 8) return ['bad', t('Le mot de passe doit faire au moins 8 caractères.')];
                 $patch['auth'] = ['password_hash' => password_hash($newPass, PASSWORD_DEFAULT)];
             }
+            $quietRaw = trim((string)($_POST['quiet_hours'] ?? ''));
+            $quietBad = $quietRaw !== '' && !Notifier::validQuietHours($quietRaw);
             return Config::save($patch)
-                ? ['ok', t('Réglages enregistrés.')
+                ? [$quietBad ? 'warn' : 'ok', t('Réglages enregistrés.')
+                       . ($quietBad ? ' ' . t('Les heures calmes « {value} » ne sont pas une plage valide : le réglage est vidé. Format attendu : 23:00-07:00.',
+                                              ['value' => str_cut($quietRaw, 30)]) : '')
                        . ($newPass !== '' ? ' ' . t('Nouveau mot de passe actif.') : '')]
                 : ['bad', t('Impossible d\'écrire config.php : le fichier est-il accessible en écriture ?')];
 

@@ -109,7 +109,7 @@ $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
                  value="<?= e($v('slow_ms', (string)($d['slow_ms'] ?? 3000))) ?>">
           <span class="unit">ms</span>
         </div>
-        <span class="hint"><?= te('Au-delà, la sonde passe en « à surveiller » sans être déclarée hors service.') ?></span>
+        <span class="hint"><?= te('Au-delà, la sonde passe en « à surveiller » sans être déclarée hors service. Zéro désactive ce contrôle.') ?></span>
       </div>
       <label class="switchrow">
         <input type="checkbox" name="auto_slow" <?= $on('auto_slow') ? 'checked' : '' ?>>

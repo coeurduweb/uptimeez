@@ -187,13 +187,42 @@ final class Notifier
 
     public static function inQuietHours(): bool
     {
-        $spec = trim((string)Config::get('notify.quiet_hours', ''));
-        if ($spec === '' || !preg_match('~^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$~', $spec, $m)) return false;
-        $nowMin = (int)date('H') * 60 + (int)date('i');
-        [$fh, $fm] = array_map('intval', explode(':', $m[1]));
-        [$th, $tm] = array_map('intval', explode(':', $m[2]));
-        $a = $fh * 60 + $fm; $b = $th * 60 + $tm;
-        return $a <= $b ? ($nowMin >= $a && $nowMin <= $b) : ($nowMin >= $a || $nowMin <= $b);
+        return self::quietHoursCover((string)Config::get('notify.quiet_hours', ''),
+                                     (int)date('H') * 60 + (int)date('i'));
+    }
+
+    /**
+     * La plage calme couvre-t-elle cette minute de la journée ?
+     *
+     * Séparée de l'heure courante pour être vérifiable : c'est exactement le
+     * genre de calcul dont l'erreur ne se voit qu'une nuit sur deux. Une plage à
+     * cheval sur minuit (« 23:00-07:00 ») est reconnue, bornes incluses.
+     */
+    public static function quietHoursCover(string $spec, int $minutes): bool
+    {
+        if (!self::validQuietHours($spec)) return false;
+        preg_match('~^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$~', trim($spec), $m);
+        $a = (int)$m[1] * 60 + (int)$m[2];
+        $b = (int)$m[3] * 60 + (int)$m[4];
+        return $a <= $b ? ($minutes >= $a && $minutes <= $b) : ($minutes >= $a || $minutes <= $b);
+    }
+
+    /**
+     * Une plage horaire écrite « HH:MM-HH:MM », avec des heures qui existent.
+     *
+     * « 25:00-99:00 » passait l'ancienne expression régulière et désactivait les
+     * heures calmes sans le dire : personne ne relie une alerte nocturne à une
+     * faute de frappe faite trois mois plus tôt.
+     */
+    public static function validQuietHours(string $spec): bool
+    {
+        $spec = trim($spec);
+        if ($spec === '') return false;
+        if (!preg_match('~^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$~', $spec, $m)) return false;
+        foreach ([[(int)$m[1], (int)$m[2]], [(int)$m[3], (int)$m[4]]] as [$h, $min]) {
+            if ($h > 23 || $min > 59) return false;
+        }
+        return true;
     }
 
     private static function log(array $mon, string $channel, string $kind, bool $ok, string $info): void

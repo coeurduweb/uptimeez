@@ -447,7 +447,10 @@ final class Runner
         }
 
         // ---- 9. Lenteur ----------------------------------------------------
-        $slow = (int)($mon['slow_ms'] ?: 3000);
+        // Zéro veut dire « pas de seuil », comme l'annonce le formulaire. Le
+        // repli sur 3000 rendait le champ trompeur : mettre 0 pour désactiver
+        // remettait en réalité la valeur par défaut.
+        $slow = (int)($mon['slow_ms'] ?? 0);
         if ($slow > 0 && $res->totalMs > $slow) {
             $note('degraded', 'SLOW', 'Temps de réponse élevé : {seconds} s',
                   ['seconds' => number_format($res->totalMs / 1000, 2, ',', ' ')]);
@@ -826,10 +829,19 @@ final class Runner
     }
 
     /** « 200 », « 200-299 », « 2xx », « 200,301,302 ». */
+    /**
+     * Le code reçu correspond-il à la spécification attendue ?
+     *
+     * Formes acceptées : « 200 », « 200-299 », « 2xx », et toute combinaison
+     * séparée par une virgule ou une espace. Une spécification vide, ou qui ne
+     * contient aucune forme exploitable, retombe sur le comportement par défaut :
+     * sinon une faute de frappe (« 200 OK ») déclarait le site hors service pour
+     * toujours, avec un message que personne ne relie à la cause.
+     */
     public static function statusMatches(int $status, string $spec): bool
     {
         $spec = trim($spec);
-        if ($spec === '') return $status >= 200 && $status < 400;
+        if ($spec === '' || !self::validStatusSpec($spec)) return $status >= 200 && $status < 400;
         foreach (preg_split('~[,\s]+~', $spec) ?: [] as $part) {
             $part = strtolower(trim($part));
             if ($part === '') continue;
@@ -849,6 +861,28 @@ final class Runner
      * Tolère les entités HTML (&eacute;) et les apostrophes typographiques,
      * dans les deux sens : la chaîne saisie n'a pas à être encodée comme la page.
      */
+    /**
+     * La spécification de codes attendus est-elle exploitable ?
+     *
+     * Sert à deux endroits : refuser une saisie absurde à l'enregistrement, et
+     * ne pas se fier à une valeur invalide déjà en base.
+     */
+    public static function validStatusSpec(string $spec): bool
+    {
+        $spec = trim($spec);
+        if ($spec === '') return true;                    // vide = comportement par défaut
+        $parts = array_filter(preg_split('~[,\s]+~', $spec) ?: []);
+        if (!$parts) return false;
+        foreach ($parts as $part) {
+            $part = strtolower(trim($part));
+            $ok = preg_match('~^\d[xX]{2}$~', $part)
+               || preg_match('~^\d{3}\s*-\s*\d{3}$~', $part)
+               || (ctype_digit($part) && strlen($part) === 3);
+            if (!$ok) return false;
+        }
+        return true;
+    }
+
     public static function containsAny(string $haystack, string $needles): bool
     {
         $decoded = null;   // décodage du corps calculé au besoin seulement

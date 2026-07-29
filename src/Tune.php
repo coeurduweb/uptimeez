@@ -30,6 +30,9 @@ final class Tune
     {
         $id = (int)$mon['id'];
         if ((int)($mon['auto_slow'] ?? 1) !== 1) return null;
+        // Un seuil à zéro est un choix : « pas de contrôle de lenteur ». L'ajuster
+        // automatiquement le ferait réapparaître sans que personne l'ait demandé.
+        if ((int)($mon['slow_ms'] ?? 0) === 0) return null;
         if (!empty($mon['tuned_at']) && strtotime((string)$mon['tuned_at']) > time() - self::COOLDOWN_SEC) return null;
 
         $from = date('Y-m-d H:i:s', time() - 7 * 86400);

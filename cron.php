@@ -136,6 +136,14 @@ try {
         if ($tuned) $out('  ' . $tuned . ' seuil(s) de lenteur réajusté(s)');
         $roll = Stats::rollup(date('Y-m-d', time() - 86400));
         $pur  = Stats::purge();
+        // Répare ce qu'une version antérieure a pu laisser : mesures sans sonde,
+        // inventaire d'un site vidé, site sans aucune sonde. Sans cela la veille
+        // interrogerait chaque jour des composants de sites disparus.
+        $rep  = Db::repairOrphans();
+        if ($rep['orphans'] || $rep['sites'] || $rep['components']) {
+            $out(sprintf('  réparation : %d ligne(s) orpheline(s), %d site(s) vide(s), %d composant(s)',
+                $rep['orphans'], $rep['sites'], $rep['components']));
+        }
         $dom  = Runner::refreshDomains(25);
         Stats::refreshStale(0, 500);
         $out(sprintf('  entretien : %d jour(s) consolidé(s), %d mesure(s) purgée(s), %d domaine(s) vérifié(s)',

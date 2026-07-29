@@ -137,8 +137,11 @@ final class Client
         $ids = array_values(array_unique(array_filter(array_map('intval', $siteIds), fn($i) => $i > 0)));
         Db::q('UPDATE sites SET client_id = NULL WHERE client_id = ?', [$clientId]);
         if (!$ids) return 0;
-        $in = implode(',', array_fill(0, count($ids), '?'));
-        Db::q("UPDATE sites SET client_id = ? WHERE id IN ($in)", array_merge([$clientId], $ids));
+        Db::chunk($ids, function (array $part) use ($clientId): array {
+            $in = implode(',', array_fill(0, count($part), '?'));
+            Db::q("UPDATE sites SET client_id = ? WHERE id IN ($in)", array_merge([$clientId], $part));
+            return [];
+        });
         return (int)Db::val('SELECT COUNT(*) FROM sites WHERE client_id = ?', [$clientId]);
     }
 

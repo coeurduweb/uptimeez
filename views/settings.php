@@ -341,6 +341,23 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
   </div>
 </form>
 
+<?php
+// Un index absent ne casse rien tout de suite : il rend l'outil lent des
+// semaines plus tard, quand personne ne fait le lien. On le dit maintenant.
+$idxIssues = Uptimer\Db::indexIssues();
+if ($idxIssues): ?>
+  <div class="alert alert-warn mt">
+    <?= Ui::icon('alert', 18) ?>
+    <div><strong><?= e(tn(count($idxIssues), 'Un index de base de données n\'a pas pu être créé.',
+                                             '{n} index de base de données n\'ont pas pu être créés.')) ?></strong>
+      <div class="hint"><?= te('L\'outil fonctionne, mais les écrans ralentiront à mesure que l\'historique grossit. Le détail est ci-dessous : à donner tel quel à votre hébergeur.') ?></div>
+      <ul class="tiny mono" style="margin:6px 0 0;padding-inline-start:18px">
+        <?php foreach (array_slice($idxIssues, 0, 6) as $iss): ?><li><?= e($iss) ?></li><?php endforeach; ?>
+      </ul>
+    </div>
+  </div>
+<?php endif; ?>
+
 <!-- ==================== TESTS ==================== -->
 <?= Ui::accOpen('tests', 'wrench', t('Tester les canaux et la détection'), t('utile après chaque changement')) ?>
 <?= Ui::accBody() ?>

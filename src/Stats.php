@@ -293,21 +293,25 @@ final class Stats
 
         // Agrégation faite par la base : avec 300 sondes, remonter chaque mesure
         // en PHP coûterait des dizaines de milliers de lignes par affichage.
-        $in      = implode(',', array_fill(0, count($ids), '?'));
         $fromSql = date('Y-m-d H:i:s', $from);
         $bucket  = Db::bucketExpr('ts', $step);
-        $rows    = Db::all(
-            "SELECT monitor_id, $bucket AS b,
-                    COUNT(*) AS n,
-                    SUM(total_ms) AS sum_ms,
-                    MAX(total_ms) AS max_ms,
-                    SUM(CASE WHEN state = 'down' THEN 1 ELSE 0 END) AS fails,
-                    SUM(CASE WHEN state = 'degraded' THEN 1 ELSE 0 END) AS degraded
-             FROM checks
-             WHERE monitor_id IN ($in) AND ts >= ?
-             GROUP BY monitor_id, b",
-            array_merge([$fromSql], $ids, [$fromSql])
-        );
+        // Découpé en paquets : un parc de mille sondes dépasserait la limite de
+        // paramètres liés d'un SQLite ancien, celui des hébergements mutualisés.
+        $rows = Db::chunk($ids, function (array $part) use ($bucket, $fromSql): array {
+            $in = implode(',', array_fill(0, count($part), '?'));
+            return Db::all(
+                "SELECT monitor_id, $bucket AS b,
+                        COUNT(*) AS n,
+                        SUM(total_ms) AS sum_ms,
+                        MAX(total_ms) AS max_ms,
+                        SUM(CASE WHEN state = 'down' THEN 1 ELSE 0 END) AS fails,
+                        SUM(CASE WHEN state = 'degraded' THEN 1 ELSE 0 END) AS degraded
+                 FROM checks
+                 WHERE monitor_id IN ($in) AND ts >= ?
+                 GROUP BY monitor_id, b",
+                array_merge([$fromSql], $part, [$fromSql])
+            );
+        });
         foreach ($rows as $r) {
             $mid = (int)$r['monitor_id'];
             $i   = min((int)$r['b'], $nb - 1);   // cf. series() : mesure de la seconde courante
@@ -319,11 +323,15 @@ final class Stats
             $sum[$mid][$i]             = (int)$r['sum_ms'];
         }
 
-        $incs = Db::all(
-            "SELECT monitor_id, started_at, ended_at FROM incidents
-             WHERE monitor_id IN ($in) AND severity = 'down' AND (ended_at IS NULL OR ended_at >= ?)",
-            array_merge($ids, [date('Y-m-d H:i:s', $from)])
-        );
+        $incs = Db::chunk($ids, function (array $part) use ($from): array {
+            $in = implode(',', array_fill(0, count($part), '?'));
+            return Db::all(
+                "SELECT monitor_id, started_at, ended_at FROM incidents
+                 WHERE monitor_id IN ($in) AND severity = 'down'
+                   AND (ended_at IS NULL OR ended_at >= ?)",
+                array_merge($part, [date('Y-m-d H:i:s', $from)])
+            );
+        });
         foreach ($incs as $inc) {
             $mid = (int)$inc['monitor_id'];
             if (!isset($out[$mid])) continue;

@@ -311,6 +311,7 @@ section('Montée de version du schéma');
 // Une base créée par une version antérieure doit gagner les colonnes manquantes.
 $tmpDb = sys_get_temp_dir() . '/uptimer-selftest-' . bin2hex(random_bytes(3)) . '.sqlite';
 Uptimer\Config::set('db.driver', 'sqlite');
+Uptimer\Db::disconnect();
 Uptimer\Config::set('db.sqlite', $tmpDb);
 Uptimer\Db::pdo()->exec("CREATE TABLE monitors (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
     url TEXT NOT NULL, kind TEXT, status TEXT, created_at TEXT)");
@@ -367,6 +368,7 @@ check('seuils de réglage automatique cohérents',
 
 section('Seuil de lenteur auto-ajusté');
 $tmpT = sys_get_temp_dir() . '/uptimer-tune-' . bin2hex(random_bytes(3)) . '.sqlite';
+Uptimer\Db::disconnect();
 Uptimer\Config::set('db.sqlite', $tmpT);
 Uptimer\Db::migrate();
 $tid = Uptimer\Db::insert('monitors', ['name' => 'lent', 'url' => 'https://a.fr/', 'kind' => 'page',
@@ -689,6 +691,7 @@ check('libellé de gravité traduit', mb_strlen(Uptimer\Vuln::severityLabel('hig
 // --- Enregistrement et remise à zéro sur changement de version ----------
 $tmpV = sys_get_temp_dir() . '/uptimer-vuln-' . bin2hex(random_bytes(3)) . '.sqlite';
 $prevDbV = Uptimer\Config::get('db.sqlite');
+Uptimer\Db::disconnect();
 Uptimer\Config::set('db.sqlite', $tmpV);
 Uptimer\Db::migrate();
 $vsid = Uptimer\Db::insert('sites', ['name' => 'Site', 'domain' => 'site.fr', 'created_at' => now()]);
@@ -733,6 +736,8 @@ check('compteurs disponibles',
 check('rien de vulnérable dans cette base', $vc['with_vuln'], 0);
 check('aucune trouvaille à signaler', Uptimer\Vuln::findings(), []);
 
+Uptimer\Db::disconnect();
+
 Uptimer\Config::set('db.sqlite', $prevDbV);
 @unlink($tmpV); @unlink($tmpV . '-wal'); @unlink($tmpV . '-shm');
 
@@ -769,6 +774,7 @@ check('sans repli, aucun destinataire', Report::recipients(['report_to' => '']),
 // --- Base isolée pour la programmation et les chiffres ------------------
 $tmpR = sys_get_temp_dir() . '/uptimer-report-' . bin2hex(random_bytes(3)) . '.sqlite';
 $prevDb = Uptimer\Config::get('db.sqlite');
+Uptimer\Db::disconnect();
 Uptimer\Config::set('db.sqlite', $tmpR);
 Uptimer\Db::migrate();
 
@@ -874,8 +880,150 @@ check('et le motif le dit', str_contains((string)$r3['info'], 'esure'), true);
 
 Uptimer\Config::set('report.enabled', false);
 Uptimer\Config::set('report.subject', '');
+Uptimer\Db::disconnect();
 Uptimer\Config::set('db.sqlite', $prevDb);
 @unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
+
+// =========================================================================
+section('Solidité : suppressions, volumes, saisies absurdes');
+// =========================================================================
+// Trois défauts trouvés en relisant le code, chacun invisible tant qu'on ne
+// pousse pas l'outil : une suppression qui laisse des traces, une requête qui
+// dépasse la limite de paramètres d'un SQLite ancien, une saisie qui met une
+// sonde hors service pour toujours.
+
+// --- Supprimer une sonde ne doit rien laisser derrière -------------------
+$prevDbS = Uptimer\Config::get('db.sqlite');
+$tmpS = sys_get_temp_dir() . '/self-solid-' . bin2hex(random_bytes(4)) . '.sqlite';
+Uptimer\Db::disconnect();
+Uptimer\Config::set('db.sqlite', $tmpS);
+Uptimer\Db::migrate();
+
+$sidS = Uptimer\Db::insert('sites', ['name' => 'Site', 'domain' => 'solid.test', 'created_at' => now()]);
+$mkMon = function (string $name, string $role) use ($sidS): int {
+    return Uptimer\Db::insert('monitors', ['site_id' => $sidS, 'name' => $name,
+        'url' => 'https://solid.test/' . $name, 'kind' => 'page', 'role' => $role, 'method' => 'GET',
+        'interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299',
+        'enabled' => 1, 'status' => 'up', 'setup_state' => 'done',
+        'created_at' => now(), 'next_check_at' => now()]);
+};
+$mA = $mkMon('a', 'primary');
+$mB = $mkMon('b', 'page');
+foreach ([$mA, $mB] as $mid) {
+    Uptimer\Db::insert('checks', ['monitor_id' => $mid, 'ts' => now(), 'state' => 'up',
+                                  'total_ms' => 10, 'attempts' => 1]);
+    Uptimer\Db::insert('incidents', ['monitor_id' => $mid, 'severity' => 'down',
+                                     'started_at' => now(), 'checks_failed' => 1]);
+    Uptimer\Db::insert('events', ['monitor_id' => $mid, 'ts' => now(), 'kind' => 'x',
+                                  'message' => 'm', 'seen' => 0]);
+    Uptimer\Db::insert('daily_stats', ['monitor_id' => $mid, 'day' => date('Y-m-d'),
+                                       'checks' => 1, 'fails' => 0]);
+    Uptimer\Db::insert('notifications', ['monitor_id' => $mid, 'ts' => now(), 'channel' => 'mail',
+                                         'kind' => 'down', 'ok' => 1]);
+}
+Uptimer\Db::insert('components', ['site_id' => $sidS, 'kind' => 'core', 'slug' => 'wp',
+                                  'name' => 'WordPress', 'seen_at' => now(), 'first_seen_at' => now()]);
+
+$delB = Uptimer\Db::deleteMonitors([$mB]);
+check('une page supprimée : la sonde part', $delB['monitors'], 1);
+check('supprimer une page ne touche pas le site', $delB['sites'], 0);
+check('ses mesures partent avec elle',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks WHERE monitor_id = ?', [$mB]), 0);
+// C'est la table oubliée : elle grossissait sans fin.
+check('ses alertes envoyées partent aussi',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM notifications WHERE monitor_id = ?', [$mB]), 0);
+check('la sonde principale est intacte',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM monitors WHERE id = ?', [$mA]), 1);
+check('l\'inventaire du site est intact',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components WHERE site_id = ?', [$sidS]), 1);
+
+$delA = Uptimer\Db::deleteMonitors([$mA]);
+check('la dernière sonde emporte le site', $delA['sites'], 1);
+check('et son inventaire logiciel', $delA['components'], 1);
+check('plus aucun composant orphelin',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM components'), 0);
+check('plus aucune mesure orpheline',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM checks'), 0);
+check('supprimer une sonde inconnue ne fait rien',
+    Uptimer\Db::deleteMonitors([999999])['monitors'], 0);
+check('liste vide : aucune requête, aucun dégât', Uptimer\Db::deleteMonitors([])['monitors'], 0);
+
+// --- La réparation rattrape ce qu'une version antérieure a laissé -------
+Uptimer\Db::insert('checks', ['monitor_id' => 4242, 'ts' => now(), 'state' => 'up',
+                              'total_ms' => 1, 'attempts' => 1]);
+Uptimer\Db::insert('notifications', ['monitor_id' => 4242, 'ts' => now(), 'channel' => 'mail',
+                                     'kind' => 'down', 'ok' => 1]);
+$sidGhost = Uptimer\Db::insert('sites', ['name' => 'Fantôme', 'domain' => 'ghost.test', 'created_at' => now()]);
+Uptimer\Db::insert('components', ['site_id' => $sidGhost, 'kind' => 'core', 'slug' => 'x',
+                                  'name' => 'X', 'seen_at' => now(), 'first_seen_at' => now()]);
+$rep = Uptimer\Db::repairOrphans();
+check('les orphelins d\'une ancienne version sont nettoyés', $rep['orphans'] >= 2, true);
+check('un site sans aucune sonde est retiré', $rep['sites'], 1);
+check('et son inventaire avec lui', $rep['components'], 1);
+check('une base saine ne bouge plus',
+    array_sum(Uptimer\Db::repairOrphans()), 0);
+
+// --- Les requêtes de masse tiennent au-delà de 999 paramètres -----------
+// SQLite compilé avant 3.32 refuse plus de 999 paramètres liés, et c'est celui
+// des hébergements mutualisés un peu anciens.
+$many = [];
+for ($i = 0; $i < 1500; $i++) $many[] = $mkMon('vol' . $i, 'page');
+check('1500 sondes créées', count($many), 1500);
+$batch = Uptimer\Stats::sparkBatch($many, 86400, 24);
+check('les courbes groupées les couvrent toutes', count($batch), 1500);
+$pulse = Uptimer\Stats::pulse(86400, 24);
+check('le pouls du parc tient sur un gros parc', count($pulse), 24);
+check('découpage : un paquet par tranche de 400',
+    count(Uptimer\Db::chunk(range(1, 1500), fn(array $p): array => [count($p)])), 4);
+check('sous le seuil, un seul paquet',
+    Uptimer\Db::chunk(range(1, 10), fn(array $p): array => [count($p)]), [10]);
+check('liste vide : aucun paquet', Uptimer\Db::chunk([], fn(array $p): array => [1]), []);
+$delMany = Uptimer\Db::deleteMonitors($many);
+check('et la suppression de masse aussi', $delMany['monitors'], 1500);
+
+Uptimer\Db::disconnect();
+
+Uptimer\Config::set('db.sqlite', $prevDbS);
+// Le chemin restauré peut désigner une base supprimée par une section
+// précédente : on s'assure que le schéma existe pour la suite.
+Uptimer\Db::migrate();
+@unlink($tmpS);
+
+// --- Les heures calmes à cheval sur minuit ------------------------------
+// Une erreur ici ne se voit qu'une nuit sur deux : la fonction est donc pure et
+// vérifiée minute par minute.
+foreach ([['23:00-07:00', 23 * 60 + 30, true], ['23:00-07:00', 6 * 60 + 59, true],
+          ['23:00-07:00', 7 * 60, true],      ['23:00-07:00', 12 * 60, false],
+          ['23:00-07:00', 22 * 60 + 59, false],
+          ['09:00-18:00', 12 * 60, true],     ['09:00-18:00', 20 * 60, false],
+          ['09:00-18:00', 9 * 60, true],      ['00:00-06:00', 3 * 60, true],
+          ['00:00-06:00', 7 * 60, false],
+          // Une plage impossible ne doit pas désactiver les heures calmes en
+          // silence : elle est refusée à la saisie, et ignorée ici.
+          ['25:00-99:00', 3 * 60, false],     ['absurde', 3 * 60, false],
+          ['', 3 * 60, false]] as [$spec, $min, $want]) {
+    check(sprintf('heures calmes [%s] à %02d:%02d', $spec ?: 'vide', intdiv($min, 60), $min % 60),
+          Uptimer\Notify\Notifier::quietHoursCover($spec, $min), $want);
+}
+foreach ([['23:00-07:00', true], ['09:00-18:00', true], ['0:00-6:00', true],
+          ['25:00-99:00', false], ['23:60-07:00', false], ['absurde', false],
+          ['', false], ['23:00', false], ['23:00-', false]] as [$spec, $valid]) {
+    check('plage [' . ($spec ?: 'vide') . '] acceptée à la saisie',
+          Uptimer\Notify\Notifier::validQuietHours($spec), $valid);
+}
+
+// --- Une spécification de codes attendus illisible ne casse plus rien ---
+foreach ([['200-299', true], ['200', true], ['2xx', true], ['200,301,404', true], ['', true],
+          ['DROP TABLE', false], ['200 OK', false], ['abc', false], ['20', false],
+          ['1000', false], ['200-', false]] as [$spec, $valid]) {
+    check('spécification « ' . ($spec ?: 'vide') . ' »', Uptimer\Runner::validStatusSpec($spec), $valid);
+}
+// Le point qui compte : une valeur invalide retombe sur le comportement par
+// défaut au lieu de déclarer le site hors service pour toujours.
+check('une spécification cassée n\'invente pas une panne',
+    Uptimer\Runner::statusMatches(200, 'n\'importe quoi'), true);
+check('et ne cache pas une vraie panne',
+    Uptimer\Runner::statusMatches(503, 'n\'importe quoi'), false);
 
 // =========================================================================
 section('Traductions : aucune phrase laissée en arrière');

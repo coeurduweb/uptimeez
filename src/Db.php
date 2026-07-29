@@ -11,6 +11,22 @@ final class Db
     private static ?PDO $pdo = null;
     private static string $driver = 'sqlite';
 
+    /**
+     * Ferme la connexion courante.
+     *
+     * La connexion est mise en cache pour la durée du processus, ce qui est le
+     * bon comportement en production : une requête web ouvre une connexion, pas
+     * dix. Mais changer « db.sqlite » en cours de route ne reconnectait pas, et
+     * l'appelant écrivait sans le savoir dans la base précédente. Les bancs
+     * d'essai qui basculent de base appellent donc ceci.
+     */
+    public static function disconnect(): void
+    {
+        self::$pdo = null;
+        self::$driver = 'sqlite';
+        self::$indexErrors = [];
+    }
+
     public static function pdo(): PDO
     {
         if (self::$pdo instanceof PDO) return self::$pdo;
@@ -393,25 +409,42 @@ final class Db
         }
 
         $idx = [
-            'CREATE INDEX IF NOT EXISTS idx_checks_mon_ts ON checks (monitor_id, ts)',
-            'CREATE INDEX IF NOT EXISTS idx_checks_ts ON checks (ts)',
-            'CREATE INDEX IF NOT EXISTS idx_inc_mon ON incidents (monitor_id, started_at)',
-            'CREATE INDEX IF NOT EXISTS idx_inc_open ON incidents (ended_at)',
-            'CREATE INDEX IF NOT EXISTS idx_mon_next ON monitors (enabled, next_check_at)',
-            'CREATE INDEX IF NOT EXISTS idx_mon_site ON monitors (site_id)',
+            // [nom, table, colonnes, unique]
+            ['idx_checks_mon_ts',  'checks',     'monitor_id, ts',          false],
+            ['idx_checks_ts',      'checks',     'ts',                      false],
+            ['idx_inc_mon',        'incidents',  'monitor_id, started_at',  false],
+            ['idx_inc_open',       'incidents',  'ended_at',                false],
+            ['idx_mon_next',       'monitors',   'enabled, next_check_at',  false],
+            ['idx_mon_site',       'monitors',   'site_id',                 false],
             // Un composant est unique par site : l'index le garantit, ce qui
             // évite d'accumuler des doublons à chaque analyse de page.
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_comp_uniq ON components (site_id, kind, slug)',
-            'CREATE INDEX IF NOT EXISTS idx_comp_scan ON components (checked_at)',
-            'CREATE INDEX IF NOT EXISTS idx_comp_vuln ON components (vuln_count)',
-            'CREATE INDEX IF NOT EXISTS idx_events_ts ON events (ts)',
+            ['idx_comp_uniq',      'components', 'site_id, kind, slug',     true],
+            ['idx_comp_scan',      'components', 'checked_at',              false],
+            ['idx_comp_vuln',      'components', 'vuln_count',              false],
+            ['idx_events_ts',      'events',     'ts',                      false],
             // Le jeton client est cherché à chaque ouverture de l'espace : il
             // doit être unique et indexé.
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_token ON clients (token)',
-            'CREATE INDEX IF NOT EXISTS idx_sites_client ON sites (client_id)',
+            ['idx_clients_token',  'clients',    'token',                   true],
+            ['idx_sites_client',   'sites',      'client_id',               false],
         ];
-        foreach ($idx as $sql) {
-            try { $pdo->exec($sql); } catch (PDOException) { /* MySQL < 8 : index déjà là */ }
+        // MySQL ne connaît pas « CREATE INDEX IF NOT EXISTS » : la requête y est
+        // une erreur de syntaxe, et l'attraper silencieusement revenait à ne
+        // créer AUCUN index. Sur une table de mesures d'un million de lignes,
+        // c'est la différence entre un tableau de bord instantané et un balayage
+        // complet à chaque affichage. On interroge donc le catalogue.
+        $existing = $my ? self::indexNames() : [];
+        foreach ($idx as [$name, $table, $cols, $unique]) {
+            if ($my && isset($existing[$name])) continue;
+            $sql = 'CREATE ' . ($unique ? 'UNIQUE ' : '') . 'INDEX '
+                 . ($my ? '' : 'IF NOT EXISTS ') . $name . " ON $table ($cols)";
+            try {
+                $pdo->exec($sql);
+            } catch (PDOException $e) {
+                // Un index déjà présent sous un autre nom, ou une colonne encore
+                // absente sur une très vieille base : on continue, mais sans
+                // faire croire que tout va bien.
+                self::$indexErrors[] = $name . ' : ' . str_cut($e->getMessage(), 120);
+            }
         }
 
         self::setSetting('schema_version', '1');
@@ -433,6 +466,139 @@ final class Db
         return self::driver() === 'mysql'
             ? "FLOOR(TIMESTAMPDIFF(SECOND, ?, $column) / $step)"
             : "CAST((CAST(strftime('%s', $column) AS INTEGER) - CAST(strftime('%s', ?) AS INTEGER)) / $step AS INTEGER)";
+    }
+
+    /** Index dont la création a échoué : lu par l'écran des réglages. */
+    private static array $indexErrors = [];
+
+    /** @return array<string,true> Noms d'index existants, pour MySQL. */
+    private static function indexNames(): array
+    {
+        try {
+            $rows = self::all('SELECT DISTINCT INDEX_NAME AS n FROM information_schema.STATISTICS
+                               WHERE TABLE_SCHEMA = DATABASE()');
+        } catch (\PDOException) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $r) $out[(string)$r['n']] = true;
+        return $out;
+    }
+
+    /**
+     * Index manquants après une migration.
+     *
+     * Un index absent ne casse rien tout de suite : il rend l'outil lent quand
+     * la table des mesures grossit, c'est-à-dire des semaines plus tard, quand
+     * personne ne fait le lien. L'écran des réglages le dit donc tout de suite.
+     *
+     * @return array<int,string>
+     */
+    public static function indexIssues(): array
+    {
+        return self::$indexErrors;
+    }
+
+    /**
+     * Découpe une liste d'identifiants en paquets pour les requêtes « IN (…) ».
+     *
+     * SQLite compilé avant la version 3.32 refuse au-delà de 999 paramètres liés,
+     * et c'est exactement le SQLite qu'on trouve sur un hébergement mutualisé un
+     * peu ancien, la cible principale de cet outil. Un parc de mille cinq cents
+     * sondes cassait donc la page d'accueil, sur la machine où ça compte le plus.
+     *
+     * Le rappel reçoit chaque paquet et son résultat est concaténé.
+     *
+     * @param callable(array):array $fn
+     */
+    public static function chunk(array $ids, callable $fn, int $size = 400): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
+        if (!$ids) return [];
+        if (count($ids) <= $size) return (array)$fn($ids);
+        $out = [];
+        foreach (array_chunk($ids, $size) as $part) {
+            foreach ((array)$fn($part) as $k => $row) {
+                if (is_int($k)) $out[] = $row; else $out[$k] = $row;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Supprime des sondes et tout ce qui n'a plus de raison d'exister après.
+     *
+     * Une suppression partielle laisse des traces qui coûtent cher plus tard :
+     * des notifications orphelines qui gonflent la table pour rien, et surtout
+     * un site vidé de ses sondes dont l'inventaire logiciel continue d'être
+     * interrogé chaque jour auprès des sources d'avis. La veille annonçait alors
+     * « six composants vulnérables » sur des sites que l'utilisateur croyait
+     * avoir supprimés.
+     *
+     * Un site n'est retiré que s'il ne lui reste aucune sonde : supprimer une
+     * page d'un site n'emporte jamais le site.
+     *
+     * @return array{monitors:int,sites:int,components:int}
+     */
+    public static function deleteMonitors(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
+        $out = ['monitors' => 0, 'sites' => 0, 'components' => 0];
+        if (!$ids) return $out;
+
+        // Sites concernés, relevés avant la suppression : après, le lien est perdu.
+        $siteIds = array_values(array_unique(array_filter(array_map(
+            fn(array $r): int => (int)$r['site_id'],
+            self::chunk($ids, function (array $part): array {
+                $in = implode(',', array_fill(0, count($part), '?'));
+                return self::all("SELECT DISTINCT site_id FROM monitors
+                                  WHERE id IN ($in) AND site_id IS NOT NULL", $part);
+            })
+        ))));
+
+        self::chunk($ids, function (array $part) use (&$out): array {
+            $in = implode(',', array_fill(0, count($part), '?'));
+            foreach (['checks', 'incidents', 'events', 'daily_stats', 'notifications'] as $t) {
+                self::q("DELETE FROM $t WHERE monitor_id IN ($in)", $part);
+            }
+            $out['monitors'] += self::q("DELETE FROM monitors WHERE id IN ($in)", $part)->rowCount();
+            return [];
+        });
+
+        foreach ($siteIds as $sid) {
+            if ((int)self::val('SELECT COUNT(*) FROM monitors WHERE site_id = ?', [$sid]) > 0) continue;
+            $out['components'] += self::q('DELETE FROM components WHERE site_id = ?', [$sid])->rowCount();
+            $out['sites']      += self::q('DELETE FROM sites WHERE id = ?', [$sid])->rowCount();
+        }
+        return $out;
+    }
+
+    /**
+     * Répare ce qu'une version antérieure a pu laisser derrière elle.
+     *
+     * Appelée par l'entretien quotidien. Sans elle, une installation qui a
+     * supprimé des sondes avant cette correction garderait ses orphelins pour
+     * toujours, et la veille continuerait de les compter.
+     *
+     * @return array{orphans:int,sites:int,components:int}
+     */
+    public static function repairOrphans(): array
+    {
+        $out = ['orphans' => 0, 'sites' => 0, 'components' => 0];
+        foreach (['checks', 'incidents', 'daily_stats'] as $t) {
+            $out['orphans'] += self::q("DELETE FROM $t
+                WHERE monitor_id NOT IN (SELECT id FROM monitors)")->rowCount();
+        }
+        foreach (['events', 'notifications'] as $t) {
+            $out['orphans'] += self::q("DELETE FROM $t
+                WHERE monitor_id IS NOT NULL AND monitor_id NOT IN (SELECT id FROM monitors)")->rowCount();
+        }
+        $out['components'] = self::q('DELETE FROM components
+            WHERE site_id NOT IN (SELECT id FROM sites)
+               OR site_id NOT IN (SELECT site_id FROM monitors WHERE site_id IS NOT NULL)')->rowCount();
+        $out['sites'] = self::q('DELETE FROM sites
+            WHERE id NOT IN (SELECT site_id FROM monitors WHERE site_id IS NOT NULL)')->rowCount();
+        return $out;
     }
 
     /** Récupère l'espace libéré après une purge (SQLite ne rend pas la place tout seul). */
