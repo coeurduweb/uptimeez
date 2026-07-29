@@ -2080,11 +2080,27 @@ section('Serveur MCP : protocole et outils');
  * conversation complète : c'est le seul moyen de vérifier qu'un client MCP
  * pourra s'y connecter.
  */
-$mcpAsk = function (array $messages, bool $write = false) : array {
+// Le serveur MCP est lancé avec une configuration ISOLÉE, écrite pour l'occasion.
+// Sans ça la suite ne passait que sur une machine déjà installée : sur un dépôt
+// fraîchement cloné, mcp.php sortait en erreur et 26 contrôles tombaient. Un banc
+// d'essai qui exige un produit configuré est un piège pour qui contribue.
+$mcpCfg = sys_get_temp_dir() . '/self-mcp-' . bin2hex(random_bytes(4)) . '.php';
+$mcpDb  = sys_get_temp_dir() . '/self-mcp-' . bin2hex(random_bytes(4)) . '.sqlite';
+file_put_contents($mcpCfg, "<?php return " . var_export([
+    'db'   => ['driver' => 'sqlite', 'sqlite' => $mcpDb],
+    'auth' => ['password_hash' => password_hash('x', PASSWORD_DEFAULT), 'session_name' => 'selfmcp'],
+    'app'  => ['name' => 'Uptimeez', 'timezone' => 'Europe/Paris', 'base_url' => 'http://127.0.0.1'],
+], true) . ";\n");
+register_shutdown_function(function () use ($mcpCfg, $mcpDb): void {
+    foreach ([$mcpCfg, $mcpDb, $mcpDb . '-wal', $mcpDb . '-shm'] as $f) @unlink($f);
+});
+
+$mcpAsk = function (array $messages, bool $write = false) use ($mcpCfg): array {
     $cmd = [PHP_BINARY, UPTIMEEZ_ROOT . '/bin/mcp.php'];
     if ($write) $cmd[] = '--write';
     $proc = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']],
-                      $pipes, UPTIMEEZ_ROOT, ['PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+                      $pipes, UPTIMEEZ_ROOT,
+                      ['PATH' => getenv('PATH') ?: '/usr/bin:/bin', 'UPTIMEEZ_CONFIG' => $mcpCfg]);
     if (!is_resource($proc)) return [];
     foreach ($messages as $m) fwrite($pipes[0], json_encode($m) . "\n");
     fclose($pipes[0]);

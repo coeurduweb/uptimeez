@@ -266,16 +266,22 @@ function fold(string $s): string
 {
     $s = mb_strtolower(trim($s), 'UTF-8');
 
-    // 1. Décomposition Unicode : la voie propre, quelle que soit la langue.
+    // 1. Décomposition Unicode quand l'extension intl est là : la voie propre,
+    //    quelle que soit la langue et sans table à maintenir.
     if (class_exists('\Normalizer')) {
         $d = \Normalizer::normalize($s, \Normalizer::FORM_D);
-        if ($d !== false) {
-            // Retire les marques combinantes (U+0300-U+036F) laissées par la décomposition.
-            $s = (string)preg_replace('~\p{Mn}+~u', '', $d);
-        }
+        if ($d !== false) $s = $d;
     }
 
-    // 2. Caractères qui ne se décomposent pas (ligatures, lettres barrées).
+    // 2. Retrait des marques combinantes, TOUJOURS, et pas seulement après une
+    //    décomposition. C'est une propriété PCRE, elle ne demande pas intl.
+    //    Sans ce déplacement, « İstanbul » restait introuvable par « istanbul » sur
+    //    une machine sans intl : mb_strtolower produit « i » suivi du point
+    //    combinant U+0307, que rien ne retirait. Trouvé en déployant sur un serveur
+    //    qui n'avait pas l'extension.
+    $s = (string)preg_replace('~\p{Mn}+~u', '', $s);
+
+    // 3. Caractères qui ne se décomposent pas (ligatures, lettres barrées).
     static $special = [
         'œ' => 'oe', 'æ' => 'ae', 'ß' => 'ss', 'ø' => 'o', 'đ' => 'd', 'ð' => 'd',
         'þ' => 'th', 'ł' => 'l', 'ħ' => 'h', 'ŧ' => 't', 'ı' => 'i', 'ĳ' => 'ij',
@@ -283,8 +289,15 @@ function fold(string $s): string
     ];
     $s = strtrr_utf8($s, $special);
 
-    // 3. Repli de secours si l'extension intl est absente : table Latin étendue.
-    if (!class_exists('\Normalizer')) {
+    // 4. Table des précomposés, appliquée SANS CONDITION.
+    //
+    //    Elle était réservée au cas « intl absent », ce qui donnait deux
+    //    comportements au même produit selon la machine. Un outil de supervision
+    //    qui trouve un site chez soi et pas chez le client n'est pas fiable, même
+    //    si la différence est invisible. Appliquée dans les deux cas, la table ne
+    //    coûte rien quand la décomposition a déjà fait le travail : plus aucun
+    //    caractère ne correspond.
+    if (true) {
         static $map = [
             'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'ā' => 'a',
             'ă' => 'a', 'ą' => 'a', 'ǎ' => 'a', 'ȧ' => 'a',
@@ -306,6 +319,22 @@ function fold(string $s): string
             'ź' => 'z', 'ż' => 'z', 'ž' => 'z',
         ];
         $s = strtrr_utf8($s, $map);
+
+        // Latin étendu additionnel (U+1E00-U+1EFF) : le vietnamien y vit tout
+        // entier, et il manquait. « Việt » restait introuvable par « viet ».
+        static $viet = [
+            'ạ' => 'a', 'ả' => 'a', 'ấ' => 'a', 'ầ' => 'a', 'ẩ' => 'a', 'ẫ' => 'a', 'ậ' => 'a',
+            'ắ' => 'a', 'ằ' => 'a', 'ẳ' => 'a', 'ẵ' => 'a', 'ặ' => 'a', 'ẹ' => 'e', 'ẻ' => 'e',
+            'ẽ' => 'e', 'ế' => 'e', 'ề' => 'e', 'ể' => 'e', 'ễ' => 'e', 'ệ' => 'e', 'ỉ' => 'i',
+            'ị' => 'i', 'ọ' => 'o', 'ỏ' => 'o', 'ố' => 'o', 'ồ' => 'o', 'ổ' => 'o', 'ỗ' => 'o',
+            'ộ' => 'o', 'ớ' => 'o', 'ờ' => 'o', 'ở' => 'o', 'ỡ' => 'o', 'ợ' => 'o', 'ụ' => 'u',
+            'ủ' => 'u', 'ứ' => 'u', 'ừ' => 'u', 'ử' => 'u', 'ữ' => 'u', 'ự' => 'u', 'ỳ' => 'y',
+            'ỵ' => 'y', 'ỷ' => 'y', 'ỹ' => 'y', 'ơ' => 'o', 'ư' => 'u', 'ă' => 'a', 'ê' => 'e',
+            'ô' => 'o', 'ẁ' => 'w', 'ẃ' => 'w', 'ẅ' => 'w', 'ẍ' => 'x', 'ẓ' => 'z', 'ṣ' => 's',
+            'ṭ' => 't', 'ṇ' => 'n', 'ṃ' => 'm', 'ḷ' => 'l', 'ḳ' => 'k', 'ḥ' => 'h', 'ḍ' => 'd',
+            'ḅ' => 'b', 'ṛ' => 'r', 'ṿ' => 'v', 'ẖ' => 'h', 'ẗ' => 't',
+        ];
+        $s = strtrr_utf8($s, $viet);
     }
     return $s;
 }

@@ -51,11 +51,17 @@ const MCP_VERSION  = UPTIMEEZ_VERSION;
 
 $WRITE = in_array('--write', $argv, true);
 
-if (!Config::isInstalled()) {
+// Une instance pas encore installée ne doit pas tuer le serveur en silence : un
+// client MCP lit du JSON-RPC sur la sortie standard, et un message en texte brut
+// ne lui apprend rien. Il obtient donc une poignée de main normale, puis une
+// erreur JSON-RPC explicite sur chaque outil appelé. Trouvé en déployant sur une
+// machine où le dépôt était cloné mais pas encore configuré.
+$INSTALLED = Config::isInstalled();
+if ($INSTALLED) {
+    Db::migrate();
+} else {
     fwrite(STDERR, "Uptimeez n'est pas installé : ouvrez install.php d'abord.\n");
-    exit(1);
 }
-Db::migrate();
 
 // Les réponses d'un serveur MCP sont lues par une machine : les descriptions
 // sont en anglais, langue par défaut du produit et des clients MCP.
@@ -788,6 +794,14 @@ while (($line = fgets(STDIN)) !== false) {
         case 'tools/call':
             $name = (string)($params['name'] ?? '');
             $args = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
+            // Sans installation, aucun outil ne peut répondre : on le dit dans le
+            // protocole, une fois, plutôt que de laisser une pile d'exceptions
+            // remonter à chaque appel.
+            if (!$INSTALLED) {
+                mcp_error($id, -32002, 'Uptimeez is not installed yet on this instance: '
+                    . 'open install.php in a browser first.');
+                break;
+            }
             if (!isset($tools[$name])) {
                 mcp_error($id, -32602, 'Unknown tool: ' . $name);
                 break;
