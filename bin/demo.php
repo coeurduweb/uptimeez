@@ -413,14 +413,16 @@ $stacks = [
 $demoAdvisories = [
     'elementor' => [[
         'id' => 'DEMO-2026-0142', 'severity' => 'high', 'published' => date('Y-m-d', time() - 3 * 86400),
-        'summary' => "Téléversement de fichier sans contrôle du type dans le constructeur de "
-                   . "modèles. Un contributeur authentifié peut exécuter du code.",
+        // Les avis de sécurité réels sont publiés en anglais : la démonstration
+        // fait pareil, sinon elle donne une fausse idée de ce qu'on lira.
+        'summary' => "Unrestricted file upload in the template builder. An authenticated "
+                   . "contributor can execute arbitrary code.",
         'url' => null, 'aliases' => ['CVE-2026-00000'],
     ]],
     'contact-form-7' => [[
         'id' => 'DEMO-2026-0117', 'severity' => 'medium', 'published' => date('Y-m-d', time() - 11 * 86400),
-        'summary' => "Injection de script stockée dans l'aperçu d'un formulaire, exploitable par "
-                   . "un administrateur de site sans privilège d'édition de code.",
+        'summary' => "Stored cross-site scripting in the form preview, exploitable by a site "
+                   . "administrator without the code-editing capability.",
         'url' => null, 'aliases' => [],
     ]],
 ];

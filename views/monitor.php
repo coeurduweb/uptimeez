@@ -84,6 +84,13 @@ foreach (($cm['assets'] ?? []) as $a) if (!empty($a['issue'])) $failedRes++;
         $evidence = [];
         if ($mon['last_message']) $evidence[] = verdict_text($mon);
         $lastDet = jdec($recent[0]['details'] ?? null);
+        // Les autres causes relevées à la même mesure : elles ne tiennent pas
+        // dans le verdict, mais elles sont là quand on ouvre la fiche.
+        foreach ((array)($lastDet['findings'] ?? []) as $i => $f) {
+            if ($i === 0) continue;                       // déjà dit par le verdict
+            $txt = t((string)($f[2] ?? ''), (array)($f[3] ?? []));
+            if ($txt !== '' && !in_array($txt, $evidence, true)) $evidence[] = $txt;
+        }
         if (!empty($lastDet['net_error'])) $evidence[] = (string)$lastDet['net_error'];
         if ($evidence): ?>
           <div class="diag-evidence"><?= e(implode("\n", $evidence)) ?></div>

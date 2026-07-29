@@ -58,7 +58,8 @@ final class Importer
 
             $url = normalize_url((string)($parts[0] ?? ''));
             if ($url === null) {
-                $errors[] = 'Ligne ' . ($n + 1) . ' : « ' . str_cut($raw, 60) . ' » n\'est pas un domaine ou une URL exploitable.';
+                $errors[] = t('Ligne {n} : « {text} » n\'est pas un domaine ou une URL exploitable.',
+                              ['n' => $n + 1, 'text' => str_cut($raw, 60)]);
                 continue;
             }
             $key = rtrim(strtolower($url), '/');
@@ -285,10 +286,12 @@ final class Importer
             // On garde la sonde : c'est peut-être justement un site en panne.
             Db::update('monitors', [
                 'setup_state' => 'failed',
-                'setup_note'  => 'Page injoignable à la préparation : ' . Http::errorLabel($res->errorCode),
+                'setup_note'  => t('Page injoignable à la préparation : {reason}',
+                                   ['reason' => Http::errorLabel($res->errorCode)]),
             ], 'id = :__i', ['__i' => $monitorId]);
             return ['ok' => false, 'cms' => null, 'expect' => null, 'pages' => 0,
-                    'message' => 'Injoignable (' . Http::errorLabel($res->errorCode) . ') : la sonde reste active'];
+                    'message' => t('Injoignable, {reason} : la sonde reste active',
+                                   ['reason' => Http::errorLabel($res->errorCode)])];
         }
 
         // Si l'URL redirige vers une autre (http→https, www), on adopte la cible.
@@ -317,7 +320,10 @@ final class Importer
         $badStatus = $res->status < 200 || $res->status >= 300;
         $upd = [
             'setup_state'   => 'done',
-            'setup_note'    => ($badStatus ? '⚠️ la page répond ' . $res->status . ' : aucune chaîne de preuve déduite · ' : '')
+            'setup_note'    => ($badStatus
+                                 ? '⚠️ ' . t('la page répond {code} : aucune chaîne de preuve déduite',
+                                             ['code' => $res->status]) . ' · '
+                                 : '')
                              . self::setupNote($detect, $rules, $switched, $finalUrl, $noHttps),
             'expect_string' => $expect !== '' ? $expect : null,
             'check_db'      => Cms::usesDatabase($detect['cms']) ? (int)$mon['check_db'] : 0,
@@ -371,22 +377,25 @@ final class Importer
 
         // Journal des décisions : l'utilisateur doit pouvoir relire nos choix.
         if ($detect['cms']) {
-            Tune::note($monitorId, 'Technologie identifiée : ' . $detect['cms']
-                . ($detect['builder'] ? ' + ' . $detect['builder'] : ''),
-                'Indices relevés dans le HTML et les en-têtes (confiance ' . (int)$detect['confidence'] . ' %).');
+            Tune::note($monitorId,
+                t('Technologie identifiée : {tech}',
+                  ['tech' => $detect['cms'] . ($detect['builder'] ? ' + ' . $detect['builder'] : '')]),
+                t('Indices relevés dans le HTML et les en-têtes, confiance {pct} %.',
+                  ['pct' => (int)$detect['confidence']]));
         }
         if ($expect !== '') {
-            Tune::note($monitorId, 'Chaîne de preuve retenue : « ' . str_cut($expect, 60) . ' »',
-                'Ce texte vient du contenu du site : sa disparition trahit une panne du serveur web ou de la base.');
+            Tune::note($monitorId,
+                t('Chaîne de preuve retenue : « {string} »', ['string' => str_cut($expect, 60)]),
+                t('Ce texte vient du contenu du site : sa disparition trahit une panne du serveur web ou de la base.'));
         }
         if (!Cms::usesDatabase($detect['cms'])) {
-            Tune::note($monitorId, 'Contrôle base de données désactivé',
-                'Site statique ou hébergé en SaaS : aucune base n\'intervient dans le rendu.');
+            Tune::note($monitorId, t('Contrôle base de données désactivé'),
+                t('Site statique ou hébergé en SaaS : aucune base n\'intervient dans le rendu.'));
         }
         if ($pagesCreated > 0) {
-            Tune::note($monitorId, $pagesCreated . ' sonde(s) supplémentaire(s) créée(s)',
-                'Pages représentatives choisies dans le sitemap, une par famille, avec une cadence '
-                . 'proportionnelle à leur importance.');
+            Tune::note($monitorId,
+                tn($pagesCreated, 'Une sonde supplémentaire créée', '{n} sondes supplémentaires créées'),
+                t('Pages représentatives choisies dans le sitemap, une par famille, avec une cadence proportionnelle à leur importance.'));
         }
 
         return [
@@ -395,10 +404,12 @@ final class Importer
             'builder' => $detect['builder'],
             'expect'  => $expect !== '' ? $expect : null,
             'pages'   => $pagesCreated,
-            'message' => trim(($detect['cms'] ?? 'CMS inconnu')
+            'message' => trim(($detect['cms'] ?? t('technologie inconnue'))
                         . ($detect['builder'] ? ' + ' . $detect['builder'] : '')
-                        . ($pagesCreated ? ' · ' . $pagesCreated . ' sonde(s) ajoutée(s)' : '')
-                        . ($expect !== '' ? ' · preuve « ' . str_cut($expect, 30) . ' »' : ' · aucune chaîne de preuve trouvée')),
+                        . ($pagesCreated ? ' · ' . tn($pagesCreated, 'une sonde ajoutée', '{n} sondes ajoutées') : '')
+                        . ($expect !== ''
+                            ? ' · ' . t('preuve « {string} »', ['string' => str_cut($expect, 30)])
+                            : ' · ' . t('aucune chaîne de preuve trouvée'))),
         ];
     }
 
@@ -487,10 +498,10 @@ final class Importer
         if ($noHttps)           $bits[] = t('⚠️ pas de HTTPS exploitable : surveillance en HTTP');
         if ($detect['cms'])     $bits[] = $detect['cms'] . ' (' . $detect['confidence'] . '%)';
         if ($detect['builder']) $bits[] = $detect['builder'];
-        if ($detect['theme'])   $bits[] = 'thème ' . $detect['theme'];
+        if ($detect['theme'])   $bits[] = t('thème {name}', ['name' => $detect['theme']]);
         if ($detect['server'])  $bits[] = str_cut((string)$detect['server'], 30);
         if ($detect['cache'])   $bits[] = $detect['cache'];
-        if ($switched)          $bits[] = 'URL alignée sur ' . str_cut($finalUrl, 60);
+        if ($switched)          $bits[] = t('URL alignée sur {url}', ['url' => str_cut($finalUrl, 60)]);
         if (!empty($rules['notes'])) $bits[] = $rules['notes'];
         return str_cut(implode(' · ', $bits), 500);
     }

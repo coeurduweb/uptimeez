@@ -1065,6 +1065,41 @@ foreach (['/src/Runner.php', '/views/dashboard.php', '/data/e2e.sqlite'] as $pat
 }
 
 // =========================================================================
+title('Anglais par défaut : plus un mot de français dans les écrans');
+// =========================================================================
+// La promesse du produit est l'anglais par défaut. Un « aucune » ou un « est »
+// au milieu d'une page anglaise se voit tout de suite, et c'est ce qui restait
+// après la traduction des chaînes évidentes : verdicts composés, libellés
+// passés par variable, phrases coupées autour d'une balise.
+$frenchWords = '~\b(?:est|sont|pas|pour|avec|dans|aucune|aucun|votre|cette|jamais'
+             . '|déjà|sonde|sondes|réglages|chaîne|vérifier|vérifié)\b~iu';
+$leftovers = [];
+foreach (['today', 'dashboard', 'monitors', 'incidents', 'events', 'report',
+          'settings', 'import', 'clients'] as $p) {
+    $rr = $req('/index.php?p=' . $p . '&lang=en&ui=expert');
+    // On ne juge que le texte visible : scripts, styles, SVG et listes de
+    // langues (où « Français » est le nom de la langue) sont écartés.
+    $body = (string)preg_replace('~<script.*?</script>|<style.*?</style>|<svg.*?</svg>'
+        . '|<option[^>]*>.*?</option>~is', ' ', $rr['body']);
+    $text = html_entity_decode(strip_tags($body), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    if (preg_match_all($frenchWords, $text, $mm, PREG_OFFSET_CAPTURE)) {
+        $ctx = [];
+        foreach (array_slice($mm[0], 0, 2) as [$w, $at]) {
+            $ctx[] = trim(preg_replace('~\s+~', ' ',
+                mb_strcut($text, max(0, $at - 60), 120)));
+        }
+        $leftovers[] = $p . ' : ' . implode(' ⟂ ', $ctx);
+    }
+}
+ok('aucun mot français dans les écrans en anglais', $leftovers === [],
+    implode(' | ', array_slice($leftovers, 0, 3)));
+
+// Et l'inverse : la version française ne doit pas se remplir d'anglais.
+$rr = $req('/index.php?p=today&lang=fr&ui=expert');
+ok('la version française reste française',
+    $has($rr, 'À traiter d&#039;abord') || $has($rr, 'Rien à faire'));
+
+// =========================================================================
 title('Chaque écran rendu jusqu\'au bout');
 // =========================================================================
 // Un appel de méthode privée ou une clé manquante interrompt le rendu sans

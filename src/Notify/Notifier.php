@@ -24,16 +24,22 @@ final class Notifier
     public static function sendIncident(array $mon, array $incident, bool $isNew): void
     {
         $sev   = $incident['severity'] === 'degraded' ? 'degraded' : 'down';
-        $title = ($sev === 'down' ? '🔴 HORS SERVICE' : '🟠 DÉGRADÉ') . ' : ' . $mon['name'];
-        if (!$isNew) $title = '🔁 Toujours ' . ($sev === 'down' ? 'hors service' : 'dégradé') . ' : ' . $mon['name'];
+        // Le titre part dans une alerte : il suit la langue de l'installation,
+        // comme tout ce que le collecteur écrit.
+        $title = ($sev === 'down' ? '🔴 ' . t('HORS SERVICE') : '🟠 ' . t('DÉGRADÉ')) . ' : ' . $mon['name'];
+        if (!$isNew) {
+            $title = '🔁 ' . ($sev === 'down' ? t('Toujours hors service') : t('Toujours dégradé'))
+                   . ' : ' . $mon['name'];
+        }
 
         $lines = [
-            ['Cause', self::reasonLabel($incident['reason_code']) ],
-            ['Détail', str_cut((string)$incident['message'], 300)],
+            [t('Cause'), self::reasonLabel($incident['reason_code'])],
+            [t('Détail'), str_cut((string)$incident['message'], 300)],
             ['URL', $mon['url']],
-            ['Depuis', self::when($incident['started_at']) . ' (' . human_duration(max(0, time() - strtotime((string)$incident['started_at']))) . ')'],
+            [t('Depuis'), self::when($incident['started_at']) . ' ('
+                . human_duration(max(0, time() - strtotime((string)$incident['started_at']))) . ')'],
         ];
-        if (!$isNew) $lines[] = ['Échecs consécutifs', (string)$incident['checks_failed']];
+        if (!$isNew) $lines[] = [t('Échecs consécutifs'), (string)$incident['checks_failed']];
 
         $sent = self::dispatch($mon, $sev, $title, $lines, $sev === 'down' ? 'critical' : 'warn');
 
@@ -66,22 +72,24 @@ final class Notifier
             $since = min($since, strtotime((string)$it['incident']['started_at']));
         }
         $n     = count($sites);
-        $title = '🔴 PANNE GROUPÉE : ' . $n . ' site' . ($n > 1 ? 's' : '') . ' injoignable' . ($n > 1 ? 's' : '');
+        $title = '🔴 ' . t('PANNE GROUPÉE') . ' : '
+               . tn($n, 'un site injoignable', '{n} sites injoignables');
 
         $names = array_values($sites);
-        $liste = implode(', ', array_slice($names, 0, 12))
-               . (count($names) > 12 ? ' et ' . (count($names) - 12) . ' autre(s)' : '');
+        $liste = implode(', ', array_slice($names, 0, 12));
+        if (count($names) > 12) {
+            $liste .= ' ' . tn(count($names) - 12, 'et un autre', 'et {n} autres');
+        }
 
         $lines = [
-            [$isIp ? 'Serveur concerné' : 'Domaine concerné', $scope],
-            ['Sites touchés', $n . ' : ' . $liste],
-            ['Sondes en échec', (string)count($items)],
-            ['Causes relevées', implode(' · ', array_keys($causes))],
-            ['Début', self::when(date('Y-m-d H:i:s', $since))],
-            ['Lecture', $isIp
-                ? 'Toutes ces adresses pointent sur la même machine : le problème est très probablement '
-                  . 'au niveau du serveur ou de l\'hébergement, pas des sites eux-mêmes.'
-                : 'Ces sites partagent le même domaine : vérifiez la configuration commune (DNS, certificat, redirections).'],
+            [$isIp ? t('Serveur concerné') : t('Domaine concerné'), $scope],
+            [t('Sites touchés'), $n . ' : ' . $liste],
+            [t('Sondes en échec'), (string)count($items)],
+            [t('Causes relevées'), implode(' · ', array_keys($causes))],
+            [t('Début'), self::when(date('Y-m-d H:i:s', $since))],
+            [t('Lecture'), $isIp
+                ? t('Toutes ces adresses pointent sur la même machine : le problème est très probablement au niveau du serveur ou de l\'hébergement, pas des sites eux-mêmes.')
+                : t('Ces sites partagent le même domaine : vérifiez la configuration commune, DNS, certificat, redirections.')],
         ];
 
         $mon0 = $items[0]['monitor'];
@@ -99,7 +107,11 @@ final class Notifier
             Db::insert('events', [
                 'monitor_id' => (int)($mon0['id'] ?? 0) ?: null,
                 'ts' => now(), 'kind' => 'grouped_alert',
-                'message' => $n . ' site(s) injoignable(s) sur ' . ($isIp ? 'le serveur ' : 'le domaine ') . $scope,
+                'message' => $isIp
+                    ? tn($n, 'un site injoignable sur le serveur {scope}',
+                             '{n} sites injoignables sur le serveur {scope}', ['scope' => $scope])
+                    : tn($n, 'un site injoignable sur le domaine {scope}',
+                             '{n} sites injoignables sur le domaine {scope}', ['scope' => $scope]),
                 'details' => jenc(['scope' => $scope, 'sites' => $names]), 'seen' => 0,
             ]);
         } catch (\Throwable) {}
@@ -110,10 +122,10 @@ final class Notifier
     {
         if (!Config::get('notify.notify_recovery', true)) return;
         $dur   = (int)($incident['duration_sec'] ?? 0);
-        $title = '🟢 RÉTABLI : ' . $mon['name'];
+        $title = '🟢 ' . t('RÉTABLI') . ' : ' . $mon['name'];
         $lines = [
-            ['Indisponibilité', human_duration($dur)],
-            ['Cause initiale', self::reasonLabel($incident['reason_code'] ?? null)],
+            [t('Indisponibilité'), human_duration($dur)],
+            [t('Cause initiale'), self::reasonLabel($incident['reason_code'] ?? null)],
             ['URL', $mon['url']],
         ];
         self::dispatch($mon, 'up', $title, $lines, 'info');
@@ -135,7 +147,7 @@ final class Notifier
     public static function dispatch(array $mon, string $sev, string $title, array $lines, string $urgency = 'warn'): int
     {
         if ($urgency !== 'critical' && self::inQuietHours()) {
-            self::log($mon, 'quiet', $sev, false, 'Heures calmes : envoi différé/ignoré');
+            self::log($mon, 'quiet', $sev, false, t('Heures calmes : envoi différé ou ignoré'));
             return 0;
         }
         if ($urgency === 'warn' && !Config::get('notify.notify_degraded', true)) return 0;
@@ -268,8 +280,8 @@ final class Notifier
         $mon = ['id' => 0, 'name' => 'Test de configuration', 'url' => (string)Config::get('app.base_url', 'https://exemple.fr'),
                 'notify_channels' => $channel];
         $lines = [
-            ['Message', 'Ceci est un test envoyé depuis Uptimer.'],
-            ['Date', date('d/m/Y H:i:s')],
+            [t('Message'), t('Ceci est un test envoyé depuis {app}.')],
+            [t('Date'), date('d/m/Y H:i:s')],
         ];
         $res = match ($channel) {
             'discord' => Discord::send('✅ Test Uptimer', $lines, 'up', $mon),

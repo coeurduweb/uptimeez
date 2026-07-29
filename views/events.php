@@ -53,7 +53,7 @@ $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m 
             <span class="tiny muted"><?= e(str_cut((string)$n['response'], 90)) ?></span></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$notifs): ?><tr><td colspan="5" class="muted small" style="padding:20px">Aucune alerte envoyée.
+      <?php if (!$notifs): ?><tr><td colspan="5" class="muted small" style="padding:20px"><?= te('Aucune alerte envoyée.') ?>
         <?= t('Testez vos canaux depuis les {link}.',
         ['link' => '<a href="' . e(u('settings')) . '">' . te('réglages') . '</a>']) ?></td></tr><?php endif; ?>
       </tbody>

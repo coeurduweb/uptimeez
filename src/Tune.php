@@ -50,10 +50,10 @@ final class Tune
             return null;
         }
 
-        $why = sprintf('p95 mesuré à %s sur %d mesures ; seuil placé %.0f × au-dessus',
-            Ui::ms($p95), $n, self::SLOW_FACTOR);
+        $why = t('p95 mesuré à {p95} sur {n} mesures, seuil placé {factor} fois au-dessus.',
+                 ['p95' => Ui::ms($p95), 'n' => $n, 'factor' => number_format(self::SLOW_FACTOR, 1, ',', ' ')]);
         Db::update('monitors', ['slow_ms' => $target, 'tuned_at' => now()], 'id = :__i', ['__i' => $id]);
-        self::note($id, 'Seuil de lenteur réglé à ' . Ui::ms($target), $why);
+        self::note($id, t('Seuil de lenteur réglé à {value}', ['value' => Ui::ms($target)]), $why);
 
         return ['changed' => true, 'from' => $current, 'to' => $target, 'why' => $why];
     }

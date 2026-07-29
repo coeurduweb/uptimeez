@@ -88,7 +88,8 @@ final class Ssl
         if ($out['days_left'] !== null && $out['days_left'] < 0) {
             $out['valid'] = false;
             $out['code']  = 'SSL_EXPIRED';
-            $out['error'] = 'Certificat expiré depuis ' . abs($out['days_left']) . ' jour(s)';
+            $out['error'] = tn(abs((int)$out['days_left']), 'Certificat expiré depuis un jour',
+                                                              'Certificat expiré depuis {n} jours');
         }
 
         return $out;
@@ -131,7 +132,7 @@ final class Ssl
         if (str_contains($r, 'self signed certificate in certificate chain')
             || str_contains($r, 'unable to get issuer'))  return 'Autorité de certification inconnue du système';
         if (str_contains($r, 'certificate has expired'))   return 'Certificat expiré';
-        if (str_contains($r, 'certificate verify failed')) return 'Vérification du certificat échouée';
+        if (str_contains($r, 'certificate verify failed')) return t('Vérification du certificat échouée');
         if ($raw === '') {
             // Certificat lisible mais refusé : dans la quasi-totalité des cas
             // l'autorité qui l'a signé n'est pas reconnue.

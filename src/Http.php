@@ -33,9 +33,9 @@ final class Http
         foreach ($ips as $ip) {
             // 169.254.169.254 sert les métadonnées chez la plupart des hébergeurs :
             // c'est la cible que cherche une SSRF, on la nomme explicitement.
-            if ($ip === '169.254.169.254') return 'adresse de métadonnées de l\'hébergeur';
+            if ($ip === '169.254.169.254') return t('adresse de métadonnées de l\'hébergeur');
             if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                return 'adresse locale ou privée (' . $ip . ')';
+                return t('adresse locale ou privée : {ip}', ['ip' => $ip]);
             }
         }
         return null;
@@ -255,23 +255,23 @@ final class Http
         $res->status    = 0;
         $res->ok        = false;
         $res->errorCode = 'BLOCKED';
-        $res->error     = 'Cible refusée : ' . $why;
+        $res->error     = t('Cible refusée : {reason}', ['reason' => $why]);
         return $res;
     }
 
     public static function errorLabel(?string $code): string
     {
         return match ($code) {
-            'TIMEOUT'        => 'Délai dépassé (timeout)',
-            'DNS'            => 'Nom de domaine non résolu',
-            'CONNECT'        => 'Connexion impossible',
-            'CONNECT_RESET'  => 'Connexion interrompue par le serveur',
-            'SSL_HANDSHAKE'  => 'Échec de la négociation TLS',
-            'SSL_INVALID'    => 'Certificat SSL invalide',
-            'REDIRECT_LOOP'  => 'Boucle de redirection',
-            'NET_ERROR'      => 'Erreur réseau',
-            'BLOCKED'        => 'Cible refusée par la politique de sécurité',
-            default          => 'Erreur',
+            'TIMEOUT'        => t('Délai dépassé (timeout)'),
+            'DNS'            => t('Nom de domaine non résolu'),
+            'CONNECT'        => t('Connexion impossible'),
+            'CONNECT_RESET'  => t('Connexion interrompue par le serveur'),
+            'SSL_HANDSHAKE'  => t('Échec de la négociation TLS'),
+            'SSL_INVALID'    => t('Certificat SSL invalide'),
+            'REDIRECT_LOOP'  => t('Boucle de redirection'),
+            'NET_ERROR'      => t('Erreur réseau'),
+            'BLOCKED'        => t('Cible refusée par la politique de sécurité'),
+            default          => t('Erreur'),
         };
     }
 }

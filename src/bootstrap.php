@@ -10,7 +10,7 @@ define('UPTIMER_VERSION', '1.0.0');
 
 if (PHP_VERSION_ID < 80100) {
     http_response_code(500);
-    exit('Uptimer nécessite PHP 8.1 ou plus récent (détecté : ' . PHP_VERSION . ')');
+    exit('Uptimer requires PHP 8.1 or newer. Uptimer nécessite PHP 8.1 ou plus récent. (' . 'PHP ' . PHP_VERSION . ')');
 }
 
 spl_autoload_register(function (string $class): void {

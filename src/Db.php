@@ -337,6 +337,9 @@ final class Db
             severity {$str(20)} NOT NULL DEFAULT 'down',   /* down | degraded */
             reason_code {$str(40)} DEFAULT NULL,
             message {$txt},
+            /* Variables du verdict au moment de l'incident : le message est une
+               phrase source, traduite à la lecture par verdict_text(). */
+            message_vars {$txt},
             started_at {$ts} NOT NULL,
             ended_at {$ts} DEFAULT NULL,
             duration_sec {$int} DEFAULT NULL,

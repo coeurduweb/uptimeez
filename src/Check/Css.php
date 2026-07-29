@@ -52,9 +52,9 @@ final class Css
 
     /** Motifs d'assets générés par un cache : leur absence est un symptôme classique. */
     private const CACHE_HINTS = [
-        '/wp-content/cache/'                 => 'cache WP (purge en cours ou fichier jamais régénéré)',
+        '/wp-content/cache/'                 => 'cache WordPress : purge en cours, ou fichier jamais régénéré',
         '/cache/autoptimize/'                => 'Autoptimize',
-        '/min/'                              => 'minification à la volée',
+        '/min/'                              => 'minification à la volée',   // étiquette traduite à l'affichage
         '/litespeed/'                        => 'LiteSpeed Cache',
         '/wp-content/uploads/elementor/css/' => 'CSS Elementor par page',
         '/cache/wpfc-minified/'              => 'WP Fastest Cache',
@@ -179,7 +179,7 @@ final class Css
                 $cons  = ['err', 'GET ' . $url . ' net::ERR_FAILED (' . strtolower($note) . ')'];
             } elseif ($res->status >= 400 || $res->status === 0) {
                 $issue = 'HTTP_' . $res->status;
-                $note  = 'HTTP ' . $res->status . ' : le fichier n\'existe plus sur le serveur';
+                $note  = t('HTTP {code} : le fichier n\'existe plus sur le serveur', ['code' => $res->status]);
                 $cons  = ['err', 'GET ' . $url . ' net::ERR_ABORTED ' . $res->status
                         . ' (' . ($res->status === 404 ? 'Not Found' : 'Error') . ')'];
             } elseif ($bytes === 0) {
@@ -188,7 +188,8 @@ final class Css
                 $cons  = ['warn', 'Empty response body for ' . $url];
             } elseif (self::looksLikeErrorPage($res)) {
                 $issue = 'NOT_' . strtoupper($kind);
-                $note  = 'le serveur renvoie du HTML ou une trace PHP au lieu du ' . strtoupper($kind);
+                $note  = t('le serveur renvoie du HTML ou une trace PHP au lieu du {kind}',
+                           ['kind' => strtoupper($kind)]);
                 $cons  = $kind === 'css'
                     ? ['err', "Refused to apply style from '" . $url . "' because its MIME type ('"
                             . (str_contains((string)$res->contentType, 'html') ? 'text/html' : (string)$res->contentType)
@@ -196,21 +197,23 @@ final class Css
                     : ['err', 'Uncaught SyntaxError: Unexpected token \'<\' (' . self::shortAsset($url) . ')'];
             } elseif (!self::mimeOk($res, $kind) && $nosniff) {
                 $issue = 'MIME_BLOCKED';
-                $note  = 'Content-Type « ' . str_cut((string)$res->contentType, 40) . ' » + nosniff : ressource rejetée';
+                $note  = t('Content-Type « {type} » avec nosniff : ressource rejetée',
+                           ['type' => str_cut((string)$res->contentType, 40)]);
                 $cons  = ['err', 'Refused to ' . ($kind === 'css' ? 'apply style' : 'execute script') . " from '" . $url
                         . "' because its MIME type ('" . str_cut((string)$res->contentType, 40)
                         . "') is not " . ($kind === 'css' ? 'a supported stylesheet MIME type' : 'executable')
                         . ', and strict MIME type checking is enabled'];
             } elseif ($kind === 'css' && !self::mimeOk($res, 'css') && !$res->looksLikeCss()) {
                 $issue = 'NOT_CSS';
-                $note  = 'contenu non reconnu comme du CSS (Content-Type : ' . str_cut((string)$res->contentType, 40) . ')';
+                $note  = t('contenu non reconnu comme du CSS, Content-Type {type}',
+                           ['type' => str_cut((string)$res->contentType, 40)]);
                 $cons  = ['err', "Refused to apply style from '" . $url . "' because its MIME type is not supported"];
             }
 
             // Contenu mixte : ressource http sur une page https → bloquée.
             if (!$issue && $isHttps && str_starts_with(strtolower($url), 'http://')) {
                 $issue = 'MIXED_CONTENT';
-                $note  = 'servie en HTTP sur une page HTTPS : bloquée par le navigateur';
+                $note  = t('servie en HTTP sur une page HTTPS : bloquée par le navigateur');
                 $cons  = ['err', 'Mixed Content: The page at \'' . $pageUrl . '\' was loaded over HTTPS, but requested an '
                         . 'insecure ' . ($kind === 'css' ? 'stylesheet' : 'script') . ' \'' . $url . '\'. '
                         . 'This request has been blocked'];
@@ -220,7 +223,7 @@ final class Css
             if (!$issue && !empty($ref['integrity']) && $bytes > 0) {
                 if (!self::sriMatches((string)$ref['integrity'], $res->body)) {
                     $issue = 'SRI_MISMATCH';
-                    $note  = 'empreinte integrity obsolète : le navigateur refuse le fichier';
+                    $note  = t('empreinte integrity obsolète : le navigateur refuse le fichier');
                     $cons  = ['err', 'Failed to find a valid digest in the \'integrity\' attribute for resource \''
                             . $url . '\' with computed SHA-' . self::sriAlgo((string)$ref['integrity']) . ' integrity. '
                             . 'The resource has been blocked'];
@@ -241,10 +244,14 @@ final class Css
                 $hard = !$isSoft && ($kind === 'css' || !empty($ref['critical']));
                 if ($hard) {
                     $critical++;
-                    $result['messages'][] = ($kind === 'css' ? 'Feuille de style' : 'Script essentiel') . ' en échec : ' . $label;
+                    $result['messages'][] = $kind === 'css'
+                        ? t('Feuille de style en échec : {detail}', ['detail' => $label])
+                        : t('Script essentiel en échec : {detail}', ['detail' => $label]);
                 } else {
                     $soft++;
-                    $result['messages'][] = ($isSoft ? 'Ressource tierce' : 'Script secondaire') . ' en échec : ' . $label;
+                    $result['messages'][] = $isSoft
+                        ? t('Ressource tierce en échec : {detail}', ['detail' => $label])
+                        : t('Script secondaire en échec : {detail}', ['detail' => $label]);
                 }
             } else {
                 if ($kind === 'css') { $metrics['sheets_ok']++; $cssParts[] = $res->body; }
@@ -297,8 +304,9 @@ final class Css
             if ($revealBroken) {
                 $critical++;
                 $metrics['hidden_risk'] = true;
-                $result['messages'][] = $hidden['count'] . ' bloc(s) masqué(s) en attente d\'animation alors que la '
-                    . 'ressource qui devait les révéler est cassée : le contenu risque de rester invisible.';
+                $result['messages'][] = tn($hidden['count'],
+                    'Un bloc reste masqué en attente d\'animation alors que la ressource qui devait le révéler est cassée : le contenu risque de rester invisible.',
+                    '{n} blocs restent masqués en attente d\'animation alors que la ressource qui devait les révéler est cassée : le contenu risque de rester invisible.');
             }
         }
 
@@ -308,7 +316,7 @@ final class Css
             if ($csp !== '' && preg_match('~style-src([^;]*)~i', $csp, $m)
                 && str_contains(strtolower($m[1]), "'none'")) {
                 $critical++;
-                $result['messages'][] = 'En-tête CSP style-src \'none\' : toutes les feuilles de style sont bloquées.';
+                $result['messages'][] = t('En-tête CSP style-src « none » : toutes les feuilles de style sont bloquées.');
                 $console[] = ['level' => 'err', 'text' => 'Refused to load the stylesheet because it violates the '
                     . 'following Content Security Policy directive: "style-src \'none\'"'];
             }
@@ -322,8 +330,8 @@ final class Css
         if ($metrics['sheets_declared'] === 0 && !$inlineStyled) {
             if (!empty($baseline['sheets_declared'])) {
                 $critical++;
-                $result['messages'][] = 'Plus aucune feuille de style déclarée dans le HTML (référence : '
-                    . (int)$baseline['sheets_declared'] . ').';
+                $result['messages'][] = t('Plus aucune feuille de style déclarée dans le HTML, la référence en comptait {n}.',
+                    ['n' => (int)$baseline['sheets_declared']]);
             } elseif (!$baseline) {
                 // Première observation : on le signale une fois. Si c'est l'état
                 // normal de la page, la référence l'enregistrera et on se taira.
@@ -620,28 +628,33 @@ final class Css
 
         $dr = $drop((float)$m['rules'], (float)($b['rules'] ?? 0));
         if ($dr !== null && $dr >= $dropPct) {
-            $crit[] = sprintf('Nombre de règles CSS divisé (%d au lieu de %d).', $m['rules'], (int)$b['rules']);
+            $crit[] = t('Nombre de règles CSS divisé : {now} au lieu de {ref}.',
+                        ['now' => (int)$m['rules'], 'ref' => (int)$b['rules']]);
         }
 
         $refCount = (int)($b['sheets_ok'] ?? 0);
         if ($refCount > 0 && $m['sheets_ok'] < $refCount) {
-            $msg = sprintf('%d feuille(s) de style en moins qu\'en référence (%d/%d chargées).',
-                $refCount - $m['sheets_ok'], $m['sheets_ok'], $refCount);
+            $msg = tn($refCount - $m['sheets_ok'],
+                'Une feuille de style en moins qu\'en référence : {ok} sur {ref} chargées.',
+                '{n} feuilles de style en moins qu\'en référence : {ok} sur {ref} chargées.',
+                ['ok' => (int)$m['sheets_ok'], 'ref' => $refCount]);
             if (($d ?? 0) >= 10) $crit[] = $msg; else $warn[] = $msg;
         }
 
         $refJs = (int)($b['js_ok'] ?? 0);
         if ($refJs > 0 && ($m['js_ok'] ?? 0) < $refJs) {
-            $warn[] = sprintf('%d script(s) en moins qu\'en référence (%d/%d chargés).',
-                $refJs - $m['js_ok'], $m['js_ok'], $refJs);
+            $warn[] = tn($refJs - (int)$m['js_ok'],
+                'Un script en moins qu\'en référence : {ok} sur {ref} chargés.',
+                '{n} scripts en moins qu\'en référence : {ok} sur {ref} chargés.',
+                ['ok' => (int)$m['js_ok'], 'ref' => $refJs]);
         }
 
         if (($b['media_queries'] ?? 0) >= 3 && $m['media_queries'] === 0) {
-            $crit[] = 'Plus aucune media query : la mise en page responsive est perdue.';
+            $crit[] = t('Plus aucune media query : la mise en page responsive est perdue.');
         }
         if (($b['layout_score'] ?? 0) >= 40 && $m['layout_score'] < ((int)$b['layout_score']) * 0.5) {
-            $crit[] = sprintf('Capacité de mise en page effondrée (score %d au lieu de %d).',
-                $m['layout_score'], (int)$b['layout_score']);
+            $crit[] = t('Capacité de mise en page effondrée : score {now} au lieu de {ref}.',
+                        ['now' => (int)$m['layout_score'], 'ref' => (int)$b['layout_score']]);
         }
 
         $covNow = $m['coverage']; $covRef = $b['coverage'] ?? null;
@@ -649,14 +662,19 @@ final class Css
             if ($covRef !== null && $covRef >= 0.5) {
                 $gap = round(($covRef - $covNow) * 100, 1);
                 if ($gap >= 25 || ($covNow < 0.45 && $gap >= 15)) {
-                    $crit[] = sprintf('Les classes de la page ne sont plus couvertes par le CSS : %.0f %% contre %.0f %% en référence%s.',
-                        $covNow * 100, $covRef * 100,
-                        !empty($m['classes_missing']) ? ' (ex. ' . implode(', ', array_slice($m['classes_missing'], 0, 4)) . ')' : '');
+                    $crit[] = t('Les classes de la page ne sont plus couvertes par le CSS : {now} % contre {ref} % en référence.{examples}',
+                        ['now' => round($covNow * 100), 'ref' => round($covRef * 100),
+                         'examples' => !empty($m['classes_missing'])
+                            ? ' ' . t('Par exemple : {list}.',
+                                      ['list' => implode(', ', array_slice($m['classes_missing'], 0, 4))])
+                            : '']);
                 } elseif ($gap >= 12) {
-                    $warn[] = sprintf('Couverture CSS en baisse : %.0f %% contre %.0f %%.', $covNow * 100, $covRef * 100);
+                    $warn[] = t('Couverture CSS en baisse : {now} % contre {ref} %.',
+                                ['now' => round($covNow * 100), 'ref' => round($covRef * 100)]);
                 }
             } elseif ($covRef === null && $covNow < 0.25 && $m['classes_tested'] >= 10) {
-                $warn[] = sprintf('Seulement %.0f %% des classes de la page trouvent une règle CSS.', $covNow * 100);
+                $warn[] = t('Seulement {pct} % des classes de la page trouvent une règle CSS.',
+                            ['pct' => round($covNow * 100)]);
             }
         }
 
@@ -742,7 +760,9 @@ final class Css
     private static function cacheHint(string $url): ?string
     {
         $l = strtolower($url);
-        foreach (self::CACHE_HINTS as $needle => $label) if (str_contains($l, $needle)) return $label;
+        // L'étiquette est un msgid : elle s'affiche entre crochets dans le
+        // message d'échec, donc dans la langue de qui lit.
+        foreach (self::CACHE_HINTS as $needle => $label) if (str_contains($l, $needle)) return t($label);
         return null;
     }
 }

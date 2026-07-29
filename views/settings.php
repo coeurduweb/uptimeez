@@ -289,7 +289,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
 
   <!-- ==================== APPLICATION ==================== -->
   <?= Ui::accOpen('app', 'globe', t('Application et accès'),
-        $token !== '' ? 'page d\'état publique activée' : 'nom, adresse, mot de passe') ?>
+        $token !== '' ? t('page d\'état publique activée') : t('nom, adresse, mot de passe')) ?>
   <?= Ui::accBody() ?>
     <div class="form-cols">
       <div>
@@ -298,6 +298,15 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
         <div class="field"><label for="bu"><?= te('Adresse de cette installation') ?></label>
           <input id="bu" type="text" name="base_url" value="<?= e($baseUrl) ?>" placeholder="<?= te('https://monitoring.votredomaine.fr') ?>" spellcheck="false">
           <span class="hint"><?= te('Sert à mettre un lien cliquable vers la fiche concernée dans les alertes.') ?></span></div>
+        <div class="field"><label for="loc"><?= te('Langue de l\'installation') ?></label><?= hint('Langue des relevés techniques écrits par la tâche planifiée : eux sont enregistrés une fois pour toutes. L\'interface, elle, suit la langue de chaque visiteur. « Automatique » laisse le navigateur décider pour l\'interface, et l\'anglais pour les relevés.') ?>
+          <select id="loc" name="locale">
+            <option value="auto"<?= in_array((string)Config::get('app.locale', ''), ['', 'auto'], true) ? ' selected' : '' ?>>
+              <?= te('Automatique') ?></option>
+            <?php foreach (Uptimer\I18n::available() as $code => $native): ?>
+              <option value="<?= e($code) ?>"<?= (string)Config::get('app.locale', '') === $code ? ' selected' : '' ?>>
+                <?= e(Uptimer\I18n::flag($code)) ?> <?= e($native) ?></option>
+            <?php endforeach; ?>
+          </select></div>
         <div class="field"><label for="tz"><?= te('Fuseau horaire') ?></label>
           <input id="tz" type="text" name="timezone" value="<?= e((string)Config::get('app.timezone', 'Europe/Paris')) ?>"></div>
       </div>
@@ -347,8 +356,8 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
       </form>
     <?php endforeach; ?>
   </div>
-  <p class="hint mt">Le résultat s'affiche en haut de page et reste consultable dans le
-    <a href="<?= e(u('events')) ?>">journal</a>.</p>
+  <p class="hint mt"><?= te('Le résultat s\'affiche en haut de page, et reste consultable dans le {journal}.',
+        ['journal' => '<a href="' . e(u('events')) . '">' . te('journal') . '</a>']) ?></p>
   <div class="section-title"><?= te('Vérifier la détection sur ce serveur') ?></div>
   <pre class="mono small" style="white-space:pre-wrap;margin:0;color:var(--text-soft)">php <?= e(UPTIMER_ROOT) ?>/bin/selftest.php   # <?= te('logique de détection, hors ligne') ?>
 php <?= e(UPTIMER_ROOT) ?>/bin/bench.php      # <?= te('pannes reproduites de bout en bout') ?>

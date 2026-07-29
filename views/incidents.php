@@ -68,7 +68,8 @@ foreach ($rows as $r) {
             </td>
             <td>
               <?= Ui::reasonBadge((string)$r['reason_code']) ?>
-              <div class="tiny muted"><?= e(str_cut((string)$r['message'], 110)) ?></div>
+              <div class="tiny muted"><?= e(verdict_text(['last_message' => $r['message'],
+                    'last_message_vars' => $r['message_vars'] ?? null], 110)) ?></div>
             </td>
             <td class="small nowrap"><?= e(date('d/m/Y H:i', strtotime((string)$r['started_at']))) ?></td>
             <td class="small nowrap"><?= $r['ended_at'] ? e(date('d/m/Y H:i', strtotime((string)$r['ended_at']))) : '<span class="v-bad">—</span>' ?></td>

@@ -49,8 +49,10 @@ final class Heartbeat
             'created_at'    => now(),
             'next_check_at' => null,
         ]);
-        Tune::note($id, 'Sonde battement créée', 'Signal attendu toutes les '
-            . human_duration(max(60, $expectEverySec)) . ', tolérance ' . human_duration(max(30, $graceSec)) . '.');
+        Tune::note($id, t('Sonde battement créée'),
+            t('Signal attendu toutes les {every}, tolérance {grace}.',
+              ['every' => human_duration(max(60, $expectEverySec)),
+               'grace' => human_duration(max(30, $graceSec))]));
         return ['id' => $id, 'token' => $token];
     }
 
@@ -75,7 +77,7 @@ final class Heartbeat
             'last_check_at' => $now,
             'status'        => 'up',
             'reason_code'   => null,
-            'last_message'  => $note !== '' ? str_cut($note, 200) : 'Signal reçu',
+            'last_message'  => $note !== '' ? str_cut($note, 200) : t('Signal reçu'),
             'status_since'  => $wasDown || $mon['status'] !== 'up' ? $now : $mon['status_since'],
             'consecutive_fail' => 0,
             'consecutive_ok'   => (int)$mon['consecutive_ok'] + 1,
@@ -83,7 +85,7 @@ final class Heartbeat
 
         Db::insert('checks', [
             'monitor_id' => $id, 'ts' => $now, 'state' => 'up', 'reason_code' => null,
-            'status_code' => 200, 'message' => $note !== '' ? str_cut($note, 200) : 'Signal reçu',
+            'status_code' => 200, 'message' => $note !== '' ? str_cut($note, 200) : t('Signal reçu'),
             'total_ms' => 0, 'attempts' => 1,
         ]);
 
@@ -118,8 +120,8 @@ final class Heartbeat
 
             if ($overdue <= 0) continue;   // dans les temps
 
-            $msg = 'Aucun signal depuis ' . human_duration(time() - $last)
-                 . ' (attendu toutes les ' . human_duration($expect) . ').';
+            $msg = t('Aucun signal depuis {since}, alors qu\'il est attendu toutes les {every}.',
+                     ['since' => human_duration(time() - $last), 'every' => human_duration($expect)]);
 
             if ($mon['status'] !== 'down') {
                 Db::update('monitors', [

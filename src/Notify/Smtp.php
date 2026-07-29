@@ -49,17 +49,17 @@ final class Smtp
             return ['ok' => false, 'info' => $why . ' | ' . str_cut(implode(' ', array_slice($log, -4)), 300)];
         };
 
-        if (!$expect($read(), '220')) return $fail('Bannière SMTP inattendue');
+        if (!$expect($read(), '220')) return $fail(t('Bannière SMTP inattendue'));
         $ehlo = 'uptimer.' . (parse_url((string)Config::get('app.base_url', ''), PHP_URL_HOST) ?: 'localhost');
         $write('EHLO ' . $ehlo);
         $caps = $read();
-        if (!$expect($caps, '250')) return $fail('EHLO refusé');
+        if (!$expect($caps, '250')) return $fail(t('EHLO refusé'));
 
         if ($secure === 'tls') {
             $write('STARTTLS');
-            if (!$expect($read(), '220')) return $fail('STARTTLS refusé');
+            if (!$expect($read(), '220')) return $fail(t('STARTTLS refusé'));
             if (!@stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                return $fail('Chiffrement TLS impossible');
+                return $fail(t('Chiffrement TLS impossible'));
             }
             $write('EHLO ' . $ehlo);
             $caps = $read();
@@ -69,25 +69,25 @@ final class Smtp
         if ($user !== '') {
             if (stripos($caps, 'AUTH') !== false && stripos($caps, 'PLAIN') !== false) {
                 $write('AUTH PLAIN ' . base64_encode("\0" . $user . "\0" . $pass), true);
-                if (!$expect($read(), '235')) return $fail('Authentification SMTP refusée');
+                if (!$expect($read(), '235')) return $fail(t('Authentification SMTP refusée'));
             } else {
                 $write('AUTH LOGIN');
-                if (!$expect($read(), '334')) return $fail('AUTH LOGIN refusé');
+                if (!$expect($read(), '334')) return $fail(t('AUTH LOGIN refusé'));
                 $write(base64_encode($user), true);
-                if (!$expect($read(), '334')) return $fail('Identifiant SMTP refusé');
+                if (!$expect($read(), '334')) return $fail(t('Identifiant SMTP refusé'));
                 $write(base64_encode($pass), true);
-                if (!$expect($read(), '235')) return $fail('Mot de passe SMTP refusé');
+                if (!$expect($read(), '235')) return $fail(t('Mot de passe SMTP refusé'));
             }
         }
 
         $write('MAIL FROM:<' . $from . '>');
-        if (!$expect($read(), '250')) return $fail('MAIL FROM refusé');
+        if (!$expect($read(), '250')) return $fail(t('MAIL FROM refusé'));
         foreach ($recipients as $rcpt) {
             $write('RCPT TO:<' . $rcpt . '>');
-            if (!$expect($read(), '250,251')) return $fail('Destinataire refusé : ' . $rcpt);
+            if (!$expect($read(), '250,251')) return $fail(t('Destinataire refusé : {mail}', ['mail' => $rcpt]));
         }
         $write('DATA');
-        if (!$expect($read(), '354')) return $fail('DATA refusé');
+        if (!$expect($read(), '354')) return $fail(t('DATA refusé'));
 
         $boundary = 'uptimer' . bin2hex(random_bytes(8));
         $headers = [
@@ -116,6 +116,8 @@ final class Smtp
         @fclose($fp);
 
         $ok = $expect($final, '250');
-        return ['ok' => $ok, 'info' => $ok ? 'Accepté par ' . $host : ('Refusé : ' . str_cut(trim($final), 200))];
+        return ['ok' => $ok, 'info' => $ok
+            ? t('Accepté par {host}', ['host' => $host])
+            : t('Refusé : {reason}', ['reason' => str_cut(trim($final), 200)])];
     }
 }

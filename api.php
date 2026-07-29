@@ -135,7 +135,8 @@ switch ($action) {
                 $new  = (int)min(60000, max(1000, ceil($base * 1.4 / 100) * 100));
                 $undo = ['slow_ms' => (int)$mon['slow_ms']];
                 Db::update('monitors', ['slow_ms' => $new], 'id = :__i', ['__i' => $id]);
-                $msg  = 'Seuil de lenteur porté à ' . Ui::ms($new) . ' (d\'après le p95 mesuré sur 7 jours).';
+                $msg  = t('Seuil de lenteur porté à {value}, d\'après le p95 mesuré sur 7 jours.',
+                          ['value' => Ui::ms($new)]);
                 break;
 
             case 'ignore_noindex':
@@ -152,14 +153,14 @@ switch ($action) {
                 }
                 $undo = ['url' => (string)$mon['url']];
                 Db::update('monitors', ['url' => $last], 'id = :__i', ['__i' => $id]);
-                $msg = 'Sonde alignée sur ' . str_cut($last, 60);
+                $msg = t('Sonde alignée sur {url}', ['url' => str_cut($last, 60)]);
                 break;
 
             case 'snooze':
                 $undo = ['paused_until' => $mon['paused_until']];
                 Db::update('monitors', ['paused_until' => date('Y-m-d H:i:s', time() + 3600)],
                            'id = :__i', ['__i' => $id]);
-                $msg = 'Sonde en pause pendant une heure.';
+                $msg = t('Sonde en pause pendant une heure.');
                 break;
 
             case 'ack':

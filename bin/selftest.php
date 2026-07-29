@@ -878,6 +878,43 @@ Uptimer\Config::set('db.sqlite', $prevDb);
 @unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
 
 // =========================================================================
+section('Traductions : aucune phrase laissée en arrière');
+// =========================================================================
+// L'anglais est la langue par défaut du produit : une phrase qui retombe sur le
+// français est un défaut, pas un détail. Ces deux contrôles interrogent l'outil
+// d'audit lui-même, pour que la dette ne revienne pas au premier écran ajouté.
+$auditJson = shell_exec(escapeshellarg(PHP_BINARY) . ' '
+    . escapeshellarg(UPTIMER_ROOT . '/bin/i18n-audit.php') . ' --json 2>/dev/null');
+$audit = jdec((string)$auditJson);
+check('l\'audit de traduction répond', isset($audit['msgids']), true);
+// Le JSON rend une liste de msgid, pas un tableau associatif.
+$ids = array_values((array)($audit['msgids'] ?? []));
+check('le catalogue anglais couvre chaque phrase',
+    count(array_diff($ids, array_keys(Uptimer\I18n::catalogue('en')))), 0);
+$bare = (int)($audit['bare'] ?? 0);
+check('aucun texte d\'interface laissé en français dans le code', $bare, 0);
+check('aucun msgid coupé en morceaux', count((array)($audit['fragments'] ?? [])), 0);
+
+// Un verdict enregistré par le collecteur se relit dans la langue du lecteur.
+$vid = Uptimer\Db::insert('monitors', ['name' => 'Verdict i18n', 'url' => 'https://verdict.test/',
+    'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300,
+    'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299', 'enabled' => 1,
+    'status' => 'degraded', 'setup_state' => 'done', 'created_at' => now(), 'next_check_at' => now(),
+    'last_message' => 'Certificat SSL expire dans {n} jours',
+    'last_message_vars' => jenc(['n' => 9])]);
+$row = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$vid]);
+Uptimer\I18n::init('fr');
+check('verdict rendu en français', verdict_text($row), 'Certificat SSL expire dans 9 jours');
+Uptimer\I18n::init('en');
+check('le même verdict rendu en anglais', verdict_text($row), 'SSL certificate expires in 9 days');
+check('un verdict sans variable reste lisible',
+    verdict_text(['last_message' => 'Tout va bien', 'last_message_vars' => null]),
+    Uptimer\I18n::catalogue('en')['Tout va bien']);
+check('aucun verdict : chaîne vide, pas de « — »', verdict_text(null), '');
+Uptimer\I18n::init('fr');
+Uptimer\Db::q('DELETE FROM monitors WHERE id = ?', [$vid]);
+
+// =========================================================================
 section('Reprise d\'un parc surveillé ailleurs');
 // =========================================================================
 use Uptimer\Import\Foreign;

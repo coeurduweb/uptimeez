@@ -236,8 +236,9 @@ $keep    = fn(string $k, $def = null) => $opt[$k] ?? $def;
       <li><?= te('la première entrée du menu de navigation ;') ?></li>
       <li><?= te('le titre H1.') ?></li>
     </ol>
-    <p><?= te('La chaîne retenue est vérifiée : elle doit réellement figurer dans le HTML, elle est débarrassée des formulations passe-partout (« tous droits réservés », « accueil ») et n\'est') ?> <strong>jamais</strong>
-      <?= te('déduite d\'une page d\'erreur. Vous pouvez l\'imposer dès l\'import en 3') ?><sup>e</sup> <?= te('colonne.') ?></p>
+    <p><?= te('La chaîne retenue est vérifiée : elle doit réellement figurer dans le HTML, elle est débarrassée des formulations passe-partout comme « tous droits réservés » ou « accueil », et elle n\'est {never} déduite d\'une page d\'erreur.',
+          ['never' => '<strong>' . te('jamais') . '</strong>']) ?>
+      <?= te('Vous pouvez l\'imposer vous-même à l\'import, en troisième colonne.') ?></p>
   </div>
 <?= Ui::accClose() ?>
 

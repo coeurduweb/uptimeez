@@ -290,7 +290,9 @@ final class Discovery
     public static function noindex(Response $res): ?string
     {
         $xr = strtolower((string)$res->header('x-robots-tag'));
-        if ($xr !== '' && str_contains($xr, 'noindex')) return 'en-tête X-Robots-Tag: ' . str_cut($xr, 40);
+        if ($xr !== '' && str_contains($xr, 'noindex')) {
+            return t('en-tête {name} : {value}', ['name' => 'X-Robots-Tag', 'value' => str_cut($xr, 40)]);
+        }
         $head = substr($res->body, 0, 60000);
         if (preg_match('~<meta[^>]+name=["\']robots["\'][^>]+content=["\']([^"\']*)~i', $head, $m)
             && stripos($m[1], 'noindex') !== false) {

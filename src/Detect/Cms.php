@@ -42,7 +42,7 @@ final class Cms
         if (str_contains($low, 'wp-json'))       $add('WordPress', 20, 'API wp-json');
         if (str_contains($low, 'wp-emoji'))      $add('WordPress', 10, 'wp-emoji');
         if ($gen && stripos($gen, 'wordpress') !== false) $add('WordPress', 40, 'meta generator');
-        if (isset($hdr['x-pingback']))           $add('WordPress', 15, 'en-tête X-Pingback');
+        if (isset($hdr['x-pingback']))           $add('WordPress', 15, t('en-tête {name}', ['name' => 'X-Pingback']));
 
         // ---- Autres CMS ---------------------------------------------------
         $needles = [
@@ -82,9 +82,9 @@ final class Cms
                 if (stripos($xg, $cms) !== false) $add($cms, 35, 'X-Generator : ' . $xg);
             }
         }
-        if (isset($hdr['x-shopify-stage']) || isset($hdr['x-shopid'])) $add('Shopify', 40, 'en-tête Shopify');
-        if (isset($hdr['x-wix-request-id']))                            $add('Wix', 40, 'en-tête Wix');
-        if (isset($hdr['x-drupal-cache']) || isset($hdr['x-drupal-dynamic-cache'])) $add('Drupal', 35, 'en-tête Drupal');
+        if (isset($hdr['x-shopify-stage']) || isset($hdr['x-shopid'])) $add('Shopify', 40, t('en-tête {name}', ['name' => 'Shopify']));
+        if (isset($hdr['x-wix-request-id']))                            $add('Wix', 40, t('en-tête {name}', ['name' => 'Wix']));
+        if (isset($hdr['x-drupal-cache']) || isset($hdr['x-drupal-dynamic-cache'])) $add('Drupal', 35, t('en-tête {name}', ['name' => 'Drupal']));
         if (isset($hdr['set-cookie']) && str_contains(strtolower($hdr['set-cookie']), 'xsrf-token')) $add('Laravel', 20, 'cookie XSRF-TOKEN');
 
         arsort($score);
@@ -154,23 +154,23 @@ final class Cms
                     ['path' => '/wp-sitemap.xml', 'kind' => 'asset', 'name' => 'Sitemap', 'expect' => '<sitemap'],
                 ],
                 'notes' => $builder === 'Elementor'
-                    ? 'Elementor : surveiller le CSS par page (uploads/elementor/css) et purger le cache après déploiement.'
-                    : 'Surveiller le CSS généré par le cache (wp-content/cache).',
+                    ? t('Elementor : surveiller le CSS par page, dans uploads/elementor/css, et purger le cache après déploiement.')
+                    : t('Surveiller le CSS généré par le cache, dans wp-content/cache.'),
             ],
             'PrestaShop' => [
                 'expect_hint' => null, 'db_probe' => true,
                 'extra_monitors' => [['path' => '/sitemap.xml', 'kind' => 'asset', 'name' => 'Sitemap', 'expect' => '<urlset']],
-                'notes' => 'Surveiller aussi une fiche produit : le panier dépend de la base.',
+                'notes' => t('Surveiller aussi une fiche produit : le panier dépend de la base.'),
             ],
             'Drupal' => ['expect_hint' => null, 'db_probe' => true, 'extra_monitors' => [], 'notes' => null],
             'Joomla' => ['expect_hint' => null, 'db_probe' => true, 'extra_monitors' => [], 'notes' => null],
             'Shopify', 'Wix', 'Squarespace', 'Webflow' => [
                 'expect_hint' => null, 'db_probe' => false, 'extra_monitors' => [],
-                'notes' => 'Hébergement SaaS : la sonde base de données n\'a pas d\'objet, on surveille le rendu.',
+                'notes' => t('Hébergement SaaS : la sonde base de données n\'a pas d\'objet, on surveille le rendu.'),
             ],
             'Astro', 'Next.js', 'Nuxt', 'Gatsby', 'Hugo', 'Jekyll' => [
                 'expect_hint' => null, 'db_probe' => false, 'extra_monitors' => [],
-                'notes' => 'Site statique / SSG : pas de base de données côté rendu, on surveille le déploiement (empreinte CSS) et les 404.',
+                'notes' => t('Site statique ou généré : pas de base de données côté rendu, on surveille le déploiement, par l\'empreinte CSS, et les 404.'),
             ],
             default => $base,
         };

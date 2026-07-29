@@ -55,7 +55,7 @@ function extract_msgids(array $files): array
         $len = strlen($src);
         // Le mot doit être isolé : « complète (… » n'est pas un appel à te().
         // \b ne suffit pas, un octet accentué compte comme frontière de mot.
-        $call = '~(?<![\w\x80-\xFF$>\-])(?:te|t|tne|tn|hint)\s*\(~';
+        $call = '~(?:\bI18n::[tn]|(?<![\w\x80-\xFF$>\-])(?:te|t|tne|tn|hint))\s*\(~';
         if (preg_match_all($call, $src, $mm, PREG_OFFSET_CAPTURE)) {
             foreach ($mm[0] as [$open, $at]) {
                 $i = $at + strlen($open);
@@ -160,8 +160,13 @@ function is_fragment(string $id): bool
  */
 function bare_strings(array $files, array $known = []): array
 {
+    // Deux fichiers ne produisent jamais de texte d'interface : l'un écrit le
+    // fichier de configuration, l'autre s'exécute avant que la traduction
+    // existe. Les analyser ne dirait rien d'utile.
+    $skipFiles = ['Config.php', 'bootstrap.php', 'I18n.php'];
     $out = [];
     foreach ($files as $f) {
+        if (in_array(basename($f), $skipFiles, true)) continue;
         $lines = file($f, FILE_IGNORE_NEW_LINES) ?: [];
         foreach ($lines as $i => $line) {
             // On ignore les commentaires et les lignes déjà traduites en entier.
@@ -172,7 +177,7 @@ function bare_strings(array $files, array $known = []): array
             // Un appel de traduction couvre tout ce qui le suit sur la ligne :
             // les msgid d'un tn() sont en 2e et 3e position, pas seulement en 1re.
             $cut = null;
-            if (preg_match('~\b(?:te|t|tne|tn|hint)\s*\(~', $line, $mm, PREG_OFFSET_CAPTURE)) {
+            if (preg_match('~(?:\bI18n::[tn]|\b(?:te|t|tne|tn|hint))\s*\(~', $line, $mm, PREG_OFFSET_CAPTURE)) {
                 $cut = (int)$mm[0][1];
             }
             // Littéraux PHP contenant du français, échappements compris.
@@ -188,6 +193,16 @@ function bare_strings(array $files, array $known = []): array
                     // interromprait ce fichier PHP au beau milieu.)
                     if (str_contains($val, '<?') || str_contains($val, '?>')
                         || preg_match('~\b(?:te|t|tn|tne|hint)\s*\(~', $val)) continue;
+                    // Une clé de tableau n'est jamais affichée : c'est un motif à
+                    // reconnaître (signature de panne, en-tête HTTP), pas une phrase.
+                    if (preg_match('~^\s*=>~', substr($line, $off + strlen($lit)))) continue;
+                    // Une expression régulière contient du français sans être du
+                    // texte : elle sert justement à reconnaître ce français.
+                    if (preg_match('{^~[\^(]|~[imsuxADSUXJ]*$}', $val)) continue;
+                    // Un motif assemblé sur plusieurs lignes : la variable qui le
+                    // reçoit le dit (« $generic = '~^(… », puis la suite).
+                    if (preg_match('~^\s*\$(?:re|regex|pattern|generic|motif)\b~', $line)
+                        || preg_match('~^\s*\.\s*\x27~', $line) && str_contains($val, '|')) continue;
                     if (!looks_french($val)) continue;
                     $hits[] = $val;
                 }
@@ -261,8 +276,15 @@ if (isset($opts['manquants'])) {
     foreach ($miss as $id) echo '  ' . str_replace("\n", '⏎', $id) . "\n";
 }
 if (isset($opts['json'])) {
-    echo json_encode(['msgids' => array_keys($msgids), 'fragments' => array_values($frags)],
-                     JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
+    // Le JSON sert à bin/i18n-sync.php et aux tests : on y met les compteurs,
+    // pas seulement les listes, pour qu'un contrôle tienne en une ligne.
+    echo json_encode([
+        'msgids'    => array_keys($msgids),
+        'fragments' => array_values($frags),
+        'bare'      => count($bare),
+        'bare_list' => array_map(fn(array $b): array => ['file' => $b[0], 'line' => $b[1], 'text' => $b[2]],
+                                 array_slice($bare, 0, 50)),
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
 }
 if ($all) {
     echo "\n  " . count($msgids) . " msgid distinct(s) · " . count($frags) . " à réparer · "

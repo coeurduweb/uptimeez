@@ -41,7 +41,9 @@ final class Mail
 
         $subjectEnc = '=?UTF-8?B?' . base64_encode($subject) . '?=';
         $ok = @mail(implode(',', $recipients), $subjectEnc, $msg, implode("\r\n", $headers), '-f' . $from);
-        return ['ok' => (bool)$ok, 'info' => $ok ? 'mail() acceptée par le serveur' : 'mail() a échoué (voir logs PHP)'];
+        return ['ok' => (bool)$ok,
+                'info' => $ok ? t('mail() acceptée par le serveur')
+                              : t('mail() a échoué, voir les journaux PHP')];
     }
 
     /**
@@ -137,9 +139,10 @@ final class Mail
             . $rows . '</table></td></tr>'
             . ($link ? '<tr><td style="padding:6px 14px 22px"><a href="' . e($link) . '" '
                 . 'style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:10px 16px;'
-                . 'border-radius:8px;font-size:14px;font-weight:600">Ouvrir dans Uptimer</a></td></tr>' : '')
+                . 'border-radius:8px;font-size:14px;font-weight:600">'
+                . e(t('Ouvrir dans {app}')) . '</a></td></tr>' : '')
             . '<tr><td style="padding:12px 14px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px">'
-            . 'Uptimer · surveillance de sites · ' . date('d/m/Y H:i') . '</td></tr>'
+            . e(t('{app} · surveillance de sites')) . ' · ' . date('d/m/Y H:i') . '</td></tr>'
             . '</table></td></tr></table></body></html>';
 
         return [$html, $txt];

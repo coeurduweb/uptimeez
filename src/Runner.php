@@ -464,8 +464,11 @@ final class Runner
                 $wanted = ($mode === 'appear' && $present) || ($mode === 'disappear' && !$present);
                 $events[] = [
                     'kind'    => $wanted ? 'watch_hit' : 'watch_change',
-                    'message' => 'Le texte « ' . str_cut($watch, 50) . ' » '
-                        . ($present ? 'est apparu' : 'a disparu') . ' sur ' . str_cut($mon['url'], 60),
+                    'message' => $present
+                        ? t('Le texte « {string} » est apparu sur {url}',
+                            ['string' => str_cut($watch, 50), 'url' => str_cut($mon['url'], 60)])
+                        : t('Le texte « {string} » a disparu de {url}',
+                            ['string' => str_cut($watch, 50), 'url' => str_cut($mon['url'], 60)]),
                     'notify'  => $wanted,
                 ];
             }
@@ -512,21 +515,16 @@ final class Runner
         usort($primary, fn($a, $b) => (self::REASON_PRIORITY[$b['reason'] ?? ''] ?? 0)
                                    <=> (self::REASON_PRIORITY[$a['reason'] ?? ''] ?? 0));
         $reason = $state === 'up' ? null : ($primary[0]['reason'] ?? null);
-        // Une seule cause : la phrase source et ses variables sont conservées
-        // telles quelles, et la traduction se fera à l'affichage. Plusieurs
-        // causes de même gravité : elles sont interpolées puis jointes, parce
-        // qu'un msgid composé de trois phrases ne se traduit pas.
-        $keep = array_slice($primary, 0, 3);
+        // Le verdict retenu est UNE cause : la plus prioritaire. Joindre trois
+        // phrases donnerait un texte intraduisible, figé dans la langue du cron.
+        // Les autres causes ne sont pas perdues : elles restent dans les détails
+        // techniques, avec leurs variables, et s'affichent sur la fiche.
         if ($state === 'up') {
-            $msg = 'Tout va bien';
+            $msg  = 'Tout va bien';
             $vars = [];
-        } elseif (count($keep) === 1) {
-            $msg  = (string)$keep[0]['message'];
-            $vars = (array)($keep[0]['vars'] ?? []);
         } else {
-            $msg  = implode(' · ', array_map(
-                fn(array $f): string => t((string)$f['message'], (array)($f['vars'] ?? [])), $keep));
-            $vars = [];
+            $msg  = (string)($primary[0]['message'] ?? 'Tout va bien');
+            $vars = (array)($primary[0]['vars'] ?? []);
         }
 
         return [
@@ -579,7 +577,8 @@ final class Runner
             'css_state'     => $cssState,
             'details'       => ($verdict['findings'] || isset($det['net_error'])) ? jenc([
                                    'findings' => array_map(
-                                       fn($f) => [$f['state'], $f['reason'], str_cut($f['message'], 200)],
+                                       fn($f) => [$f['state'], $f['reason'], str_cut($f['message'], 200),
+                                                  (array)($f['vars'] ?? [])],
                                        $verdict['findings']),
                                    'net_error' => $det['net_error'] ?? null,
                                ]) : null,
@@ -713,6 +712,7 @@ final class Runner
                 'severity'      => $state,
                 'reason_code'   => $verdict['reason'],
                 'message'       => str_cut($verdict['message'], 400),
+                'message_vars'  => !empty($verdict['vars']) ? jenc($verdict['vars']) : null,
                 'started_at'    => $ts,
                 'checks_failed' => 1,
             ]);
@@ -966,11 +966,14 @@ final class Runner
                     [(int)$r['id'], date('Y-m-d H:i:s', time() - 7 * 86400)]);
                 if (!$exists) {
                     Db::insert('events', ['monitor_id' => (int)$r['id'], 'ts' => now(), 'kind' => 'domain_soon',
-                        'message' => 'Le domaine ' . $info['domain'] . ' expire dans ' . $info['days_left'] . ' jour(s)',
+                        'message' => tn((int)$info['days_left'],
+                            'Le domaine {domain} expire dans un jour',
+                            'Le domaine {domain} expire dans {n} jours', ['domain' => $info['domain']]),
                         'details' => jenc($info), 'seen' => 0]);
                     $mon = Db::one('SELECT * FROM monitors WHERE id = ?', [(int)$r['id']]);
                     if ($mon) Notifier::sendEvent($mon, 'domain_soon',
-                        'Le domaine ' . $info['domain'] . ' expire dans ' . $info['days_left'] . ' jour(s)');
+                        tn((int)$info['days_left'], 'Le domaine {domain} expire dans un jour',
+                           'Le domaine {domain} expire dans {n} jours', ['domain' => $info['domain']]));
                 }
             }
             $n++;

@@ -348,6 +348,9 @@ function handle_post(): ?array
                     'name'         => trim((string)($_POST['app_name'] ?? 'Uptimer')) ?: 'Uptimer',
                     'base_url'     => rtrim(trim((string)($_POST['base_url'] ?? '')), '/'),
                     'timezone'     => trim((string)($_POST['timezone'] ?? 'Europe/Paris')) ?: 'Europe/Paris',
+                    'locale'       => in_array((string)($_POST['locale'] ?? 'auto'),
+                                               array_merge(['auto'], array_keys(Uptimer\I18n::LANGS)), true)
+                                      ? (string)$_POST['locale'] : 'auto',
                     'public_token' => trim((string)($_POST['public_token'] ?? '')),
                     'cron_key'     => trim((string)($_POST['cron_key'] ?? '')),
                 ],

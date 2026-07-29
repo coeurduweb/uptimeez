@@ -13,6 +13,12 @@ declare(strict_types=1);
 
 require __DIR__ . '/src/bootstrap.php';
 
+// Le collecteur écrit des relevés techniques en base : ils le sont dans la
+// langue de l'installation (réglage « Langue »), pas dans celle d'un visiteur
+// qui n'existe pas ici. Les verdicts, eux, sont stockés en phrase source et
+// traduits à l'affichage : voir verdict_text().
+Uptimer\I18n::init();
+
 use Uptimer\Config;
 use Uptimer\Db;
 use Uptimer\Importer;

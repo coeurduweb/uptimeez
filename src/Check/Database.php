@@ -91,7 +91,9 @@ final class Database
                 return [
                     'state'    => 'down',
                     'reason'   => 'DB_DOWN',
-                    'message'  => $label,
+                    // L'étiquette est un msgid : elle s'écrit dans la langue de
+                    // l'installation, celle du relevé technique.
+                    'message'  => t($label),
                     'evidence' => self::excerpt($body, $needle),
                     'probe'    => null,
                 ];
@@ -103,7 +105,7 @@ final class Database
                 return [
                     'state'    => 'down',
                     'reason'   => 'APP_ERROR',
-                    'message'  => $label,
+                    'message'  => t($label),
                     'evidence' => self::excerpt($body, $needle),
                     'probe'    => null,
                 ];
