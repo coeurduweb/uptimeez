@@ -397,7 +397,7 @@ list. No Composer, no Node, no Docker, no build step.
 
 ```bash
 # 1. Put the files where your web server can serve them
-git clone https://github.com/loran750/uptimeez.git
+git clone https://github.com/coeurduweb/uptimeez.git
 cd uptimeez
 
 # 2. Open install.php in a browser and choose a password.
@@ -481,7 +481,7 @@ A monitoring tool that lies to you is worse than no monitoring tool. So the dete
 real failures, and the interface is tested in a real browser.
 
 ```
-php bin/selftest.php      774 checks   detection logic, offline, no network needed
+php bin/selftest.php      796 checks   detection logic, offline, no network needed
 php bin/bench.php          73 checks   real failures reproduced end to end (incl. badssl.com)
 php bin/e2e.php           240 checks   full user journey over real HTTP, isolated instance
 node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
@@ -494,7 +494,7 @@ php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, 
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**1,444 checks, all green**, plus zero dead code and a complete default catalogue.
+**1,466 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Four suites deserve a word.
 

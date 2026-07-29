@@ -2351,6 +2351,28 @@ foreach ($annonces as $quoi => [$motif, $mesure]) {
         implode(' ', array_unique($faux)), '');
 }
 
+// ---------------------------------------------------------------------------
+// Le nombre de contrôles annoncé dans les README doit être le vrai.
+//
+// Il dérive à chaque ajout de test, exactement comme « 45 signatures » avant lui, et
+// personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
+// donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
+// qu'on passerait sa vie à se demander d'où il vient.
+$lus = [];
+foreach (['/../README.md' => '/(\d+) checks   detection logic/',
+          '/../README.fr.md' => '/(\d+) contrôles   logique de détection/'] as $f => $motif) {
+    $chemin = __DIR__ . $f;
+    if (!is_file($chemin)) continue;
+    preg_match($motif, (string)file_get_contents($chemin), $m);
+    $lus[basename($f)] = (int)($m[1] ?? 0);
+}
+// On compte AVANT d'ajouter : ces contrôles-ci font partie du total qu'ils vérifient,
+// et les additionner après laissait un décalage de deux qu'on aurait cherché longtemps.
+$totalReel = $pass + $fail + count($lus);
+foreach ($lus as $nom => $annonce) {
+    check("$nom annonce le bon nombre de contrôles", $annonce, $totalReel);
+}
+
 echo "\n" . str_repeat('─', 68) . "\n";
 printf("%d test(s) réussi(s), %d échec(s)\n", $pass, $fail);
 if ($fail > 0) {

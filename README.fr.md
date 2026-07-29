@@ -407,7 +407,7 @@ liste. Pas de Composer, pas de Node, pas de Docker, aucune étape de compilation
 
 ```bash
 # 1. Déposez les fichiers là où votre serveur web peut les servir
-git clone https://github.com/loran750/uptimeez.git
+git clone https://github.com/coeurduweb/uptimeez.git
 cd uptimeez
 
 # 2. Ouvrez install.php dans un navigateur et choisissez un mot de passe.
@@ -492,7 +492,7 @@ Un outil de surveillance qui vous ment est pire que pas d'outil du tout. La logi
 testée contre de vraies pannes, et l'interface est testée dans un vrai navigateur.
 
 ```
-php bin/selftest.php      774 contrôles   logique de détection, hors ligne, sans réseau
+php bin/selftest.php      796 contrôles   logique de détection, hors ligne, sans réseau
 php bin/bench.php          73 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
 php bin/e2e.php           240 contrôles   parcours complet en HTTP réel, instance isolée
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
@@ -505,7 +505,7 @@ php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, ms
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**1 444 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**1 466 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
 Quatre suites méritent un mot.
 
