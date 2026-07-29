@@ -9,6 +9,10 @@ final class Mail
 {
     public static function send(string $title, array $lines, string $sev, array $mon): array
     {
+        // Démonstration publique : rien ne sort. Le verrou est ici, dans
+        // l'expéditeur, et pas seulement dans la configuration : un visiteur
+        // atteint l'écran des réglages.
+        if ($q = \Uptimeez\Demo::silenced()) return $q;
         $to = trim((string)Config::get('notify.mail.to', ''));
         if ($to === '') return ['ok' => false, 'info' => t('Aucun destinataire configuré')];
 

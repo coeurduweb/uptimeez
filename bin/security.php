@@ -181,6 +181,89 @@ ok('A06', 'et ce plancher reçoit encore des correctifs de sécurité',
    $hasFloor && (int)$mFloor[1] >= $PHP_FLOOR_MIN,
    $hasFloor ? 'plancher ' . $mFloor[1] . ', minimum attendu ' . $PHP_FLOOR_MIN : 'aucun plancher');
 
+title('A04 Démonstration publique : les verrous');
+// Une démo publique d'un outil qui va chercher les URL qu'on lui donne est un
+// relais ouvert si on ne la verrouille pas. Ces contrôles vérifient les verrous
+// eux-mêmes, dans un sous-processus où UPTIMEEZ_DEMO est posé : impossible de les
+// éprouver dans le processus courant, le drapeau est lu une fois pour toutes.
+$demoProbe = function (string $code, bool $demo = true) use ($ROOT): string {
+    // Le code va dans un fichier, jamais dans « php -r » : le passage par le
+    // shell a déjà produit une erreur d'analyse silencieuse, que l'assertion
+    // n'avait pas vue. Un test qui ne peut pas échouer ne teste rien.
+    $f = sys_get_temp_dir() . '/uptimeez-demo-probe-' . bin2hex(random_bytes(4)) . '.php';
+    file_put_contents($f, "<?php\nrequire " . var_export($ROOT . '/src/bootstrap.php', true) . ";\n" . $code . "\n");
+    $out = (string)shell_exec(($demo ? 'UPTIMEEZ_DEMO=1 ' : '') . escapeshellarg(PHP_BINARY)
+                              . ' ' . escapeshellarg($f) . ' 2>&1');
+    @unlink($f);
+    return trim($out);
+};
+
+ok('A04', 'le drapeau de démo vient de l\'environnement, pas de la configuration',
+   !str_contains((string)file_get_contents($ROOT . '/src/Demo.php'), "Config::get('app.demo'")
+   && str_contains((string)file_get_contents($ROOT . '/src/Demo.php'), "getenv('UPTIMEEZ_DEMO')"));
+
+ok('A04', 'hors démo, rien n\'est verrouillé',
+   $demoProbe('echo Uptimeez\\Demo::on() ? "on" : "off";', false) === 'off');
+
+ok('A04', 'en démo, les plages privées sont bloquées d\'office',
+   $demoProbe('echo Uptimeez\\Config::get("security.block_private_ranges") ? "oui" : "non";') === 'oui');
+
+// Le point qui compte : le verrou est dans l'expéditeur, donc réactiver le canal
+// en configuration ne le rouvre pas. Sans ça, un visiteur qui atteint l'écran des
+// réglages ferait émettre la démo où il veut.
+$CANAUX = ['Webhook', 'Mail', 'Discord', 'Slack', 'Smtp'];
+$sent = $demoProbe(<<<'PROBE'
+Uptimeez\Config::set('notify.webhook.enabled', true);
+Uptimeez\Config::set('notify.webhook.url', 'https://exemple.invalid/h');
+Uptimeez\Config::set('notify.mail.enabled', true);
+Uptimeez\Config::set('notify.mail.to', 'a@exemple.invalid');
+Uptimeez\Config::set('notify.discord.enabled', true);
+Uptimeez\Config::set('notify.discord.webhook', 'https://exemple.invalid/d');
+Uptimeez\Config::set('notify.slack.enabled', true);
+Uptimeez\Config::set('notify.slack.webhook', 'https://exemple.invalid/s');
+$mon = ['id' => 1, 'name' => 'Essai', 'url' => 'https://exemple.test/'];
+$out = [];
+$dit = function (string $nom, array $r) use (&$out): void {
+    $out[] = $nom . '=' . (empty($r['ok']) ? 'muet' : 'A_EMIS');
+};
+// Appels explicites : un nom de classe construit à l'exécution demandait un
+// antislash en fin de chaîne, et c'est lui qui a cassé la sonde en silence.
+$dit('Webhook', Uptimeez\Notify\Webhook::send('Essai', [['Clé', 'Valeur']], 'down', $mon));
+$dit('Mail',    Uptimeez\Notify\Mail::send('Essai', [['Clé', 'Valeur']], 'down', $mon));
+$dit('Discord', Uptimeez\Notify\Discord::send('Essai', [['Clé', 'Valeur']], 'down', $mon));
+$dit('Slack',   Uptimeez\Notify\Slack::send('Essai', [['Clé', 'Valeur']], 'down', $mon));
+// Smtp n'est pas un canal mais le transport de Mail : sa signature diffère.
+$dit('Smtp',    Uptimeez\Notify\Smtp::send(['a@exemple.invalid'], 'de@exemple.invalid', 'Essai', 'Sujet', '<p>x</p>', 'x'));
+echo implode(' ', $out);
+PROBE);
+// On exige la forme complète : chaque canal doit avoir répondu, et muet.
+// Une sonde qui échoue ne peut donc plus faire passer le contrôle.
+$tousMuets = count(array_filter($CANAUX, fn(string $c): bool
+    => str_contains($sent, $c . '=muet'))) === count($CANAUX);
+ok('A04', 'aucun expéditeur n\'émet, même canal réactivé en configuration',
+   $tousMuets && !str_contains($sent, 'A_EMIS'), $sent);
+
+$refus = $demoProbe(
+    '$r = [];'
+  . 'foreach (["import","preview","save_monitor","save_settings","test_notify",'
+  . '"send_site_report","delete_monitor","client_rotate","maintenance_cron"] as $a) {'
+  . '  if (!Uptimeez\\Demo::refuses($a)) $r[] = $a;'
+  . '} echo $r ? implode(",", $r) : "toutes refusées";');
+ok('A04', 'les actions qui exposent ou vident la démo sont refusées', $refus === 'toutes refusées', $refus);
+ok('A04', 'une suppression en masse est refusée',
+   $demoProbe('echo Uptimeez\\Demo::refuses("bulk", "delete") ? "refusée" : "PASSE";') === 'refusée');
+
+// Une démo qui ne laisse rien faire ne démontre rien : ces actions restent
+// ouvertes, et c'est un choix.
+$libre = $demoProbe(
+    '$r = [];'
+  . 'foreach (["check","ack_incident","close_incident","reset_baseline"] as $a) {'
+  . '  if (Uptimeez\\Demo::refuses($a)) $r[] = $a;'
+  . '} echo $r ? implode(",", $r) : "toutes permises";'
+  . 'echo Uptimeez\\Demo::refuses("bulk", "enable") ? " MAIS bulk:enable refusé" : "";');
+ok('A04', 'ce qui montre le produit sans rien exposer reste permis',
+   $libre === 'toutes permises', $libre);
+
 title('A09 Journalisation');
 ok('A09', 'les tentatives de connexion sont enregistrées',
    str_contains($appSrc, 'login_tries'));

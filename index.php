@@ -136,6 +136,13 @@ function handle_post(): ?array
 {
     $action = (string)($_POST['action'] ?? '');
 
+    // Démonstration publique : les actions qui exposent quelque chose ou qui
+    // videraient la démo pour le visiteur suivant sont refusées ici, en un seul
+    // endroit, avant le moindre traitement. Voir src/Demo.php.
+    if (Uptimeez\Demo::refuses($action, isset($_POST['bulk_action']) ? (string)$_POST['bulk_action'] : null)) {
+        return Uptimeez\Demo::refusal();
+    }
+
     switch ($action) {
         // ---- Aperçu avant création : on ne crée rien à l'aveugle ---------
         case 'preview':

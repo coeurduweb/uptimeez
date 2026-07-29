@@ -11,6 +11,10 @@ final class Webhook
 {
     public static function send(string $title, array $lines, string $sev, array $mon): array
     {
+        // Démonstration publique : rien ne sort. Le verrou est ici, dans
+        // l'expéditeur, et pas seulement dans la configuration : un visiteur
+        // atteint l'écran des réglages.
+        if ($q = \Uptimeez\Demo::silenced()) return $q;
         $url = trim((string)Config::get('notify.webhook.url', ''));
         if ($url === '') return ['ok' => false, 'info' => t('URL de webhook non configurée')];
 

@@ -34,6 +34,7 @@ spl_autoload_register(function (string $class): void {
 require_once UPTIMEEZ_ROOT . '/src/helpers.php';
 
 use Uptimeez\Config;
+use Uptimeez\Demo;
 use Uptimeez\Fail;
 
 // Avant Config::load() : un config.php cassé est justement une des pannes que
@@ -41,6 +42,12 @@ use Uptimeez\Fail;
 Fail::install();
 
 Config::load();
+
+// Démonstration publique : les verrous s'appliquent AVANT tout traitement, et le
+// drapeau vient de l'environnement pour rester hors de portée de l'écran des
+// réglages. Voir src/Demo.php.
+Demo::apply();
+
 date_default_timezone_set(Config::get('app.timezone', 'Europe/Paris'));
 mb_internal_encoding('UTF-8');
 

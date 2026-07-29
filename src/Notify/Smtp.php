@@ -14,6 +14,10 @@ final class Smtp
     public static function send(array $recipients, string $from, string $fromName, string $subject,
                                 string $html, string $text): array
     {
+        // Démonstration publique : rien ne sort. Le verrou est ici, dans
+        // l'expéditeur, et pas seulement dans la configuration : un visiteur
+        // atteint l'écran des réglages.
+        if ($q = \Uptimeez\Demo::silenced()) return $q;
         $c      = Config::get('notify.mail.smtp', []);
         $host   = trim((string)($c['host'] ?? ''));
         $port   = (int)($c['port'] ?? 587);

@@ -100,7 +100,7 @@ php bin/chaos.php             # 35 checks: 859 hostile requests, nothing must br
 php bin/chaos.php --long      # adds the bulky payloads
 php bin/infra.php             # 61 checks: Uptimeez down, what it says and what it withholds
 php bin/mysql.php             # 43 checks: the MySQL driver, skipped without a test database
-php bin/security.php          # 105 checks: OWASP Top 10, three depths
+php bin/security.php          # 113 checks: OWASP Top 10, three depths
 php bin/security.php --niveau=1   # light only: configuration, secrets, surface
 php bin/security.php --niveau=2   # deep only: active OWASP tests
 php bin/security.php --niveau=3   # very deep only: SSRF, XXE, bombs, timing
@@ -139,6 +139,41 @@ rest of the product stays covered by the other suites, on SQLite:
 UPTIMEEZ_TEST_MYSQL_NAME=uptimeez_test UPTIMEEZ_TEST_MYSQL_USER=root \
 UPTIMEEZ_TEST_MYSQL_PASS=secret php bin/mysql.php
 ```
+
+### Public demo mode
+
+`UPTIMEEZ_DEMO=1` in the web server's environment locks an instance down so it can be opened to
+anyone. **The flag comes from the environment, not from `config.php`:** a visitor reaches the
+settings screen, so anything locked by a setting alone is three clicks from being unlocked.
+
+What is locked, and why:
+
+| Lock | The reason |
+|---|---|
+| Private ranges blocked outright | Uptimeez fetches the URLs it is given: that is the product. On a public demo, without this, anyone can have it scan `127.0.0.1` and the host's local network |
+| No sender emits | The lock sits in **every** sender, not in the dispatcher: re-enabling a channel from the settings does not reopen it. Otherwise a webhook set by a visitor becomes an exfiltration channel |
+| Adding a monitor refused | That is the main abuse vector, the one that actually matters |
+| Settings, client access, reports refused | The first visitor would lock the demo behind them, or make it send wherever they like |
+| Deletion refused | Reversible at the hourly reset, but the demo would sit empty until the next hour |
+
+**What stays allowed, deliberately**: everything you can look at, checking a monitor now,
+pausing, acknowledging an incident, relearning a baseline, switching language, switching detail
+level. A demo that lets you do nothing demonstrates nothing.
+
+The reset works by replacing files, not by an undo path:
+
+```bash
+php bin/demo.php                       # build the demo once
+cp data/uptimeez.sqlite data/demo-reference.sqlite
+cp config.php config-reference.php
+
+0 * * * * cd /path/to/uptimeez && cp data/demo-reference.sqlite data/uptimeez.sqlite \
+          && rm -f data/uptimeez.sqlite-wal data/uptimeez.sqlite-shm \
+          && cp config-reference.php config.php
+```
+
+The locks are verified by `bin/security.php`, section A04: seven checks, including one that
+re-enables the channels in configuration to prove the senders stay silent anyway.
 
 ### When Uptimeez itself goes down
 

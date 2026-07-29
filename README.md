@@ -486,7 +486,7 @@ php bin/bench.php          73 checks   real failures reproduced end to end (incl
 php bin/e2e.php           233 checks   full user journey over real HTTP, isolated instance
 node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
 php bin/chaos.php          35 checks   859 hostile requests from a user doing everything wrong
-php bin/security.php      105 checks   OWASP Top 10, three depths, against a hostile local site
+php bin/security.php      113 checks   OWASP Top 10, three depths, against a hostile local site
 php bin/infra.php          61 checks   Uptimeez itself down: what it says, and what it never leaks
 php bin/mysql.php          43 checks   the MySQL / MariaDB driver, on a real server
 php bin/mcp.php            n/a         MCP server for agents (27 of the checks above exercise it)
@@ -494,7 +494,7 @@ php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, 
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**1,404 checks, all green**, plus zero dead code and a complete default catalogue.
+**1,412 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Four suites deserve a word.
 
