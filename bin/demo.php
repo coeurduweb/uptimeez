@@ -569,15 +569,28 @@ foreach ($battements as [$nom, $toutes, $tolerance, $etat]) {
     $recu = $etat === 'ok'
         ? time() - (int)($toutes * 0.3)
         : time() - $toutes - $tolerance - 420;
+    // On n'écrit QUE la date du dernier signal, et on laisse le moteur conclure.
+    //
+    // Le premier essai posait « status = down » à la main : la sonde en silence
+    // affichait alors « Anomaly detected » avec le conseil « ouvrez la page dans un
+    // navigateur », qui n'a aucun sens pour une tâche cron. Il manquait le code
+    // d'anomalie, donc l'explication dédiée du moteur ne s'appliquait pas.
+    //
+    // Heartbeat::sweep() fait le travail complet et juste : le code
+    // HEARTBEAT_LATE, le message avec la durée du silence, la ligne d'historique et
+    // l'incident. Simuler à la main ce que le produit sait faire est exactement ce
+    // qui a produit le bug des pannes indexées par nom.
     Db::update('monitors', [
-        'heartbeat_at' => date('Y-m-d H:i:s', $recu),
-        'status'       => $etat === 'ok' ? 'up' : 'down',
+        'heartbeat_at'  => date('Y-m-d H:i:s', $recu),
         'last_check_at' => now(),
-        'uptime_24h'   => $etat === 'ok' ? 100.0 : 91.4,
+        'uptime_24h'    => $etat === 'ok' ? 100.0 : 91.4,
+        'status'        => 'up',
     ], 'id = :__i', ['__i' => (int)$h['id']]);
     $nbBattements++;
 }
-printf("battements : %d sonde(s), dont 1 en silence\n", $nbBattements);
+$enRetard = Heartbeat::sweep();
+printf("battements : %d sonde(s), dont %d en silence (verdict posé par le moteur)\n",
+       $nbBattements, $enRetard);
 
 // Une sonde « clé attendue » explicite, pour montrer le cas le plus demandé : je
 // veux savoir que MON mot est encore sur la page. Les autres sondes l'utilisent
