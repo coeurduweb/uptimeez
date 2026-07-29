@@ -265,13 +265,19 @@ console.log('Séquence animée :');
   await page.waitForTimeout(500); await grab(6); await grab(7);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
-  // 4. on applique un correctif depuis la carte, sans changer de page
+  // 4. on applique un correctif depuis la carte, sans changer de page.
+  // Les actions secondaires vivent derrière le bouton « ··· » : on l'ouvre,
+  // ce qui fait aussi partie de ce que la démonstration doit montrer.
+  const more = await page.$('.hero-task .act-more > summary');
+  if (more) { await more.click(); await page.waitForTimeout(300); }
   const fix = await page.$('.js-fix[data-fix=relearn]');
   if (fix) {
     await fix.scrollIntoViewIfNeeded();
     await page.waitForTimeout(250); await grab(8);
     await fix.click();
     await page.waitForTimeout(900); await grab(9); await grab(10);
+  } else {
+    await grab(8); await grab(9); await grab(10);
   }
   // 5. le mur d'écran
   await page.goto(BASE + '/index.php?p=dashboard&lang=fr', { waitUntil: 'networkidle' });
@@ -286,3 +292,9 @@ console.log('Séquence animée :');
 
 await browser.close();
 console.log('\nCaptures écrites dans docs/img/');
+// L'animation du README se monte depuis la séquence. La commande vit ici pour
+// être reproductible, plutôt que dans un historique de terminal.
+console.log("\nPour remonter l'animation du README (ffmpeg requis) :");
+console.log("  ffmpeg -y -framerate 1.1 -pattern_type glob -i 'docs/img/seq/*.png' \\");
+console.log('    -vf "scale=1100:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];'
+          + '[b][p]paletteuse=dither=bayer:bayer_scale=3" -loop 0 docs/img/tour.gif');
