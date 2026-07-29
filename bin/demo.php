@@ -34,9 +34,13 @@ if ($purge) {
     exit("Démonstration supprimée. Ouvrez install.php pour une installation propre.\n");
 }
 
-if (is_file($root . '/config.php') && !is_file($marker)) {
+// Ce garde-fou protège une installation réelle d'un écrasement accidentel. Mais
+// UPTIMEEZ_DEMO=1 dit sans ambiguïté que cette instance EST une démonstration :
+// le refuser empêchait de monter une démo publique, ce qui était l'inverse du but.
+if (is_file($root . '/config.php') && !is_file($marker) && !\Uptimeez\Demo::on()) {
     exit("Uptimeez est déjà installé pour de vrai : la démonstration écraserait votre configuration.\n"
-       . "Supprimez config.php si vous voulez malgré tout repartir de la démo.\n");
+       . "Supprimez config.php si vous voulez malgré tout repartir de la démo,\n"
+       . "ou posez UPTIMEEZ_DEMO=1 si cette instance est justement une démonstration.\n");
 }
 
 // Le faux site qui sert de cible aux sondes de démonstration.
