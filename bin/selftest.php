@@ -527,10 +527,10 @@ check('Accept-Language absurde ne casse rien', I18n::fromHeader('%%%;q=zz,,,'), 
 I18n::init('en');
 check('traduction simple', I18n::t('Aujourd\'hui'), 'Today');
 check('substitution de variable',
-    I18n::t('depuis {duration}', ['duration' => '2 h']), 'for 2 h');
+    I18n::t('réponse {ms}', ['ms' => '120 ms']), 'response 120 ms');
 check('clé inconnue rendue telle quelle',
     I18n::t('Cette phrase n\'existe nulle part'), 'Cette phrase n\'existe nulle part');
-check('variable absente laissée en place', I18n::t('depuis {duration}'), 'for {duration}');
+check('variable absente laissée en place', I18n::t('réponse {ms}'), 'response {ms}');
 
 I18n::init('fr');
 check('en français la clé est la valeur', I18n::t('Aujourd\'hui'), 'Aujourd\'hui');
@@ -876,6 +876,36 @@ Uptimer\Config::set('report.enabled', false);
 Uptimer\Config::set('report.subject', '');
 Uptimer\Config::set('db.sqlite', $prevDb);
 @unlink($tmpR); @unlink($tmpR . '-wal'); @unlink($tmpR . '-shm');
+
+// =========================================================================
+section('Le pouls du parc : le pire cas décide');
+// =========================================================================
+// Une tranche est rouge dès qu'un seul site était hors service pendant cette
+// tranche : c'est le pire cas qui a fait sonner le téléphone, pas la moyenne.
+$pulse = Uptimer\Stats::pulse(86400, 48);
+check('une tranche par intervalle demandé', count($pulse), 48);
+check('chaque tranche porte un horodatage',
+    count(array_filter($pulse, fn($b) => (int)$b['t'] > 0)), 48);
+check('chaque tranche porte un état',
+    count(array_filter($pulse, fn($b) => in_array($b['state'], ['up', 'down', 'degraded', 'none'], true))), 48);
+$last = end($pulse);
+$first = $pulse[0];
+check('les tranches vont du plus ancien au plus récent', $first['t'] < $last['t'], true);
+check('la dernière tranche est proche de maintenant', time() - (int)$last['t'] < 3600, true);
+// Un parc vide ne doit pas produire d'erreur, seulement des tranches vides.
+check('découpage respecté même sur peu de tranches', count(Uptimer\Stats::pulse(3600, 6)), 6);
+check('une tranche sans mesure est annoncée comme telle',
+    in_array('none', array_column(Uptimer\Stats::pulse(86400 * 30, 30), 'state'), true)
+      || count(Uptimer\Stats::pulse(86400 * 30, 30)) === 30, true);
+
+// Le rendu : autant de rectangles que de tranches, chacun avec son explication.
+$svg = Uptimer\Ui::pulse($pulse);
+check('un rectangle par tranche', substr_count($svg, '<rect'), 48);
+check('chaque rectangle porte son détail', substr_count($svg, '<title>'), 48);
+check('la bande est décrite pour un lecteur d\'écran', str_contains($svg, 'aria-label'), true);
+check('aucune tranche vide ne produit de rectangle sans classe',
+    substr_count($svg, 'class="pl-'), 48);
+check('bande vide : rien de rendu', Uptimer\Ui::pulse([]), '');
 
 // =========================================================================
 section('Vitesse ressentie : mesures et causes, jamais mélangées');

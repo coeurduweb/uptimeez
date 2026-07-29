@@ -224,6 +224,93 @@ try {
     return el !== null;
   }));
 
+  title('Le pouls du parc');
+  await page.goto(BASE + '/index.php?p=today&ui=simple', { waitUntil: 'networkidle' });
+  ok('bande de pouls présente', (await page.$('.band-pulse svg.pulse')) !== null);
+  const slices = await page.$$eval('.band-pulse svg.pulse rect', (e) => e.length);
+  ok('une tranche par intervalle', slices >= 24, slices + ' tranche(s)');
+  // Chaque tranche porte son détail : une couleur seule n'informe pas.
+  const titled = await page.$$eval('.band-pulse svg.pulse rect title', (e) => e.length);
+  ok('chaque tranche explique ce qu\'elle montre', titled === slices, titled + '/' + slices);
+  // L'animation d'arrivée ne doit jamais laisser la bande masquée.
+  await page.waitForTimeout(900);
+  const visible = await page.$eval('.band-pulse svg.pulse', (el) => {
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return r.width > 50 && cs.visibility !== 'hidden' && +cs.opacity > .9
+      && (cs.clipPath === 'none' || cs.clipPath.includes('0px') || cs.clipPath.includes('inset(0'));
+  });
+  ok('bande entièrement révélée après l\'animation', visible);
+  ok('le mur d\'écran a la même bande',
+    (await (async () => {
+      await page.goto(BASE + '/index.php?p=dashboard', { waitUntil: 'networkidle' });
+      return page.$('.band-pulse svg.pulse');
+    })()) !== null);
+
+  title('Contraste mesuré, thème clair et thème sombre');
+  // Le contraste ne se juge pas à l'œil : on le calcule sur chaque texte
+  // réellement affiché, avec les seuils WCAG (4,5:1, ou 3:1 pour du grand
+  // texte). Sept défauts avaient été trouvés ainsi, dont des boutons blancs
+  // sur accent clair en thème sombre.
+  const contrastAudit = async (url, theme) => {
+    await page.goto(BASE + url, { waitUntil: 'networkidle' });
+    await page.evaluate((t) => { document.documentElement.dataset.theme = t; }, theme);
+    await page.waitForTimeout(150);
+    return page.evaluate(() => {
+      const lum = (c) => {
+        const [r, g, b] = c.map((v) => {
+          v /= 255;
+          return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const parse = (s) => {
+        const m = s.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/);
+        return m ? { rgb: [+m[1], +m[2], +m[3]], a: m[4] === undefined ? 1 : +m[4] } : null;
+      };
+      // Le fond effectif : on remonte jusqu'au premier parent réellement opaque.
+      const bgOf = (el) => {
+        let n = el;
+        while (n && n !== document.documentElement) {
+          const c = parse(getComputedStyle(n).backgroundColor);
+          if (c && c.a > 0.5) return c.rgb;
+          n = n.parentElement;
+        }
+        return [255, 255, 255];
+      };
+      const ratio = (a, b) => {
+        const l1 = lum(a), l2 = lum(b);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+      };
+      const bad = [];
+      for (const el of document.querySelectorAll('body *')) {
+        const own = [...el.childNodes].filter((n) => n.nodeType === 3)
+          .map((n) => n.textContent.trim()).join('');
+        if (!own) continue;
+        const st = getComputedStyle(el);
+        if (st.visibility === 'hidden' || st.display === 'none' || +st.opacity < 0.3) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) continue;
+        const fg = parse(st.color);
+        if (!fg) continue;
+        const size = parseFloat(st.fontSize), weight = +st.fontWeight || 400;
+        const need = (size >= 24 || (size >= 18.66 && weight >= 700)) ? 3 : 4.5;
+        const cr = ratio(fg.rgb, bgOf(el));
+        if (cr < need) bad.push((el.className || el.tagName) + ' ' + cr.toFixed(2) + '<' + need);
+      }
+      return bad;
+    });
+  };
+  for (const [url, theme] of [['/index.php?p=today&ui=simple', 'light'],
+                              ['/index.php?p=today&ui=simple', 'dark'],
+                              ['/index.php?p=dashboard', 'light'],
+                              ['/index.php?p=dashboard', 'dark']]) {
+    const bad = await contrastAudit(url, theme);
+    ok('contraste suffisant · ' + url.replace('/index.php?p=', '').split('&')[0] + ' · ' + theme,
+      bad.length === 0, bad.slice(0, 3).join(' | '));
+  }
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
+
   title('Accessibilité et responsive');
   ok('page en français', (await page.getAttribute('html', 'lang')) === 'fr');
   ok('navigation avec état courant', (await page.$('nav [aria-current="page"]')) !== null);

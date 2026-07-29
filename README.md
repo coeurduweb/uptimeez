@@ -312,6 +312,8 @@ request; the table lives in this file.
 | Self-tuning slowness threshold | ✅ from p95 | ❌ fixed | ❌ fixed | ❌ fixed | ❌ fixed | ⚠️ build it yourself | ⚠️ baselines, paid tiers |
 | Journal of the tool's own decisions | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Home screen is a to-do list with fixes | ✅ | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard |
+| The broken page shown inside the to-do list | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Whole-portfolio 24 h pulse in one strip | ✅ | ❌ | ❌ | ⚠️ per monitor | ❌ | ⚠️ build it yourself | ⚠️ per app |
 | Undo on every action | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Outages grouped by server IP | ✅ automatic | ❌ | ❌ | ⚠️ dependency config | ❌ | ✅ topology | ⚠️ config |
 | Dead-man heartbeat (cron, backups) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |

@@ -650,6 +650,25 @@ ok('cron --report s\'exécute sans erreur',
    $out !== null && !preg_match('~Fatal|Uncaught~', (string)$out), str_cut(trim((string)$out), 60));
 
 // =========================================================================
+title('Écran d\'accueil : le pouls et la preuve');
+// =========================================================================
+$r = $req('/index.php?p=today&ui=simple');
+ok('bande de pouls rendue', $has($r, 'class="pulse"') && $has($r, 'il y a 24 h'));
+ok('chaque tranche porte son détail', substr_count($r['body'], '<title>') >= 24,
+    substr_count($r['body'], '<title>') . ' infobulle(s)');
+ok('la durée de panne est le chiffre de la carte', $has($r, 'task-metric'));
+ok('la carte porte une preuve à droite', $has($r, 'task-proof'));
+// La silhouette d'une page cassée doit apparaître dans la liste de tâches :
+// c'est ce qui fait comprendre la panne sans ouvrir la fiche.
+ok('silhouette montrée sur une mise en page cassée',
+    $has($r, 'task-sil') || $has($r, 'task-spark'));
+ok('la reconstitution est annoncée comme telle',
+    !$has($r, 'task-sil') || $has($r, 'pas une capture'));
+ok('cause et remède côte à côte', $has($r, 'task-cols'));
+$r = $req('/index.php?p=dashboard');
+ok('le mur porte la même bande', $has($r, 'class="pulse"'));
+
+// =========================================================================
 title('Vitesse ressentie : mesures et causes sur la fiche');
 // =========================================================================
 $slowMon = (int)$val("SELECT id FROM monitors WHERE url LIKE '%lente.html' LIMIT 1");

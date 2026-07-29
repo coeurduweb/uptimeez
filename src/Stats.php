@@ -227,6 +227,51 @@ final class Stats
      * Séries pour plusieurs sondes en 2 requêtes (tableau de bord).
      * @return array<int,array<int,array>>
      */
+    /**
+     * Le pouls du parc : un état par tranche de temps, tous sites confondus.
+     *
+     * Ce que ça donne à voir en une ligne : la journée telle qu'elle s'est
+     * passée. Une tranche est rouge dès qu'un site était hors service pendant
+     * cette tranche, orange s'il était seulement dégradé, verte si tout
+     * répondait. C'est le pire cas qui gagne, parce que c'est le pire cas qui
+     * a fait sonner le téléphone.
+     *
+     * @return array<int,array{t:int,state:string,down:int,degraded:int,up:int,avg_ms:?int}>
+     */
+    public static function pulse(int $seconds = 86400, int $buckets = 48): array
+    {
+        $ids = array_map(fn(array $r): int => (int)$r['id'],
+                         Db::all("SELECT id FROM monitors WHERE enabled = 1"));
+        $step = (int)max(60, floor($seconds / max(1, $buckets)));
+        $to = time(); $from = $to - $seconds;
+        $out = [];
+        for ($i = 0, $t = $from; $t < $to; $t += $step, $i++) {
+            $out[$i] = ['t' => $t, 'state' => 'none', 'down' => 0, 'degraded' => 0,
+                        'up' => 0, 'avg_ms' => null];
+        }
+        if (!$ids) return $out;
+
+        $per = self::sparkBatch($ids, $seconds, count($out));
+        $sum = array_fill(0, count($out), 0);
+        $cnt = array_fill(0, count($out), 0);
+        foreach ($per as $slots) {
+            foreach ($slots as $i => $b) {
+                if (!isset($out[$i])) continue;
+                $st = (string)$b['state'];
+                if ($st === 'down')          $out[$i]['down']++;
+                elseif ($st === 'degraded')  $out[$i]['degraded']++;
+                elseif ($st === 'up')        $out[$i]['up']++;
+                if ($b['avg_ms'] !== null) { $sum[$i] += (int)$b['avg_ms']; $cnt[$i]++; }
+            }
+        }
+        foreach ($out as $i => $b) {
+            $out[$i]['state'] = $b['down'] > 0 ? 'down'
+                : ($b['degraded'] > 0 ? 'degraded' : ($b['up'] > 0 ? 'up' : 'none'));
+            if ($cnt[$i] > 0) $out[$i]['avg_ms'] = (int)round($sum[$i] / $cnt[$i]);
+        }
+        return $out;
+    }
+
     public static function sparkBatch(array $monitorIds, int $seconds = 86400, int $buckets = 48): array
     {
         $ids = array_values(array_unique(array_map('intval', $monitorIds)));

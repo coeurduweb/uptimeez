@@ -104,6 +104,31 @@ if ($deadCls) { $issues += count($deadCls); foreach ($deadCls as $d) echo "  MOR
 else echo "  aucune\n";
 
 // =========================================================================
+title('Variables CSS employées sans être définies');
+// =========================================================================
+// Une var() non définie et sans valeur de repli rend la déclaration invalide :
+// la bordure prend la couleur du texte au lieu du gris prévu, et personne ne
+// s'en aperçoit avant de regarder l'écran de près. C'est arrivé sur --line,
+// utilisée six fois et déclarée nulle part.
+$cssVars = (string)file_get_contents($ROOT . '/assets/app.css');
+$usedVars = [];
+if (preg_match_all('~var\(\s*(--[a-z0-9-]+)\s*\)~i', $cssVars, $m)) {
+    foreach ($m[1] as $v) $usedVars[$v] = true;
+}
+$defVars = [];
+if (preg_match_all('~(?<!var\()(--[a-z0-9-]+)\s*:~i', $cssVars, $m)) {
+    foreach ($m[1] as $v) $defVars[$v] = true;
+}
+$ghost = array_keys(array_diff_key($usedVars, $defVars));
+if ($ghost) {
+    $issues += count($ghost);
+    foreach ($ghost as $v) {
+        $n = preg_match_all('~var\(\s*' . preg_quote($v, '~') . '\s*\)~i', $cssVars);
+        echo "  MORT  $v : employée $n fois, définie nulle part\n";
+    }
+} else echo "  aucune\n";
+
+// =========================================================================
 title('Classes CSS déclarées mais jamais utilisées');
 // =========================================================================
 $css = (string)file_get_contents($ROOT . '/assets/app.css');

@@ -149,6 +149,14 @@ $band  = $bad > 0 ? 'band-bad' : ($warn > 0 ? 'band-warn' : ($all['up'] > 0 ? 'b
       </div>
     <?php endif; ?>
   </div>
+  <div class="band-pulse">
+    <?= Ui::pulse(Stats::pulse(86400, 48)) ?>
+    <div class="band-pulse-scale">
+      <span><?= te('il y a 24 h') ?></span>
+      <span class="grow"></span>
+      <span><?= te('maintenant') ?></span>
+    </div>
+  </div>
   <div class="band-cta">
     <button class="btn" id="check-all"><?= Ui::icon('refresh') ?> <?= te('Tout revérifier') ?></button>
   </div>
@@ -299,7 +307,7 @@ $band  = $bad > 0 ? 'band-bad' : ($warn > 0 ? 'band-warn' : ($all['up'] > 0 ? 'b
 
     <div class="card-foot">
       <?php if ($m['last_ms'] !== null): ?>
-        <span class="card-num"><?= Ui::ms((int)$m['last_ms']) ?><small><?= te('temps de réponse') ?></small></span>
+        <span class="card-num"><?= Ui::ms((int)$m['last_ms']) ?><small><?= te('réponse') ?></small></span>
       <?php endif; ?>
       <?php foreach ($flags as [$txt, $tone]): ?><?= Ui::badge($txt, $tone) ?><?php endforeach; ?>
       <div class="card-actions">

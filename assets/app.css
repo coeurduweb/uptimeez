@@ -17,7 +17,7 @@
   --border-strong: #ccd5e2;
   --text: #0d1526;
   --text-soft: #445067;
-  --muted: #66738c;
+  --muted: #5c677c;
 
   /* --- Couleurs sémantiques --------------------------------------------- */
   --accent: #2b52d8;
@@ -29,6 +29,17 @@
   --warn-soft: #fdf0dc;
   --bad: #ce2233;
   --bad-soft: #fdeaec;
+
+  /* Un aplat et un texte n'ont pas les mêmes contraintes : une pastille verte
+     peut être vive, le mot « opérationnel » écrit dans ce vert-là tombe à
+     4,1:1 sur blanc et 3,7:1 sur fond teinté, sous le minimum de 4,5:1. D'où
+     ces trois encres, mesurées sur les deux fonds où elles servent. */
+  --ok-ink: #077a46;
+  --warn-ink: #96560a;
+  --bad-ink: #c01f2f;
+  /* Texte posé sur l'accent : blanc en thème clair, presque noir en sombre où
+     l'accent s'éclaircit pour rester visible sur fond foncé. */
+  --on-accent: #ffffff;
 
   /* --- Échelles ---------------------------------------------------------- */
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
@@ -61,6 +72,13 @@ html[data-theme="dark"] {
   --warn-soft: #2c2113;
   --bad: #f8666f;
   --bad-soft: #2f1418;
+
+  /* En thème sombre, les couleurs vives sont déjà claires : elles servent
+     directement de texte sur fond foncé. */
+  --ok-ink: #4bd694;
+  --warn-ink: #f4b954;
+  --bad-ink: #ff8b92;
+  --on-accent: #0b1020;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
   --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 26px -18px rgba(0, 0, 0, .9);
@@ -142,9 +160,9 @@ svg { flex: 0 0 auto; }
 }
 .btn:hover { background: var(--surface-2); border-color: var(--muted); text-decoration: none; }
 .btn:active { transform: translateY(1px); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
-.btn-danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); background: var(--surface); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
+.btn-danger { color: var(--bad-ink); border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); background: var(--surface); }
 .btn-danger:hover { background: var(--bad-soft); border-color: var(--bad); }
 .btn-sm { min-height: 30px; padding: 5px 10px; font-size: 13px; }
 .btn-ghost { border-color: transparent; background: transparent; color: var(--text-soft); }
@@ -159,7 +177,43 @@ svg { flex: 0 0 auto; }
 .band {
   margin: var(--s4) 0; border-radius: var(--r-lg); padding: var(--s4) var(--s5);
   border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow);
-  display: flex; gap: var(--s4); align-items: flex-start;
+  /* Trois zones : l'état, le pouls de la journée, l'action. Sur un écran
+     étroit, elles s'empilent dans cet ordre de priorité. */
+  display: grid; gap: var(--s3) var(--s4); align-items: center;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(180px, 300px) auto;
+  grid-template-areas: "icon text pulse cta";
+}
+.band > .band-icon { grid-area: icon; }
+.band > .grow { grid-area: text; }
+.band > .band-pulse { grid-area: pulse; min-width: 0; }
+.band > .band-cta { grid-area: cta; }
+@media (max-width: 1000px) {
+  .band { grid-template-columns: 40px minmax(0, 1fr) auto;
+          grid-template-areas: "icon text cta" ". pulse pulse"; }
+}
+@media (max-width: 620px) {
+  .band { grid-template-columns: 40px minmax(0, 1fr);
+          grid-template-areas: "icon text" "pulse pulse" "cta cta"; }
+  .band > .band-cta { justify-self: stretch; }
+  .band > .band-cta .btn { width: 100%; justify-content: center; }
+}
+
+/* Le pouls : la journée en une bande. Aucune légende, la couleur suffit. */
+.band-pulse svg.pulse { display: block; width: 100%; height: 26px; }
+/* La bande se dessine de gauche à droite une fois, à l'arrivée sur la page :
+   le mouvement dit « voilà comment la journée s'est déroulée ». L'état final
+   est l'état normal, donc rien ne peut rester caché si l'animation ne joue
+   pas, et prefers-reduced-motion la réduit à néant. */
+@keyframes pulse-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.band-pulse svg.pulse { animation: pulse-in .7s cubic-bezier(.22, .61, .36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .band-pulse svg.pulse { animation: none; } }
+.pulse .pl-up   { fill: var(--ok); }
+.pulse .pl-degraded { fill: var(--warn); }
+.pulse .pl-down { fill: var(--bad); }
+.pulse .pl-none { fill: var(--border-strong); }
+.band-pulse-scale {
+  display: flex; margin-top: 5px; font-size: 11px; color: var(--muted);
+  letter-spacing: .02em;
 }
 .band-ok   { border-color: color-mix(in srgb, var(--ok) 30%, var(--border)); }
 .band-bad  { border-color: color-mix(in srgb, var(--bad) 42%, var(--border)); background: linear-gradient(103deg, var(--bad-soft), var(--surface) 55%); }
@@ -183,8 +237,8 @@ svg { flex: 0 0 auto; }
 }
 .chip:hover { border-color: var(--muted); text-decoration: none; }
 .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chip-bad  { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); color: var(--bad); background: var(--surface); }
-.chip-warn { border-color: color-mix(in srgb, var(--warn) 48%, var(--border)); color: var(--warn); background: var(--surface); }
+.chip-bad  { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); color: var(--bad-ink); background: var(--surface); }
+.chip-warn { border-color: color-mix(in srgb, var(--warn) 48%, var(--border)); color: var(--warn-ink); background: var(--surface); }
 
 /* ============================== Indicateurs ============================== */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s3); }
@@ -195,7 +249,7 @@ svg { flex: 0 0 auto; }
 .stat-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 650; }
 .stat-value { font-size: 26px; font-weight: 700; letter-spacing: -.03em; margin-top: 2px; line-height: 1.15; }
 .stat-hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.v-ok { color: var(--ok); } .v-warn { color: var(--warn); } .v-bad { color: var(--bad); }
+.v-ok { color: var(--ok-ink); } .v-warn { color: var(--warn-ink); } .v-bad { color: var(--bad-ink); }
 
 /* ================================ Filtres ================================ */
 .toolbar { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; margin: var(--s5) 0 var(--s3); }
@@ -217,7 +271,7 @@ svg { flex: 0 0 auto; }
 }
 .segmented > :last-child { border-right: 0; }
 .segmented a:hover, .segmented button:hover { background: var(--surface-2); text-decoration: none; color: var(--text); }
-.segmented [aria-selected="true"], .segmented .on { background: var(--accent); color: #fff; }
+.segmented [aria-selected="true"], .segmented .on { background: var(--accent); color: var(--on-accent); }
 .segmented .n { opacity: .75; font-size: 11.5px; }
 select, .select {
   min-height: 36px; padding: 7px 10px; border-radius: var(--r-sm); border: 1px solid var(--border-strong);
@@ -244,12 +298,12 @@ select, .select {
 .card-name:hover { text-decoration: none; color: var(--accent); }
 .card-sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
 .card-msg { font-size: 13px; color: var(--text-soft); margin-top: 7px; min-height: 18px; }
-.card.s-down .card-msg { color: var(--bad); font-weight: 550; }
-.card.s-degraded .card-msg { color: var(--warn); }
+.card.s-down .card-msg { color: var(--bad-ink); font-weight: 550; }
+.card.s-degraded .card-msg { color: var(--warn-ink); }
 .card-foot { display: flex; gap: var(--s3); align-items: center; margin-top: 8px; }
 .card-num { font-weight: 650; font-size: 13.5px; }
 .card-num small { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.card-actions { display: flex; gap: 2px; margin-left: auto; opacity: .4; transition: opacity .15s; }
+.card-actions { display: flex; gap: 2px; margin-left: auto; opacity: .62; transition: opacity .15s; }
 .card:hover .card-actions, .card-actions:focus-within { opacity: 1; }
 
 /* =========================== Pastilles / badges =========================== */
@@ -265,9 +319,9 @@ select, .select {
   font-size: 11.5px; font-weight: 620; white-space: nowrap;
   background: var(--surface-3); color: var(--text-soft); border: 1px solid transparent;
 }
-.badge-ok   { background: var(--ok-soft);   color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 26%, transparent); }
-.badge-warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
-.badge-bad  { background: var(--bad-soft);  color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 28%, transparent); }
+.badge-ok   { background: var(--ok-soft);   color: var(--ok-ink);   border-color: color-mix(in srgb, var(--ok) 26%, transparent); }
+.badge-warn { background: var(--warn-soft); color: var(--warn-ink); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.badge-bad  { background: var(--bad-soft);  color: var(--bad-ink);  border-color: color-mix(in srgb, var(--bad) 28%, transparent); }
 .badge-info { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 22%, transparent); }
 
 /* ============================== Graphiques ============================== */
@@ -378,7 +432,7 @@ dl.kv dd .hint { margin-top: 2px; }
 .field > label, .f-label {
   display: block; font-size: 13.5px; font-weight: 620; margin-bottom: 5px; color: var(--text);
 }
-.field .req { color: var(--bad); margin-left: 2px; }
+.field .req { color: var(--bad-ink); margin-left: 2px; }
 .hint { display: block; font-size: 12.5px; color: var(--muted); font-weight: 400; margin-top: 5px; line-height: 1.45; }
 input[type=text], input[type=password], input[type=email], input[type=number], input[type=url], textarea {
   width: 100%; min-height: 38px; padding: 8px 11px; border-radius: var(--r-sm);
@@ -422,16 +476,16 @@ fieldset > legend {
   transform: translateY(0); transition: opacity .18s, transform .18s;
 }
 .savebar[hidden] { display: none; }
-.savebar .sb-note { font-size: 13px; color: var(--warn); font-weight: 550; }
+.savebar .sb-note { font-size: 13px; color: var(--warn-ink); font-weight: 550; }
 
 /* ================================ Messages ================================ */
 .alert {
   padding: 11px var(--s4); border-radius: var(--r-sm); border: 1px solid var(--border);
   margin: var(--s4) 0 0; font-size: 14px; display: flex; gap: 10px; align-items: flex-start;
 }
-.alert-ok   { background: var(--ok-soft);   border-color: color-mix(in srgb, var(--ok) 32%, transparent);   color: var(--ok); }
-.alert-bad  { background: var(--bad-soft);  border-color: color-mix(in srgb, var(--bad) 32%, transparent);  color: var(--bad); }
-.alert-warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 32%, transparent); color: var(--warn); }
+.alert-ok   { background: var(--ok-soft);   border-color: color-mix(in srgb, var(--ok) 32%, transparent);   color: var(--ok-ink); }
+.alert-bad  { background: var(--bad-soft);  border-color: color-mix(in srgb, var(--bad) 32%, transparent);  color: var(--bad-ink); }
+.alert-warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 32%, transparent); color: var(--warn-ink); }
 .alert-info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 26%, transparent); color: var(--accent); }
 .empty { text-align: center; padding: var(--s6) var(--s4); color: var(--muted); }
 .empty h3 { color: var(--text); margin-bottom: 6px; }
@@ -460,8 +514,8 @@ fieldset > legend {
 .res-bad .res-ico { color: var(--bad); }
 .res-url { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; color: var(--text-soft); }
 .res-bad .res-url { color: var(--text); }
-.res-note { color: var(--bad); font-weight: 550; margin-top: 2px; font-size: 12.5px; }
-.res-warn .res-note { color: var(--warn); }
+.res-note { color: var(--bad-ink); font-weight: 550; margin-top: 2px; font-size: 12.5px; }
+.res-warn .res-note { color: var(--warn-ink); }
 .res-meta { font-size: 12px; color: var(--muted); white-space: nowrap; margin-left: auto; }
 .console {
   font-family: var(--mono); font-size: 12px; line-height: 1.6; background: #0d1117; color: #e6edf3;
@@ -525,13 +579,76 @@ html[data-theme="light"] .console { background: #131a26; }
    conduite à tenir et ses actions ; rien ne renvoie vers un écran de réglages.
    ========================================================================== */
 .task {
-  background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted);
+  background: var(--surface); border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--muted);
   border-radius: var(--r); box-shadow: var(--shadow-sm); padding: var(--s4) var(--s5);
   margin-bottom: var(--s3);
+  /* Deux colonnes : ce qu'il faut lire, ce qu'il faut voir. La preuve occupe
+     la place qui restait vide à droite du texte. */
+  display: grid; gap: var(--s4) var(--s5); align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
 }
-.task-bad  { border-left-color: var(--bad);  background: linear-gradient(100deg, var(--bad-soft), var(--surface) 42%); }
-.task-warn { border-left-color: var(--warn); background: linear-gradient(100deg, var(--warn-soft), var(--surface) 42%); }
+.task-main { min-width: 0; }
+/* La teinte reste une bordure et un pictogramme : cinq cartes rouges empilées
+   sur fond rouge cessent de hiérarchiser quoi que ce soit. */
+.task-bad  { border-inline-start-color: var(--bad); }
+.task-warn { border-inline-start-color: var(--warn); }
+.task-bad  { box-shadow: var(--shadow-sm), inset 3px 0 0 -1px color-mix(in srgb, var(--bad) 14%, transparent); }
 .task-head { display: flex; gap: var(--s3); align-items: flex-start; }
+
+/* La durée de panne : le chiffre qui décide de l'ordre d'attaque. */
+.task-metric {
+  flex: 0 0 auto; text-align: end; line-height: 1.2; padding-inline-start: var(--s3);
+}
+.task-metric b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.02em;
+                 font-variant-numeric: tabular-nums; }
+.task-metric > span { display: block; font-size: 11.5px; text-transform: uppercase;
+                      letter-spacing: .06em; font-weight: 650; color: var(--muted); }
+.task-metric-bad b  { color: var(--bad-ink); }
+.task-metric-warn b { color: var(--warn-ink); }
+.task-metric-sub { font-size: 11.5px; color: var(--muted); text-transform: none !important;
+                   letter-spacing: 0 !important; font-weight: 400 !important; }
+
+/* Cause et remède côte à côte : la carte perd la moitié de sa hauteur sans
+   qu'une seule phrase soit cachée. */
+.task-cols { display: grid; gap: var(--s3) var(--s5); margin-top: var(--s3);
+             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.task-cols > p { margin: 0; }
+
+/* La preuve : ce qu'on montrerait au client. */
+.task-proof { min-width: 0; }
+.task-sil { margin: 0; }
+.task-sil figcaption { font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+                       font-weight: 650; color: var(--muted); margin-bottom: 4px; }
+/* Le sélecteur porte l'élément : sinon la règle générique des légendes,
+   plus spécifique, remettrait cette note en majuscules. */
+.task-sil figcaption.task-sil-note {
+  text-transform: none; letter-spacing: 0; font-weight: 400; margin: 4px 0 0;
+}
+html[data-theme="dark"] .task-sil-view, html[data-theme="dark"] .sil-view { background: #dde3ec; }
+.task-sil-view {
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden;
+  /* On ne montre que le haut de la page : c'est ce que le visiteur voit en
+     premier, et cela garde la carte à une hauteur lisible d'un coup d'œil. */
+  background: #fbfcfe; max-height: 132px;
+}
+.task-sil-view svg { display: block; width: 100%; height: auto; }
+.task-bad .task-sil-view { border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); }
+.task-spark { border: 1px solid var(--border); border-radius: var(--r-sm);
+              padding: var(--s3); background: var(--surface-2); }
+.task-spark-head, .task-spark-foot {
+  display: flex; justify-content: space-between; gap: var(--s2);
+  font-size: 11.5px; color: var(--muted);
+}
+.task-spark-head { text-transform: uppercase; letter-spacing: .05em; font-weight: 650;
+                   margin-bottom: 5px; }
+.task-spark-foot { margin-top: 5px; font-variant-numeric: tabular-nums; }
+@media (max-width: 1000px) {
+  .task { grid-template-columns: minmax(0, 1fr); }
+  /* Sur un écran étroit, la preuve passe sous le texte mais reste visible :
+     c'est elle qui fait comprendre la panne d'un coup d'œil. */
+  .task-proof { max-width: 420px; }
+}
 .task-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto;
   border-radius: 9px; background: var(--surface); border: 1px solid var(--border); }
 .task-bad .task-icon  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 35%, var(--border)); }
@@ -608,16 +725,16 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
    ========================================================================= */
 
 /* Sélecteur segmenté : deux états, un clic, pas de menu. */
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm);
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-sm);
        overflow: hidden; background: var(--surface-2); }
 .seg-i { padding: .34rem .6rem; font-size: .78rem; font-weight: 600; color: var(--text-soft);
          text-decoration: none; line-height: 1.2; white-space: nowrap; }
-.seg-i + .seg-i { border-inline-start: 1px solid var(--line); }
+.seg-i + .seg-i { border-inline-start: 1px solid var(--border); }
 .seg-i:hover { background: var(--surface-3); color: var(--text); }
-.seg-on, .seg-on:hover { background: var(--accent); color: #fff; }
+.seg-on, .seg-on:hover { background: var(--accent); color: var(--on-accent); }
 
 .lang-pick { display: inline-flex; align-items: center; }
-.lang-pick select { appearance: none; border: 1px solid var(--line); background: var(--surface-2);
+.lang-pick select { appearance: none; border: 1px solid var(--border); background: var(--surface-2);
                     color: var(--text-soft); border-radius: var(--r-sm); padding: .34rem 1.4rem .34rem .5rem;
                     font-size: .78rem; font-weight: 600; cursor: pointer;
                     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -629,12 +746,12 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
 /* Aide « ? » : au survol comme au clavier, jamais un simple title=. */
 .hint { position: relative; display: inline-flex; vertical-align: middle; margin-inline-start: .28rem; }
 .hint { z-index: 40; }
-.hint-b { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line);
+.hint-b { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border);
           text-transform: none; letter-spacing: normal;
           background: var(--surface-2); color: var(--text-soft); font-size: .68rem; font-weight: 700;
           line-height: 1; cursor: help; padding: 0; display: inline-flex; align-items: center;
           justify-content: center; }
-.hint-b:hover, .hint-b:focus-visible { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hint-b:hover, .hint-b:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 /* La bulle est positionnée en « fixed » par le script dès son ouverture : elle
    échappe ainsi à tout parent en overflow:hidden et à toute pile de z-index.
    text-transform et letter-spacing sont remis à zéro : un titre de section en
@@ -696,7 +813,7 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
 .demo-flag { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap;
              margin: 0 0 var(--s4); padding: .5rem .75rem; border-radius: var(--r-sm);
              background: color-mix(in srgb, var(--warn) 12%, var(--surface));
-             border: 1px dashed color-mix(in srgb, var(--warn) 45%, var(--line));
+             border: 1px dashed color-mix(in srgb, var(--warn) 45%, var(--border));
              color: var(--text-soft); font-size: .8rem; line-height: 1.45; }
 .demo-flag strong { color: var(--text); }
 .demo-flag code { margin-inline-start: auto; font-size: .72rem; padding: .1rem .4rem;
@@ -716,7 +833,7 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
                   font-size: .74rem; font-weight: 600; text-transform: uppercase;
                   letter-spacing: .04em; color: var(--text-soft); }
 .sil figcaption .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
-.sil-view { border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden;
+.sil-view { border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden;
             background: #fbfcfe; max-height: 320px; }
 .sil-view svg { display: block; width: 100%; height: auto; }
 /* Une silhouette qui a dérivé se signale au premier regard. */
@@ -731,7 +848,6 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
 .adv-list { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; gap: .3rem; }
 .adv-list li { font-size: .78rem; line-height: 1.35; }
 .adv-list a { font-family: var(--mono, ui-monospace, monospace); font-size: .74rem; }
-.v-ok { color: var(--ok); } .v-warn { color: var(--warn); }
 
 /* ===========================================================================
    Mode agence : la liste des clients et l'espace en lecture seule
@@ -745,7 +861,7 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
 table.tbl td.cell-form { padding: 0 var(--s4) var(--s4); background: var(--surface); }
 table.tbl tr:hover td.cell-form { background: var(--surface); }
 
-.txt-bad { color: var(--bad); } .txt-warn { color: var(--warn); }
+.txt-bad { color: var(--bad-ink); } .txt-warn { color: var(--warn-ink); }
 
 fieldset.fs { border: 1px solid var(--border); border-radius: var(--r-sm);
               padding: var(--s3) var(--s4); margin: var(--s4) 0 0; }

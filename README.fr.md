@@ -321,6 +321,8 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Seuil de lenteur auto-ajusté | ✅ sur le p95 | ❌ fixe | ❌ fixe | ❌ fixe | ❌ fixe | ⚠️ à construire | ⚠️ formules payantes |
 | Journal des décisions de l'outil | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Accueil = liste de tâches avec correctifs | ✅ | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord |
+| La page cassée montrée dans la liste de tâches | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Pouls du parc sur 24 h en une seule bande | ✅ | ❌ | ❌ | ⚠️ par sonde | ❌ | ⚠️ à construire | ⚠️ par application |
 | Annulation de chaque action | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Pannes regroupées par IP de serveur | ✅ automatique | ❌ | ❌ | ⚠️ à configurer | ❌ | ✅ topologie | ⚠️ à configurer |
 | Battement dead-man (cron, sauvegardes) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |

@@ -232,6 +232,54 @@ final class Ui
         return $svg . '</svg>';
     }
 
+    /**
+     * Le pouls du parc : une bande de tranches colorées, la journée en un coup
+     * d'œil.
+     *
+     * Pas de courbe, pas d'axe, pas de légende : la couleur suffit, et chaque
+     * tranche porte son détail dans une infobulle native. Une bande plutôt
+     * qu'un graphique, parce qu'on cherche à répondre « est-ce que la journée
+     * s'est bien passée ? » et pas « combien de millisecondes à 14 h 20 ? ».
+     */
+    public static function pulse(array $buckets, int $h = 26): string
+    {
+        $n = count($buckets);
+        if ($n === 0) return '';
+        $gap = 2.0;
+        $w   = 1000.0;                       // repère interne, la bande s'étire
+        $bw  = max(1.0, ($w - ($n - 1) * $gap) / $n);
+        $svg = '<svg class="pulse" viewBox="0 0 ' . (int)$w . ' ' . $h . '"'
+             . ' preserveAspectRatio="none" role="img" aria-label="'
+             . e(t('Les {n} dernières tranches de temps, tous sites confondus', ['n' => $n])) . '">';
+        $x = 0.0;
+        foreach ($buckets as $b) {
+            $state = (string)($b['state'] ?? 'none');
+            // Une tranche sans mesure reste visible mais discrète : un trou dans
+            // la surveillance est une information, pas un vide à masquer.
+            $cls = 'pl-' . ($state === 'none' ? 'none' : $state);
+            $hh  = $state === 'none' ? max(4, (int)round($h * .35)) : $h;
+            $y   = (int)round(($h - $hh) / 2);
+            $svg .= '<rect class="' . $cls . '" x="' . round($x, 2) . '" y="' . $y
+                  . '" width="' . round($bw, 2) . '" height="' . $hh . '" rx="1.5">'
+                  . '<title>' . e(self::pulseTitle($b)) . '</title></rect>';
+            $x += $bw + $gap;
+        }
+        return $svg . '</svg>';
+    }
+
+    private static function pulseTitle(array $b): string
+    {
+        $when = isset($b['t']) ? date('H:i', (int)$b['t']) : '';
+        $state = (string)($b['state'] ?? 'none');
+        if ($state === 'none') return $when . ' · ' . t('aucune mesure');
+        $bits = [$when];
+        if (!empty($b['down']))     $bits[] = tn((int)$b['down'], 'un site hors service', '{n} sites hors service');
+        elseif (!empty($b['degraded'])) $bits[] = tn((int)$b['degraded'], 'un site à surveiller', '{n} sites à surveiller');
+        else $bits[] = t('tout répondait');
+        if (isset($b['avg_ms']) && $b['avg_ms'] !== null) $bits[] = self::ms((int)$b['avg_ms']);
+        return implode(' · ', $bits);
+    }
+
     private static function bucketTitle(array $b): string
     {
         $when = isset($b['t']) ? date('d/m H:i', (int)$b['t']) : '';

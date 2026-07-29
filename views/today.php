@@ -27,6 +27,10 @@ $nWarn = $nAct - $nDown;
 
 $sparkIds = array_map(fn($h) => $h['id'], $healthy);
 $sparks   = $sparkIds ? Stats::sparkBatch(array_slice($sparkIds, 0, 40), 86400, 32) : [];
+// Les cartes de tâches portent aussi une courbe : une seule requête groupée
+// pour toutes, comme pour la liste des sondes saines.
+$taskIds    = array_map(fn($a) => (int)$a['id'], $actions);
+$taskSparks = $taskIds ? Stats::sparkBatch($taskIds, 86400, 40) : [];
 ?>
 
 <!-- ===================== BANDEAU D'ÉTAT ===================== -->
@@ -58,6 +62,14 @@ $sparks   = $sparkIds ? Stats::sparkBatch(array_slice($sparkIds, 0, 40), 86400, 
       <?php endif; ?>
     </div>
   </div>
+  <div class="band-pulse">
+    <?= Ui::pulse(Stats::pulse(86400, 48)) ?>
+    <div class="band-pulse-scale">
+      <span><?= te('il y a 24 h') ?></span>
+      <span class="grow"></span>
+      <span><?= te('maintenant') ?></span>
+    </div>
+  </div>
   <div class="band-cta row">
     <?php if ($nAct): ?>
       <button class="btn btn-primary" id="check-all"><?= Ui::icon('refresh') ?> <?= te('Tout revérifier') ?></button>
@@ -80,6 +92,7 @@ $sparks   = $sparkIds ? Stats::sparkBatch(array_slice($sparkIds, 0, 40), 86400, 
     $tone = $a['severity'] === 'down' ? 'bad' : 'warn';
   ?>
   <article class="task task-<?= $tone ?>" data-id="<?= $mid ?>" data-task>
+    <div class="task-main">
     <div class="task-head">
       <span class="task-icon"><?= Ui::icon($a['icon'], 22) ?></span>
       <div class="grow">
@@ -87,25 +100,32 @@ $sparks   = $sparkIds ? Stats::sparkBatch(array_slice($sparkIds, 0, 40), 86400, 
         <div class="task-who">
           <a href="<?= e(u('monitor', ['id' => $mid])) ?>"><strong><?= e($a['title']) ?></strong></a>
           <span class="muted"><?= e($a['subtitle']) ?></span>
-          <?php if ($a['since']): ?>
-            · <?= te('depuis {duration}', ['duration' => human_duration(max(0, time() - strtotime((string)$a['since'])))]) ?>
-          <?php endif; ?>
-          <?php if ($a['fails'] > 1): ?>
-            · <?= tne($a['fails'], 'un échec', '{n} échecs consécutifs') ?>
-          <?php endif; ?>
           <?php if ($a['also'] > 0): ?>
             · <?= Ui::badge(tn($a['also'], '+1 autre page du site', '+{n} autres pages du site'), $tone) ?>
           <?php endif; ?>
           <?php if ($a['acked']): ?> <?= Ui::badge(t('pris en compte'), 'neutral') ?><?php endif; ?>
         </div>
       </div>
+      <?php /* La durée est le chiffre qui décide de l'ordre d'attaque : elle
+               sort du texte pour devenir la métrique de la carte. */
+      if ($a['since']): ?>
+        <div class="task-metric task-metric-<?= $tone ?>">
+          <b><?= e(human_duration(max(0, time() - strtotime((string)$a['since'])))) ?></b>
+          <span><?= $a['severity'] === 'down' ? te('hors service') : te('à surveiller') ?></span>
+          <?php if ($a['fails'] > 1): ?>
+            <span class="task-metric-sub"><?= e(tn($a['fails'], 'un échec', '{n} échecs de suite')) ?></span>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
     </div>
 
-    <p class="task-why"><?= e($a['why']) ?></p>
+    <div class="task-cols">
+      <p class="task-why"><?= e($a['why']) ?></p>
+      <p class="task-fix"><?= Ui::icon('wrench', 14) ?> <?= e($a['fix']) ?></p>
+    </div>
     <?php if ($a['evidence'] !== '' && expert()): ?>
       <div class="task-evidence"><?= e($a['evidence']) ?></div>
     <?php endif; ?>
-    <p class="task-fix"><?= Ui::icon('wrench', 14) ?> <?= e($a['fix']) ?></p>
 
     <div class="task-actions">
       <?php foreach ($a['actions'] as [$act, $label]):
@@ -130,6 +150,46 @@ $sparks   = $sparkIds ? Stats::sparkBatch(array_slice($sparkIds, 0, 40), 86400, 
       <?php endif; ?>
       <a class="btn btn-sm btn-ghost" href="<?= e(u('monitor', ['id' => $mid])) ?>"><?= te('Fiche complète →') ?></a>
     </div>
+    </div><?php /* fin de .task-main */ ?>
+
+    <?php
+    // La preuve, à droite : ce qu'on montrerait au client. La silhouette de la
+    // page cassée d'abord, parce qu'une image se comprend sans lecture ; à
+    // défaut, la courbe des 24 heures et la dernière mesure.
+    $sil  = (string)($m['silhouette_now'] ?? '');
+    // La silhouette ne parle que des pannes visibles à l'écran : une panne
+    // réseau ou un certificat expiré n'ont rien à montrer d'utile.
+    $showSil = $sil !== '' && in_array($a['reason'], ['CSS_BROKEN', 'CSS_DEGRADED', 'DB_DOWN',
+                                                      'APP_ERROR', 'STRING_MISSING',
+                                                      'STRING_FORBIDDEN', 'NOINDEX'], true);
+    ?>
+    <aside class="task-proof">
+      <?php if ($showSil): ?>
+        <figure class="task-sil">
+          <figcaption><?= te('La page maintenant') ?></figcaption>
+          <div class="task-sil-view"><?= $sil ?></div>
+          <figcaption class="task-sil-note"><?= te('Reconstitution, pas une capture d\'écran.') ?></figcaption>
+        </figure>
+      <?php else: ?>
+        <div class="task-spark">
+          <div class="task-spark-head">
+            <span><?= te('24 dernières heures') ?></span>
+            <?php if (($m['last_status_code'] ?? null) !== null): ?>
+              <span class="mono"><?= (int)$m['last_status_code'] ?></span>
+            <?php endif; ?>
+          </div>
+          <?= Ui::sparkline($taskSparks[$mid] ?? [], 320, 40) ?>
+          <div class="task-spark-foot">
+            <?php if (($m['last_ms'] ?? null) !== null): ?>
+              <?= e(Ui::ms((int)$m['last_ms'])) ?>
+            <?php endif; ?>
+            <?php if (($m['uptime_30d'] ?? null) !== null): ?>
+              · <?= te('{pct} sur 30 j', ['pct' => Ui::pct((float)$m['uptime_30d'], 2)]) ?>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endif; ?>
+    </aside>
   </article>
   <?php endforeach; ?>
 <?php endif; ?>
