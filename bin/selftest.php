@@ -9,6 +9,19 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
+// LA SUITE FIXE SA LANGUE, ELLE NE L'HÉRITE PAS.
+//
+// Des dizaines de contrôles comparent des chaînes rendues (« 1 j 1 h », « 2 Ko »,
+// « Anomalie détectée »), donc dans la langue source. Or I18n::init() sans argument
+// prend « app.locale » de l'instance : le 2026-07-29, une instance passée en anglais
+// pour produire des captures a fait échouer dix contrôles d'un coup, sans qu'aucun
+// code soit en cause. Le même piège attend tout contributeur dont l'instance n'est
+// pas en français.
+//
+// Les sections qui éprouvent la traduction rebasculent explicitement (I18n::init('en')
+// puis reviennent) : ce sont elles qui décident, pas la configuration ambiante.
+Uptimeez\I18n::init('fr');
+
 use Uptimeez\Check\Css;
 use Uptimeez\Check\Database;
 use Uptimeez\Detect\Cms;

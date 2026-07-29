@@ -120,36 +120,52 @@ function json_out(mixed $data, int $code = 200): never
     exit;
 }
 
-/** Durée lisible : 4210 -> "1 h 10 min". */
+/**
+ * Durée lisible : 4210 -> « 1 h 10 min ».
+ *
+ * LES UNITÉS SONT TRADUITES, ET ELLES NE L'ÉTAIENT PAS.
+ *
+ * Ces trois fonctions écrivaient « min », « h », « j », « o », « Ko » en dur. Ce
+ * sont des abréviations FRANÇAISES : « j » pour jour, « o » pour octet. Elles
+ * sortaient donc telles quelles dans les neuf autres langues, y compris sur la page
+ * d'état publique et dans le rapport que l'agence envoie à ses clients. Constaté le
+ * 2026-07-29 sur une capture en anglais : « last pass il y a 44 s ».
+ *
+ * LA FORME COMPTE AUTANT QUE LA CORRECTION. Le premier essai traduisait l'unité
+ * seule, t('s'), t('h'), t('j'). L'audit de traduction l'a refusé, et il avait
+ * raison : un msgid d'une lettre est intraduisible, parce que le traducteur ne sait
+ * pas de quoi il parle, et parce que plusieurs langues n'écrivent pas le nombre et
+ * l'unité dans cet ordre ni avec cette espace. Le nombre entre donc DANS le msgid :
+ * « {n} s », que le chinois rend « {n}秒 » sans espace et le russe « {n} с ».
+ */
 function human_duration(?int $sec): string
 {
     $sec = max(0, (int)$sec);
-    if ($sec < 60)    return $sec . ' s';
-    if ($sec < 3600)  return floor($sec / 60) . ' min';
+    if ($sec < 60)   return t('{n} s', ['n' => $sec]);
+    if ($sec < 3600) return t('{n} min', ['n' => floor($sec / 60)]);
     if ($sec < 86400) {
         $h = floor($sec / 3600); $m = floor(($sec % 3600) / 60);
-        return $h . ' h' . ($m ? ' ' . $m . ' min' : '');
+        return t('{n} h', ['n' => $h]) . ($m ? ' ' . t('{n} min', ['n' => $m]) : '');
     }
     $d = floor($sec / 86400); $h = floor(($sec % 86400) / 3600);
-    return $d . ' j' . ($h ? ' ' . $h . ' h' : '');
+    return t('{n} j', ['n' => $d]) . ($h ? ' ' . t('{n} h', ['n' => $h]) : '');
 }
 
-/** Écart lisible depuis un timestamp : "il y a 3 min". */
+/** Écart lisible depuis un timestamp : « il y a 3 min ». */
 function human_since(?string $datetime): string
 {
     if (!$datetime) return '—';
     $ts = strtotime($datetime);
     if (!$ts) return '—';
     $d = time() - $ts;
-    if ($d < 10)  return t('à l\'instant');
-    if ($d < 60)  return "il y a {$d} s";
-    return 'il y a ' . human_duration($d);
+    if ($d < 10) return t('à l\'instant');
+    return t('il y a {duree}', ['duree' => human_duration($d)]);
 }
 
 function human_bytes(?int $b): string
 {
     $b = (int)$b;
-    if ($b < 1024) return $b . ' o';
+    if ($b < 1024) return t('{n} o', ['n' => $b]);
     // Le séparateur décimal suit la langue, et la décimale ne s'affiche que si
     // elle apporte quelque chose : « 2 Ko » plutôt que « 2,0 Ko ».
     $show = static function (float $v, int $max): string {
@@ -157,12 +173,12 @@ function human_bytes(?int $b): string
         $dec = fmod($r, 1.0) === 0.0 ? 0 : $max;
         return \Uptimeez\Ui::num($r, $dec);
     };
-    if ($b < 1048576) return $show($b / 1024, $b < 10240 ? 1 : 0) . ' Ko';
+    if ($b < 1048576) return t('{n} Ko', ['n' => $show($b / 1024, $b < 10240 ? 1 : 0)]);
     // L'échelle monte jusqu'au téraoctet : l'espace disque libre et un an
     // d'historique se comptent en gigaoctets, et « 14 346 Mo » ne se lit pas.
-    if ($b < 1073741824)    return $show($b / 1048576, 2) . ' Mo';
-    if ($b < 1099511627776) return $show($b / 1073741824, 2) . ' Go';
-    return $show($b / 1099511627776, 2) . ' To';
+    if ($b < 1073741824)    return t('{n} Mo', ['n' => $show($b / 1048576, 2)]);
+    if ($b < 1099511627776) return t('{n} Go', ['n' => $show($b / 1073741824, 2)]);
+    return t('{n} To', ['n' => $show($b / 1099511627776, 2)]);
 }
 
 /** Normalise une saisie utilisateur en URL http(s). */

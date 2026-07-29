@@ -41,12 +41,40 @@ function ui_files(): array
     return array_values(array_filter($out, 'is_file'));
 }
 
+/**
+ * Retire les commentaires d'un source PHP en gardant les positions de ligne.
+ *
+ * On remplace chaque commentaire par autant de sauts de ligne qu'il en contenait,
+ * pour que les numéros de ligne signalés restent justes.
+ */
+function strip_php_comments(string $src): string
+{
+    $out = '';
+    foreach (@token_get_all($src) as $t) {
+        if (is_array($t) && in_array($t[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+            $out .= str_repeat("\n", substr_count($t[1], "\n"));
+            continue;
+        }
+        $out .= is_array($t) ? $t[1] : $t;
+    }
+    return $out;
+}
+
 /** Extrait les msgid de tous les appels t()/te()/tn()/tne()/hint()/Fail::tr(). */
 function extract_msgids(array $files): array
 {
     $ids = [];
     foreach ($files as $f) {
         $src = (string)file_get_contents($f);
+        // LES COMMENTAIRES SONT ÉCARTÉS AVANT TOUTE ANALYSE.
+        //
+        // Un « t('...') » dans un commentaire n'est jamais exécuté : le signaler est
+        // un faux positif par construction. Et le cas se présente pour de bon :
+        // le 2026-07-29, un commentaire de helpers.php citait t('s'), t('h') et
+        // t('j') comme exemples de ce qu'il ne FAUT PAS écrire, et l'audit a signalé
+        // trois fragments intraduisibles. Un outil qui se déclenche sur la
+        // documentation de ses propres règles finit par être ignoré.
+        $src = strip_php_comments($src);
         // Un appel peut porter plusieurs msgid : tn($n, 'un', '{n} deux').
         // On avance caractère par caractère depuis l'ouverture de l'appel,
         // jusqu'à la parenthèse fermante ou au tableau de substitution : un

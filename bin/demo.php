@@ -150,42 +150,66 @@ Db::migrate();
 /**
  * Parc de démonstration.
  *
- * Les domaines sont ceux de services que tout le monde reconnaît : une capture
- * d'écran parle immédiatement, là où « Boutique Dupont » n'évoque rien. Deux
- * précautions, parce qu'il s'agit de marques réelles :
+ * Un parc d'agence : des PME, sur des domaines en « .example » (TLD réservé par la
+ * RFC 2606, donc aucun tiers n'est visé). Cette liste portait auparavant des
+ * marques réelles, au motif qu'une capture d'écran parle immédiatement. Deux
+ * raisons de renoncer :
  *
- *   1. les mesures sont entièrement fictives, et l'interface l'affiche en
- *      permanence (bandeau « mode démonstration ») ;
- *   2. les quatre pannes ne portent jamais sur un service public réel : elles
- *      sont placées sur des sous-domaines de préproduction (staging., preprod.,
- *      beta., recette.) qui n'existent pas. Un préprod cassé est plausible,
- *      recognaissable, et n'affirme rien sur le service que les gens utilisent.
+ *   1. la démo publique affichait une panne inventée au nom d'une entreprise
+ *      réelle. Un bandeau l'expliquait, mais personne ne lit les bandeaux, et ce
+ *      n'était pas à nous d'en décider pour eux ;
+ *   2. ces captures servent la page de vente, où une liste de marques connues
+ *      laisse croire qu'il s'agit de nos clients. Aucune explication ne rattrape ça.
  *
- * Le collecteur ne joindra de toute façon jamais ces domaines : les sondes
- * pointent sur le faux site local, seul l'affichage porte le nom réel.
+ * Ce qui fait la démonstration est la variété des CAS de panne, pas la notoriété
+ * des noms : une feuille de style disparue, une base muette, une lenteur, un
+ * noindex parti en production.
  */
 $sites = [
-    // --- Ce qui va bien : de vrais services publics -----------------------
-    ['Wikipédia',        'wikipedia.org',           'MediaWiki', 'Références', "$B/ok.html",       ['contact.html', 'tarifs.html', 'services.html']],
-    ['GitHub',           'github.com',              'Ruby on Rails', 'Outils', "$B/services.html", ['contact.html']],
-    ['Stripe',           'stripe.com',              'Next.js',   'Outils',     "$B/tarifs.html",   ['mentions-legales.html']],
-    ['Mozilla',          'mozilla.org',             'Django',    'Références', "$B/contact.html",  ['ok.html']],
-    ['Shopify',          'shopify.com',             'Shopify',   'Boutiques',  "$B/ok.html",       []],
-    ['WordPress.org',    'wordpress.org',           'WordPress', 'Références', "$B/services.html", []],
-    ['Le Monde',         'lemonde.fr',              'WordPress', 'Presse',     "$B/tarifs.html",   []],
-    ['OVHcloud',         'ovhcloud.com',            'Drupal',    'Outils',     "$B/contact.html",  []],
+    // Le parc d'une agence, tel qu'il est vraiment : des PME, pas des géants.
+    //
+    // POURQUOI DES NOMS INVENTÉS, ET POURQUOI LE TLD « .example »
+    //
+    // Cette liste portait Leboncoin, BlaBlaCar, Airbnb, Deezer, La Poste, Le Monde
+    // et OVHcloud, avec des pannes fictives attribuées à des préproductions de ces
+    // marques. Deux problèmes, et le second est le plus sérieux :
+    //
+    //   - sur la démo publique, on affiche une panne inventée au nom d'une
+    //     entreprise réelle. Le bandeau explique que tout est fictif, mais
+    //     personne ne lit les bandeaux, et ce n'est pas à nous d'en décider ;
+    //   - ces captures servent aussi la page de vente, où une liste de marques
+    //     connues laisse croire que ce sont nos clients. C'est un usage de marque
+    //     d'autrui qu'aucune explication ne rattrape.
+    //
+    // « .example » est réservé par la RFC 2606 : aucun domaine ne peut l'utiliser,
+    // donc aucun tiers n'est visé, et un lecteur technique y lit exactement le bon
+    // message : aucun vrai client n'est exposé ici.
+    //
+    // Le contenu pédagogique est intact : huit sites sains, quatre pannes de nature
+    // différente, un site lent, une API interne. C'est la variété des CAS qui fait
+    // la démonstration, pas la notoriété des noms.
 
-    // --- Les quatre pannes : uniquement des préproductions fictives -------
-    ['Recette Leboncoin',   'staging.leboncoin.fr',  'WordPress', 'Préprod',   "$B/css404.html",   ['ok.html']],
-    ['Préprod BlaBlaCar',   'preprod.blablacar.fr',  'Laravel',   'Préprod',   "$B/dberror.php",   []],
-    ['Bêta Deezer',         'beta.deezer.com',       'Next.js',   'Préprod',   "$B/slow.php",      []],
-    ['Recette La Poste',    'recette.laposte.fr',    'Drupal',    'Préprod',   "$B/noindex.html",  []],
+    // --- Ce qui va bien ---------------------------------------------------
+    ['Riverside Dental',    'riverside-dental.example', 'WordPress', 'Clients',   "$B/ok.html",       ['contact.html', 'tarifs.html', 'services.html']],
+    ['Northgate Legal',     'northgate-legal.example',  'WordPress', 'Clients',   "$B/services.html", ['contact.html']],
+    ['Atlas Outdoor',       'atlas-outdoor.example',    'Shopify',   'Boutiques', "$B/tarifs.html",   ['mentions-legales.html']],
+    ['Verger du Coteau',    'verger-coteau.example',    'WooCommerce', 'Boutiques', "$B/contact.html", ['ok.html']],
+    ['Kite & Sail School',  'kite-sail.example',        'WordPress', 'Clients',   "$B/ok.html",       []],
+    ['Maison Bertin',       'maison-bertin.example',    'PrestaShop', 'Boutiques', "$B/services.html", []],
+    ['Le Petit Gazette',    'petit-gazette.example',    'WordPress', 'Presse',    "$B/tarifs.html",   []],
+    ['Clinique Vauban',     'clinique-vauban.example',  'Drupal',    'Clients',   "$B/contact.html",  []],
+
+    // --- Les quatre pannes, une par nature -------------------------------
+    ['Camping des Pins',    'camping-des-pins.example', 'WordPress', 'Clients',   "$B/css404.html",   ['ok.html']],
+    ['Ferronnerie Duval',   'ferronnerie-duval.example', 'Laravel',  'Clients',   "$B/dberror.php",   []],
+    ['Studio Halcyon',      'studio-halcyon.example',   'Next.js',   'Clients',   "$B/slow.php",      []],
+    ['Mairie de Sainte-Ame', 'sainte-ame.example',      'Drupal',    'Clients',   "$B/noindex.html",  []],
 
     // --- Un site lent : c'est l'analyse de vitesse qui parle ---------------
-    ['Airbnb',              'airbnb.fr',             'Next.js',   'Boutiques', "$B/lente.html",    []],
+    ['Hotel Belvedere',     'hotel-belvedere.example',  'WordPress', 'Boutiques', "$B/lente.html",    []],
 
     // --- Une API interne --------------------------------------------------
-    ['API interne · état',  'api.exemple-interne.fr', null,       'Interne',   "$B/health.php",    []],
+    ['Internal API health', 'api.internal.example',     null,        'Interne',   "$B/health.php",    []],
 ];
 
 $i = 0;
@@ -279,12 +303,29 @@ if ($probe) {
         $run['ran'], $run['down'], $run['degraded'], $run['up']);
 } else {
     echo "faux site non démarré : état simulé (les courbes et l'historique restent réels)\n";
-    $states = [
-        'Recette Leboncoin' => ['down', 'CSS_BROKEN',   'Mise en page cassée : feuille de style en échec : …/cache/min/1/absent.css → HTTP 404 [cache WP]'],
-        'Préprod BlaBlaCar' => ['down', 'DB_DOWN',      'Laravel : erreur de requête : « SQLSTATE[HY000] [2002] Connection refused »'],
-        'Bêta Deezer'       => ['degraded', 'SLOW',     'Temps de réponse élevé : 2,60 s'],
-        'Recette La Poste'  => ['degraded', 'NOINDEX',  'Page en noindex : balise meta robots : noindex, nofollow'],
+    // L'ÉTAT EST ATTACHÉ À LA CIBLE, PAS AU NOM AFFICHÉ.
+    //
+    // Cette table était indexée par le nom de la sonde (« Recette Leboncoin »…).
+    // Renommer le parc l'a donc vidée en silence : la démo est restée entièrement
+    // verte, « Nothing to do, everything is running », et le défaut ne s'est vu que
+    // sur une capture d'écran. Le fichier de destination, lui, dit ce que la sonde
+    // ÉPROUVE : css404.html teste une feuille de style manquante, et ça ne changera
+    // pas parce que le client s'appelle autrement.
+    $parCible = [
+        'css404.html'  => ['down',     'CSS_BROKEN', 'Mise en page cassée : feuille de style en échec : …/cache/min/1/absent.css → HTTP 404 [cache WP]'],
+        'dberror.php'  => ['down',     'DB_DOWN',    'Laravel : erreur de requête : « SQLSTATE[HY000] [2002] Connection refused »'],
+        'slow.php'     => ['degraded', 'SLOW',       'Temps de réponse élevé : 2,60 s'],
+        'noindex.html' => ['degraded', 'NOINDEX',    'Page en noindex : balise meta robots : noindex, nofollow'],
     ];
+    // On reconstruit la table par nom à partir du parc réellement créé : aucune
+    // liste à tenir à jour à deux endroits.
+    $states = [];
+    foreach ($sites as [$nom, , , , $url]) {
+        foreach ($parCible as $cible => $etat) {
+            if (str_contains($url, $cible)) { $states[$nom] = $etat; }
+        }
+    }
+    printf("états simulés : %d panne(s) placée(s)\n", count($states));
     // Silhouettes de démonstration : une page de boulangerie mise en page, et la
     // même sans CSS. C'est la comparaison que l'on montre à un client.
     $demoHtml = '<body><header class="site-header"><nav class="nav-main"><a href="/">Accueil</a>'
@@ -322,10 +363,10 @@ if ($probe) {
                 . '(ex. hero-title, card-grid, nav-main, btn-primary).',
         ],
         'console' => [
-            ['level' => 'err', 'text' => 'GET https://camping-des-pins.fr/wp-content/cache/min/1/absent.css net::ERR_ABORTED 404 (Not Found)'],
-            ['level' => 'err', 'text' => 'GET https://camping-des-pins.fr/wp-content/plugins/elementor/assets/js/frontend.min.js net::ERR_ABORTED 404 (Not Found)'],
-            ['level' => 'err', 'text' => "Refused to apply style from 'https://camping-des-pins.fr/wp-content/cache/min/1/absent.css' because its MIME type ('text/html') is not a supported stylesheet MIME type"],
-            ['level' => 'warn', 'text' => 'Empty response body for https://camping-des-pins.fr/wp-content/uploads/elementor/css/post-142.css'],
+            ['level' => 'err', 'text' => 'GET https://camping-des-pins.example/wp-content/cache/min/1/absent.css net::ERR_ABORTED 404 (Not Found)'],
+            ['level' => 'err', 'text' => 'GET https://camping-des-pins.example/wp-content/plugins/elementor/assets/js/frontend.min.js net::ERR_ABORTED 404 (Not Found)'],
+            ['level' => 'err', 'text' => "Refused to apply style from 'https://camping-des-pins.example/wp-content/cache/min/1/absent.css' because its MIME type ('text/html') is not a supported stylesheet MIME type"],
+            ['level' => 'warn', 'text' => 'Empty response body for https://camping-des-pins.example/wp-content/uploads/elementor/css/post-142.css'],
         ],
         'metrics' => [
             'sheets_declared' => 6, 'sheets_ok' => 4, 'sheets_failed' => 2,
@@ -335,21 +376,21 @@ if ($probe) {
             'coverage' => 0.31, 'classes_missing' => ['hero-title', 'card-grid', 'nav-main', 'btn-primary', 'price-box'],
             'inline_bytes' => 2140, 'hidden_nodes' => 4, 'hidden_risk' => true,
             'assets' => [
-                ['url' => 'https://camping-des-pins.fr/wp-content/cache/min/1/absent.css', 'kind' => 'css',
+                ['url' => 'https://camping-des-pins.example/wp-content/cache/min/1/absent.css', 'kind' => 'css',
                  'status' => 404, 'bytes' => 0, 'issue' => 'HTTP_404',
                  'note' => 'HTTP 404 : le fichier n\'existe plus sur le serveur', 'soft' => false],
-                ['url' => 'https://camping-des-pins.fr/wp-content/uploads/elementor/css/post-142.css', 'kind' => 'css',
+                ['url' => 'https://camping-des-pins.example/wp-content/uploads/elementor/css/post-142.css', 'kind' => 'css',
                  'status' => 200, 'bytes' => 0, 'issue' => 'EMPTY', 'note' => 'fichier vide (0 octet)', 'soft' => false],
-                ['url' => 'https://camping-des-pins.fr/wp-content/plugins/elementor/assets/js/frontend.min.js',
+                ['url' => 'https://camping-des-pins.example/wp-content/plugins/elementor/assets/js/frontend.min.js',
                  'kind' => 'js', 'status' => 404, 'bytes' => 0, 'issue' => 'HTTP_404',
                  'note' => 'HTTP 404 : le fichier n\'existe plus sur le serveur', 'soft' => false],
-                ['url' => 'https://camping-des-pins.fr/wp-content/themes/astra/assets/css/main.min.css',
+                ['url' => 'https://camping-des-pins.example/wp-content/themes/astra/assets/css/main.min.css',
                  'kind' => 'css', 'status' => 200, 'bytes' => 28714, 'issue' => null, 'note' => null, 'soft' => false],
-                ['url' => 'https://camping-des-pins.fr/wp-includes/css/dist/block-library/style.min.css',
+                ['url' => 'https://camping-des-pins.example/wp-includes/css/dist/block-library/style.min.css',
                  'kind' => 'css', 'status' => 200, 'bytes' => 9204, 'issue' => null, 'note' => null, 'soft' => false],
                 ['url' => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600', 'kind' => 'css',
                  'status' => 200, 'bytes' => 1403, 'issue' => null, 'note' => null, 'soft' => true],
-                ['url' => 'https://camping-des-pins.fr/wp-includes/js/jquery/jquery.min.js', 'kind' => 'js',
+                ['url' => 'https://camping-des-pins.example/wp-includes/js/jquery/jquery.min.js', 'kind' => 'js',
                  'status' => 200, 'bytes' => 30512, 'issue' => null, 'note' => null, 'soft' => false],
             ],
         ],
