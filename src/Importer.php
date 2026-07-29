@@ -258,7 +258,7 @@ final class Importer
     public static function setup(int $monitorId, array $opt = []): array
     {
         $mon = Db::one('SELECT * FROM monitors WHERE id = ?', [$monitorId]);
-        if (!$mon) return ['ok' => false, 'cms' => null, 'expect' => null, 'pages' => 0, 'message' => 'Sonde introuvable'];
+        if (!$mon) return ['ok' => false, 'cms' => null, 'expect' => null, 'pages' => 0, 'message' => t('Sonde introuvable')];
 
         $stored = jdec(Db::setting('import_opt'));
         $discover = (int)($opt['discover'] ?? $stored['discover'] ?? 1);

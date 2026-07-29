@@ -148,6 +148,18 @@ final class Diagnose
                 'fix'   => t('Regardez la courbe pour voir si c\'est ponctuel ou installé. Cache serveur, requêtes SQL lourdes et images non optimisées sont les causes habituelles.'),
                 'icon'  => 'clock',
             ],
+            'DB_ERROR_VISIBLE', 'APP_ERROR_VISIBLE' => [
+                'title' => t('Une erreur technique s\'affiche sur une page qui fonctionne'),
+                'why'   => t('La page répond, son contenu est là, et pourtant un message d\'erreur de base de données ou de PHP est visible dedans. C\'est un morceau du site qui échoue sans faire tomber le reste : un widget, un plugin, une requête d\'un seul bloc. Vos visiteurs le voient.'),
+                'fix'   => t('Ouvrez la page et cherchez le message : l\'extrait est indiqué ci-dessous. Le journal d\'erreurs PHP de l\'hébergement donne la ligne exacte. En attendant, masquer l\'affichage des erreurs (display_errors) cache le symptôme sans régler la cause.'),
+                'icon'  => 'alert',
+            ],
+            'BODY_TRUNCATED' => [
+                'title' => t('La page est trop volumineuse pour être vérifiée en entier'),
+                'why'   => t('{app} lit au plus 3 Mo de HTML, pour ne pas épuiser la mémoire d\'un hébergement mutualisé. Au-delà, la fin de la page n\'est pas lue : une chaîne de contrôle placée dans le pied de page ne peut donc plus être trouvée, et son absence ne prouve rien. Aucune panne n\'est déclarée sur cette base.'),
+                'fix'   => t('Une page HTML de plus de 3 Mo est en soi un problème de performance : regardez ce qui la remplit, souvent des images en base64 ou un catalogue entier rendu d\'un coup. Sinon, choisissez une chaîne de contrôle située plus haut dans la page.'),
+                'icon'  => 'alert',
+            ],
             'HEARTBEAT_LATE' => [
                 'title' => t('Le signal attendu n\'est pas arrivé'),
                 'why'   => t('Cette sonde ne teste pas une page : elle attend qu\'un script du site se signale. Le silence veut dire que le cron, la sauvegarde ou l\'import surveillé ne s\'est pas exécuté.'),

@@ -103,6 +103,19 @@ still answers `200` means the data layer is gone.
 **Forbidden string.** The reverse: a text that must never appear. It is what the inverted keywords of other tools
 become when you import from them.
 
+**"Error showing" is not "site down".** A signature found in a page is not enough to conclude: a blog post
+explaining how to fix "Error establishing a database connection" contains the phrase without being broken, and for
+an agency whose clients include hosts and developers that is the guaranteed 3 a.m. false alarm. So at least one
+other sign is required, and one is enough: the server answers 5xx, or the page is short — a real WordPress error
+page weighs a few hundred bytes — or the proof string has vanished. With none of the three, the verdict is
+**degraded** and says what it sees: a technical error is showing on a page that works. That is a real defect,
+visible to visitors, but it is not an outage.
+
+**What could not be read proves nothing.** Reading stops at 3 MB of HTML, so as not to exhaust a shared host's
+memory. Past that the end of the page is not read: a proof string sitting in the footer can no longer be found, and
+its absence says nothing. The verdict is then "page too large to be verified in full", never "the database is
+down".
+
 ---
 
 ## 4. Is it fast for visitors
@@ -132,7 +145,10 @@ key, no figure is invented. See [Perceived speed](speed.md).
 ## 5. Will it break soon
 
 **TLS certificate, in two passes.** A permissive read to establish the facts, a strict browser-like validation for
-the verdict. Expiry, chain, authority, domain match, with configurable notice.
+the verdict. Expiry, chain, authority, domain match, with configurable notice. Plus the case everyone forgets: a
+certificate **not valid yet**, which browsers refuse exactly the way they refuse an expired one. That is a skewed
+server clock, or a certificate issued ahead of time and deployed too early; the verdict says so instead of handing
+back OpenSSL's raw message.
 
 **Domain expiry**, over RDAP, once a day. An expired domain kills the site *and* the e-mail, and can be bought by
 someone else.

@@ -134,6 +134,66 @@ foreach ([
     check('« ' . str_cut($body, 42) . ' »', $out['reason'], $want);
 }
 
+// --- La même signature dans un article n'est PAS une panne ---------------
+// Le défaut : un billet de blog qui explique comment corriger « Error
+// establishing a database connection » faisait déclarer le site hors service.
+// Pour une agence dont des clients sont hébergeurs ou développeurs, c'est la
+// fausse alerte de trois heures du matin garantie. Une vraie page d'erreur se
+// reconnaît autrement : le serveur répond 5xx, ou la page est courte, ou la
+// chaîne de preuve a disparu.
+$article = new Response();
+$article->ok = true;
+$article->status = 200;
+$article->contentType = 'text/html';
+$article->body = '<!doctype html><html><head><title>Corriger l\'erreur de connexion</title></head><body>'
+    . '<nav>Accueil Blog Contact</nav><h1>Error establishing a database connection : que faire ?</h1>'
+    . str_repeat('<p>Cette erreur signifie que WordPress ne joint plus MySQL. Voici la marche à suivre.</p>', 120)
+    . '<footer>© 2026 Agence Exemple</footer></body></html>';
+$monArt = ['expect_string' => '© 2026 Agence Exemple'];
+
+$oA = Database::audit($article, $monArt);
+check('un article qui parle de l\'erreur n\'est pas une panne', $oA['state'], 'degraded');
+check('mais l\'erreur affichée est signalée', $oA['reason'], 'DB_ERROR_VISIBLE');
+check('et l\'extrait est joint', str_contains((string)$oA['evidence'], 'database connection'), true);
+
+// Même page, mais la chaîne de preuve a disparu : la base est vraiment tombée.
+$monArt2 = ['expect_string' => 'Signature qui ne peut venir que de la base'];
+check('la chaîne de preuve absente tranche : c\'est une panne',
+    Database::audit($article, $monArt2)['state'], 'down');
+
+// Même page, mais le serveur annonce 500 : il tranche lui-même.
+$art500 = clone $article; $art500->status = 503;
+check('un 5xx tranche aussi', Database::audit($art500, $monArt)['state'], 'down');
+
+// La vraie page d'erreur WordPress : courte, donc conclusive sans rien d'autre.
+$wpErr = new Response();
+$wpErr->ok = true; $wpErr->status = 200; $wpErr->contentType = 'text/html';
+$wpErr->body = '<!DOCTYPE html><html><head><title>Database Error</title></head><body>'
+    . '<h1>Error establishing a database connection</h1></body></html>';
+check('la vraie page d\'erreur WordPress reste une panne',
+    Database::audit($wpErr, [])['state'], 'down');
+check('même sans chaîne de preuve configurée',
+    Database::audit($wpErr, [])['reason'], 'DB_DOWN');
+
+// Une erreur PHP visible sur une page saine : dégradé, pas hors service. La page
+// ne doit contenir QUE l'erreur PHP : le titre de l'article précédent est
+// lui-même une signature base de données, et c'est elle qui sortirait.
+$phpVis = new Response();
+$phpVis->ok = true; $phpVis->status = 200; $phpVis->contentType = 'text/html';
+$phpVis->body = '<!doctype html><html><head><title>Nos tarifs</title></head><body><nav>Accueil</nav>'
+    . str_repeat('<p>Une page de tarifs tout à fait normale, avec du contenu.</p>', 300)
+    . '<div>Fatal error: Uncaught TypeError in /var/www/widget.php</div>'
+    . '<footer>© 2026 Agence Exemple</footer></body></html>';
+$oP = Database::audit($phpVis, $monArt);
+check('une erreur PHP dans un coin de page saine est dégradée', $oP['state'], 'degraded');
+check('avec son propre motif', $oP['reason'], 'APP_ERROR_VISIBLE');
+// La borne de taille : la même erreur sur une page courte redevient une panne,
+// parce qu'une page courte qui affiche une erreur EST une page d'erreur.
+$phpShort = new Response();
+$phpShort->ok = true; $phpShort->status = 200; $phpShort->contentType = 'text/html';
+$phpShort->body = '<html><body>Fatal error: Uncaught TypeError in /var/www/x.php</body></html>';
+check('la même erreur sur une page courte reste une panne',
+    Database::audit($phpShort, $monArt)['state'], 'down');
 section('Détection du CMS');
 $wp = new Response();
 $wp->body = '<html><head><meta name="generator" content="WordPress 6.7"><link href="/wp-content/themes/astra/style.css">
@@ -1024,6 +1084,156 @@ check('une spécification cassée n\'invente pas une panne',
     Uptimer\Runner::statusMatches(200, 'n\'importe quoi'), true);
 check('et ne cache pas une vraie panne',
     Uptimer\Runner::statusMatches(503, 'n\'importe quoi'), false);
+
+// =========================================================================
+section('Incident en cours : motif, message et variables vont ensemble');
+// =========================================================================
+// Le motif, le message et les variables du message partaient séparément. Un
+// changement de cause à gravité égale réécrivait le message sans toucher au
+// motif : l'incident racontait « la chaîne de contrôle est absente » et
+// affichait le diagnostic, le remède et l'icône d'une erreur 500. Les variables,
+// elles, n'étaient jamais réécrites : le nouveau message était rempli avec les
+// valeurs de l'ancien, d'où des verdicts faux comme « Erreur serveur 404 »
+// quand le serveur avait répondu 503.
+
+$prevDbI = Uptimer\Config::get('db.sqlite');
+$tmpI = sys_get_temp_dir() . '/self-incident-' . bin2hex(random_bytes(4)) . '.sqlite';
+Uptimer\Db::disconnect();
+Uptimer\Config::set('db.sqlite', $tmpI);
+Uptimer\Db::migrate();
+
+$midI = Uptimer\Db::insert('monitors', ['name' => 'Incident', 'url' => 'https://incident.test/',
+    'kind' => 'page', 'role' => 'primary', 'method' => 'GET', 'interval_sec' => 300,
+    'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299', 'enabled' => 1,
+    'status' => 'up', 'setup_state' => 'done', 'created_at' => now(), 'next_check_at' => now(),
+    'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0, 'check_noindex' => 0,
+    'check_content' => 0, 'slow_ms' => 0]);
+$monI = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
+
+$resI = function (int $status, string $body = '<!doctype html><html><body>ok</body></html>') {
+    $r = new Uptimer\Response();
+    $r->ok = true; $r->status = $status; $r->body = $body; $r->contentType = 'text/html';
+    $r->totalMs = 120; $r->finalUrl = 'https://incident.test/';
+    return $r;
+};
+$incI = fn() => Uptimer\Db::one('SELECT * FROM incidents WHERE monitor_id = ? ORDER BY id DESC LIMIT 1', [$midI]);
+
+// 1. Ouverture sur une erreur 503.
+Uptimer\Runner::runBatch([$monI], true);
+$monI = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
+// On force le verdict en passant par evaluate + persist via une réponse fabriquée.
+$vI = Uptimer\Runner::evaluate($monI, $resI(503));
+check('un 503 ouvre bien une panne', $vI['reason'], 'HTTP_5XX');
+check('et le code mesuré est dans les variables', $vI['vars']['code'] ?? null, 503);
+
+// 2. Puis la même gravité avec une autre cause : chaîne de contrôle absente.
+Uptimer\Db::q('UPDATE monitors SET expect_string = ? WHERE id = ?', ['Mentions légales', $midI]);
+$monI = Uptimer\Db::one('SELECT * FROM monitors WHERE id = ?', [$midI]);
+$vI2 = Uptimer\Runner::evaluate($monI, $resI(200));
+check('la nouvelle cause est bien la chaîne absente', $vI2['reason'], 'STRING_MISSING');
+
+// Le moteur d'incidents est privé : on l'exerce par le chemin public, en
+// écrivant les deux verdicts à la suite sur la même sonde.
+$refl = new ReflectionMethod(Uptimer\Runner::class, 'applyIncident');
+$refl->setAccessible(true);
+$refl->invoke(null, $monI, 'down', $vI);
+$openI = $incI();
+check('incident ouvert', $openI !== null, true);
+check('son motif est celui du 503', $openI['reason_code'] ?? null, 'HTTP_5XX');
+check('et ses variables portent le 503', jdec($openI['message_vars'] ?? null)['code'] ?? null, 503);
+
+$refl->invoke(null, $monI, 'down', $vI2);
+$openI = $incI();
+check('un seul incident, pas deux',
+    (int)Uptimer\Db::val('SELECT COUNT(*) FROM incidents WHERE monitor_id = ?', [$midI]), 1);
+check('le motif a suivi le message', $openI['reason_code'] ?? null, 'STRING_MISSING');
+check('le message aussi', str_contains((string)$openI['message'], 'chaîne de contrôle'), true);
+// Le point qui faisait faux : les variables de l'ancien verdict remplissaient
+// le nouveau message.
+check('les variables du verdict précédent ont disparu',
+    isset(jdec($openI['message_vars'] ?? null)['code']), false);
+check('le verdict se relit sans laisser de {trou}',
+    str_contains(verdict_text($openI), '{'), false);
+
+// 3. Une gravité qui baisse ne réécrit rien : l'incident se raconte par son pire
+//    moment.
+$vI3 = ['state' => 'degraded', 'reason' => 'SLOW', 'message' => 'Temps de réponse élevé : {seconds} s',
+        'vars' => ['seconds' => '4,20'], 'details' => [], 'events' => [], 'findings' => []];
+$refl->invoke(null, $monI, 'degraded', $vI3);
+$openI = $incI();
+check('une gravité en baisse ne change pas le motif', $openI['reason_code'] ?? null, 'STRING_MISSING');
+check('ni la gravité de l\'incident', $openI['severity'] ?? null, 'down');
+check('mais le compteur d\'échecs monte', (int)($openI['checks_failed'] ?? 0) >= 3, true);
+
+Uptimer\Db::disconnect();
+Uptimer\Config::set('db.sqlite', $prevDbI);
+Uptimer\Db::migrate();
+foreach ([$tmpI, $tmpI . '-wal', $tmpI . '-shm'] as $f) @unlink($f);
+
+// =========================================================================
+section('Réponse tronquée : ne rien conclure de ce qu\'on n\'a pas lu');
+// =========================================================================
+// Http marque les réponses coupées au-delà de 3 Mo, et personne ne lisait ce
+// drapeau. Conséquences sur une page volumineuse (catalogue entier rendu d\'un
+// coup, images en base64) : la chaîne de contrôle, choisie de préférence dans le
+// pied de page, tombait au-delà de la coupure. Elle était donc déclarée absente,
+// ce qui veut dire « la base de données ne répond plus », donc une fausse panne
+// permanente. Et l\'empreinte de contenu, calculée sur un corps dont la longueur
+// dépendait du découpage réseau, changeait à chaque passe : « le contenu de la
+// page a changé », indéfiniment.
+
+$monT = ['id' => 0, 'url' => 'https://tronque.test/', 'kind' => 'page', 'method' => 'GET',
+    'interval_sec' => 300, 'timeout_sec' => 10, 'retries' => 0, 'expect_status' => '200-299',
+    'enabled' => 1, 'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0, 'check_noindex' => 0,
+    'check_content' => 1, 'slow_ms' => 0, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
+    'expect_string' => 'Mentions légales 2026', 'forbid_string' => 'Fatal error',
+    'watch_string' => 'En stock', 'watch_mode' => 'disappear', 'watch_state' => 'present',
+    'content_hash' => null, 'follow_redirects' => 1, 'ignore_ssl_errors' => 0];
+
+$mkRes = function (string $body, bool $cut) {
+    $r = new Uptimer\Response();
+    $r->ok = true; $r->status = 200; $r->body = $body; $r->contentType = 'text/html';
+    $r->truncated = $cut; $r->totalMs = 200; $r->finalUrl = 'https://tronque.test/';
+    return $r;
+};
+$page = '<!doctype html><html><body><p>' . str_repeat('contenu ', 200) . '</p>';
+
+// Page complète, chaîne absente : c\'est une vraie panne, elle doit sortir.
+$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . '</body></html>', false));
+check('page complète sans la chaîne : panne déclarée', $vT['state'], 'down');
+check('et le motif est bien la chaîne absente', $vT['reason'], 'STRING_MISSING');
+
+// Même page, mais coupée : on ne sait pas, et on le dit.
+$vT = Uptimer\Runner::evaluate($monT, $mkRes($page, true));
+check('page coupée : pas de panne inventée', $vT['state'], 'degraded');
+check('le motif dit que la page est trop grosse', $vT['reason'], 'BODY_TRUNCATED');
+check('et le verdict explique pourquoi',
+    str_contains($vT['message'], 'trop volumineuse'), true);
+
+// Une chaîne présente reste une certitude, coupure ou pas.
+$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
+check('la chaîne trouvée avant la coupure suffit', $vT['state'], 'up');
+
+// Une chaîne INTERDITE présente est une certitude elle aussi.
+$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026 Fatal error', true));
+check('une chaîne interdite reste une panne sur page coupée', $vT['reason'], 'STRING_FORBIDDEN');
+
+// L\'empreinte de contenu ne se calcule pas sur un corps incomplet.
+$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
+check('aucune empreinte de contenu sur page coupée',
+    isset($vT['details']['content_hash']), false);
+$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026</body></html>', false));
+check('mais elle se calcule sur une page complète',
+    isset($vT['details']['content_hash']), true);
+
+// Le mot surveillé ne bascule pas sur une lecture partielle : « En stock »
+// disparu de la fin d\'une page coupée n\'est pas une disparition.
+$vT = Uptimer\Runner::evaluate($monT, $mkRes($page . 'Mentions légales 2026', true));
+check('aucune bascule du mot surveillé sur page coupée', $vT['events'], []);
+
+// La coupure elle-même — la même page lue deux fois doit donner le même corps,
+// quel que soit le découpage réseau — se vérifie contre un vrai serveur :
+// voir bin/e2e.php, section « Page trop volumineuse ».
 
 // =========================================================================
 section('Durée : un an d\'historique, et la place rendue');

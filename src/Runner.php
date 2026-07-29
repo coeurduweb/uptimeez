@@ -219,6 +219,12 @@ final class Runner
         $details  = [];
         $events   = [];
         $https    = str_starts_with(strtolower((string)$mon['url']), 'https://');
+        // La réponse a-t-elle été reçue en entier ? Au-delà de Http::MAX_BODY le
+        // corps est coupé, et une absence de texte n'y prouve plus rien. C'est le
+        // cas qui transformait une page de catalogue trop lourde en « chaîne de
+        // contrôle absente », donc en « la base de données ne répond plus », donc
+        // en fausse panne. Le drapeau existait et personne ne le lisait.
+        $complete = !$res->truncated;
 
         // Le message est une phrase source avec ses variables : la traduction a
         // lieu à l'affichage, pas ici. Le collecteur ne connaît pas la langue de
@@ -307,12 +313,21 @@ final class Runner
         $expectStr = trim((string)($mon['expect_string'] ?? ''));
         if ($expectStr !== '') {
             $found = self::containsAny($res->body, $expectStr);
-            if (!$found) {
+            if (!$found && $complete) {
                 $note('down', 'STRING_MISSING',
                     'La chaîne de contrôle « {string} » est absente de la page : le contenu n\'est plus servi, par le serveur web ou par la base de données.',
                     ['string' => str_cut($expectStr, 60)]);
+            } elseif (!$found) {
+                // Dire « je n'ai pas pu vérifier » plutôt que d'inventer une
+                // panne : la page dépasse la taille lue, et la chaîne est
+                // peut-être juste au-delà de la coupure.
+                $note('degraded', 'BODY_TRUNCATED',
+                    'Page trop volumineuse pour être vérifiée en entier ({size} lus) : la chaîne de contrôle n\'a pas pu être cherchée jusqu\'au bout.',
+                    ['size' => human_bytes(strlen($res->body))]);
             }
         }
+        // Une chaîne interdite ABSENTE d'une page coupée ne prouve rien non plus.
+        // Sa présence, elle, reste une certitude : on la signale toujours.
         $forbid = trim((string)($mon['forbid_string'] ?? ''));
         if ($forbid !== '' && self::containsAny($res->body, $forbid)) {
             $note('down', 'STRING_FORBIDDEN', 'Chaîne interdite détectée : « {string} »',
@@ -458,7 +473,7 @@ final class Runner
 
         // ---- 10. Mot surveillé (mise à jour de page) ----------------------
         $watch = trim((string)($mon['watch_string'] ?? ''));
-        if ($watch !== '' && $res->body !== '') {
+        if ($watch !== '' && $res->body !== '' && $complete) {
             $present = self::containsAny($res->body, $watch);
             $prev    = $mon['watch_state'] ?? null;
             $state   = $present ? 'present' : 'absent';
@@ -479,7 +494,7 @@ final class Runner
         }
 
         // ---- 11. Modification de contenu ---------------------------------
-        if ((int)($mon['check_content'] ?? 0) === 1 && $htmlOk) {
+        if ((int)($mon['check_content'] ?? 0) === 1 && $htmlOk && $complete) {
             $hash = self::contentHash($res->body);
             $details['content_hash'] = $hash;
             if (!empty($mon['content_hash']) && $mon['content_hash'] !== $hash) {
@@ -499,12 +514,22 @@ final class Runner
         'DNS' => 100, 'CONNECT' => 99, 'CONNECT_RESET' => 98, 'TIMEOUT' => 97,
         'SSL_EXPIRED' => 95, 'SSL_INVALID' => 94, 'SSL_HANDSHAKE' => 93, 'REDIRECT_LOOP' => 92,
         'DB_DOWN' => 90, 'APP_ERROR' => 89, 'HTTP_5XX' => 88,
+        // Une erreur de base AFFICHÉE sur une page qui répond normalement :
+        // à montrer en premier parmi les signaux dégradés, c'est le plus grave
+        // d'entre eux, mais ce n'est pas une panne.
+        'DB_ERROR_VISIBLE' => 58, 'APP_ERROR_VISIBLE' => 57,
         'STRING_MISSING' => 80, 'STRING_FORBIDDEN' => 79,
         'HTTP_404' => 75, 'HTTP_403' => 74, 'HTTP_401' => 73, 'HTTP_429' => 72,
         'HTTP_4XX' => 71, 'HTTP_3XX' => 70, 'HTTP_UNEXPECTED' => 69,
         'JSON_INVALID' => 65, 'JSON_PATH' => 64, 'JSON_VALUE' => 63,
         'CSS_BROKEN' => 60,
         'SSL_SOON' => 50, 'CSS_DEGRADED' => 45, 'NOINDEX' => 40, 'SLOW' => 30,
+        // Une lecture partielle est le moins actionnable des signaux dégradés :
+        // elle dit « je n'ai pas pu vérifier », pas « quelque chose est cassé ».
+        'BODY_TRUNCATED' => 20,
+        // Repli de la couche réseau : il revient seul, la priorité n'arbitre
+        // rien, mais un motif absent de cette table valait 0 sans le dire.
+        'NET_ERROR' => 96, 'HEARTBEAT_LATE' => 85,
     ];
 
     private static function verdict(array $findings, array $details, array $events, Response $res): array
@@ -728,15 +753,32 @@ final class Runner
         }
 
         // Incident en cours : on aggrave si besoin, on relance l'alerte à intervalle.
+        //
+        // Le motif, le message et les variables du message vont toujours ensemble.
+        // Ils partaient séparément : un changement de cause à gravité égale
+        // réécrivait le message sans toucher au motif, si bien que l'incident
+        // affichait « la chaîne de contrôle est absente » avec le diagnostic et le
+        // remède d'une erreur 500. Et les variables n'étaient jamais réécrites,
+        // donc le nouveau message était rempli avec les valeurs de l'ancien :
+        // « Erreur serveur 404 » là où le serveur avait répondu 503.
+        //
+        // Une gravité qui BAISSE ne réécrit rien : un incident se raconte par son
+        // pire moment, et l'état courant de la sonde est ailleurs.
         $upd = ['checks_failed' => (int)$open['checks_failed'] + 1];
         $escalated = false;
+        $describe  = false;
         if (self::SEVERITY[$state] > self::SEVERITY[$open['severity']]) {
-            $upd['severity']    = $state;
-            $upd['reason_code'] = $verdict['reason'];
-            $upd['message']     = str_cut($verdict['message'], 400);
+            $upd['severity'] = $state;
             $escalated = true;
-        } elseif ($open['reason_code'] !== $verdict['reason']) {
-            $upd['message'] = str_cut($verdict['message'], 400);
+            $describe  = true;
+        } elseif (self::SEVERITY[$state] === self::SEVERITY[$open['severity']]
+                  && $open['reason_code'] !== $verdict['reason']) {
+            $describe = true;
+        }
+        if ($describe) {
+            $upd['reason_code']  = $verdict['reason'];
+            $upd['message']      = str_cut($verdict['message'], 400);
+            $upd['message_vars'] = !empty($verdict['vars']) ? jenc($verdict['vars']) : null;
         }
         Db::update('incidents', $upd, 'id = :__i', ['__i' => (int)$open['id']]);
 

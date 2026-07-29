@@ -92,9 +92,9 @@ and it locks for that time, which is why it never invites itself.
 ## Command line
 
 ```bash
-php bin/selftest.php          # 715 checks: detection logic, offline, no network
+php bin/selftest.php          # 749 checks: detection logic, offline, no network
 php bin/bench.php             # 73 checks: real failures reproduced end to end
-php bin/e2e.php               # 227 checks: full user journey, isolated instance
+php bin/e2e.php               # 233 checks: full user journey, isolated instance
 node bin/e2e-browser.mjs      # 105 checks: real Chromium
 php bin/chaos.php             # 35 checks: 859 hostile requests, nothing must break
 php bin/chaos.php --long      # adds the bulky payloads

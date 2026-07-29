@@ -93,7 +93,7 @@ if ($page === 'login') {
             header('Location: ' . u('today'));
             exit;
         } else {
-            $error = 'Mot de passe incorrect.';
+            $error = t('Mot de passe incorrect.');
         }
     }
     $view = 'login';
@@ -213,7 +213,7 @@ function handle_post(): ?array
         case 'save_monitor':
             $id   = (int)($_POST['id'] ?? 0);
             $url  = normalize_url((string)($_POST['url'] ?? ''));
-            if (!$url) return ['bad', 'URL invalide.'];
+            if (!$url) return ['bad', t('URL invalide.')];
 
             $data = [
                 'name'            => str_cut(trim((string)($_POST['name'] ?? '')) ?: host_of($url), 180),

@@ -431,7 +431,9 @@ final class Ui
             else {
                 $down = (int)$r['downtime_sec'];
                 $cls  = $down > 900 ? 'down' : ($down > 0 || (int)$r['fails'] > 0 ? 'degraded' : 'up');
-                $title = date('d/m', strtotime($day)) . ' · ' . ($down > 0 ? 'HS ' . human_duration($down) : '100 % en ligne');
+                $title = date('d/m', strtotime($day)) . ' · '
+                       . ($down > 0 ? t('HS {duration}', ['duration' => human_duration($down)])
+                                    : t('100 % en ligne'));
             }
             $out .= '<i class="d-' . $cls . '" title="' . e($title) . '"></i>';
         }

@@ -31,7 +31,7 @@ $action  = (string)($_REQUEST['action'] ?? '');
 $isWrite = in_array($action, ['check', 'toggle', 'setup', 'fix', 'undo'], true);
 if ($isWrite) {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') json_out(['error' => 'method'], 405);
-    if (!Auth::checkCsrf($_POST['csrf'] ?? null)) json_out(['error' => 'csrf', 'message' => 'Jeton invalide'], 403);
+    if (!Auth::checkCsrf($_POST['csrf'] ?? null)) json_out(['error' => 'csrf', 'message' => t('Jeton invalide')], 403);
 }
 
 $id = (int)($_REQUEST['id'] ?? 0);

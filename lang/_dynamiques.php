@@ -22,6 +22,21 @@ return [
     'Pas encore vérifié',
     'Inconnu',
 
+    // --- Sondes applicatives : le libellé entre dans le verdict ----------
+    // Database::probe() les passe à t() par variable, l'audit ne peut pas les
+    // voir en lisant le code.
+    'REST WordPress',
+    'flux RSS',
+    'accueil',
+    'formulaire de connexion',
+
+    // --- Certificat : verdicts écrits par le collecteur ------------------
+    // Ils sont stockés en phrase source et traduits à l'affichage, comme leurs
+    // voisins de Ssl::humanError().
+    'Connexion TLS impossible',
+    'Certificat pas encore valide : vérifiez l\'horloge du serveur',
+    'Vérification du certificat échouée',
+
     // --- Verdicts réseau et HTTP ----------------------------------------
     'Délai dépassé (timeout)',
     'Nom de domaine non résolu',
@@ -52,6 +67,7 @@ return [
     'Doctrine : erreur base de données',
     'Laravel : erreur de requête',
     'Connexion base non initialisée',
+    '{error} affichée sur une page qui répond normalement',
 
     // --- Mise en page ----------------------------------------------------
     'Aucune feuille de style détectée sur cette page.',
@@ -102,6 +118,7 @@ return [
     'Code HTTP inattendu : {code}, attendu {expected}',
     '{reason} : « {evidence} »',
     'La chaîne de contrôle « {string} » est absente de la page : le contenu n\'est plus servi, par le serveur web ou par la base de données.',
+    'Page trop volumineuse pour être vérifiée en entier ({size} lus) : la chaîne de contrôle n\'a pas pu être cherchée jusqu\'au bout.',
     'Chaîne interdite détectée : « {string} »',
     'Réponse non JSON valide : {error}',
     'Champ « {field} » absent de la réponse',

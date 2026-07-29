@@ -242,8 +242,30 @@ function looks_french(string $s): bool
     if (preg_match('~^[\w./:#?&=%-]+$~', $s)) return false;      // identifiant, URL, classe CSS
     if (preg_match('~^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|FROM|WHERE)\b~i', $s)) return false;
     if (str_contains($s, '<path') || str_contains($s, 'viewBox')) return false;
+    // Balisage, déclaration CSS, en-tête HTTP : trois formes qui contiennent des
+    // mots mais ne sont pas des phrases. L'en-tête se reconnaît à son nom collé
+    // aux deux-points ; le français, lui, met une espace avant (« Erreur : … »).
+    if (str_contains($s, '<') || str_contains($s, '>')) return false;
+    if (str_contains($s, ';') && str_contains($s, ':')) return false;
+    if (preg_match('~^[A-Z][A-Za-z-]*:\s~', $s)) return false;
     if (preg_match('~[éèêëàâçùûôîïœÀÉÈÊ]~u', $s)) return true;
-    return (bool)preg_match('~(?<![\w])(le|la|les|des|du|une|est|pas|sur|pour|avec|dans|aucun|aucune|vous|votre|cette|tous|toutes|plus|jamais|encore)(?![\w])~u', $s);
+
+    // Le français sans accent existait et passait à travers : « Connexion TLS
+    // impossible » n'était jamais signalé, donc jamais traduit, donc affiché en
+    // français dans une interface anglaise. La liste de mots-outils ne suffisait
+    // pas ; les adjectifs de verdict comptent autant, puisque c'est justement de
+    // ça que les messages du collecteur sont faits.
+    //
+    // Ce qui reste volontairement hors liste : les messages de console
+    // reconstitués (Css.php les reproduit tels que le navigateur les écrit, en
+    // anglais, et les traduire serait un contresens), les noms d'extensions,
+    // les en-têtes HTTP et les fragments SQL.
+    $outils = 'le|la|les|des|du|de|une|est|sont|pas|non|sur|pour|avec|dans|en|sans|par|sous|entre'
+            . '|aucun|aucune|vous|votre|cette|chaque|tous|toutes|plus|moins|jamais|encore|trop'
+            . '|doit|faut|veuillez|alors|donc|mais|puis';
+    $verdicts = 'impossible|invalide|introuvable|inconnu|inconnue|absent|absente|inattendu|inattendue'
+              . '|manquant|manquante|refuse|refuse|vide|valide';
+    return (bool)preg_match('~(?<![\w])(' . $outils . '|' . $verdicts . ')(?![\w])~u', $s);
 }
 
 // ---------------------------------------------------------------------------

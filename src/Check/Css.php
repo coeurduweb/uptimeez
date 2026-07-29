@@ -5,6 +5,7 @@ namespace Uptimer\Check;
 
 use Uptimer\Http;
 use Uptimer\Response;
+use Uptimer\Ui;
 
 /**
  * Détection de « la page qui se casse la figure ».
@@ -184,7 +185,7 @@ final class Css
                         . ' (' . ($res->status === 404 ? 'Not Found' : 'Error') . ')'];
             } elseif ($bytes === 0) {
                 $issue = 'EMPTY';
-                $note  = 'fichier vide (0 octet)';
+                $note  = t('fichier vide (0 octet)');
                 $cons  = ['warn', 'Empty response body for ' . $url];
             } elseif (self::looksLikeErrorPage($res)) {
                 $issue = 'NOT_' . strtoupper($kind);
@@ -282,8 +283,10 @@ final class Css
                 if (!$r->ok || $r->status >= 400) {
                     $metrics['fonts_failed']++;
                     $soft++;
-                    $result['messages'][] = 'Police introuvable : ' . self::shortAsset($r->url)
-                        . ' → ' . ($r->status ?: Http::errorLabel($r->errorCode));
+                    $result['messages'][] = t('Police introuvable : {asset} → {status}', [
+                        'asset'  => self::shortAsset($r->url),
+                        'status' => (string)($r->status ?: Http::errorLabel($r->errorCode)),
+                    ]);
                     $console[] = ['level' => 'err', 'text' => 'GET ' . $r->url . ' net::ERR_ABORTED ' . ($r->status ?: 0)];
                 }
             }
@@ -618,11 +621,13 @@ final class Css
         $d = $drop((float)$m['css_bytes'], (float)($b['css_bytes'] ?? 0));
         if ($d !== null) {
             if ($d >= $dropPct) {
-                $crit[] = sprintf('Poids CSS en chute de %.0f %% (%s au lieu de %s attendus).',
-                    $d, human_bytes($m['css_bytes']), human_bytes((int)$b['css_bytes']));
+                $crit[] = t('Poids CSS en chute de {pct} % ({now} au lieu de {ref} attendus).', [
+                    'pct' => Ui::num($d, 0), 'now' => human_bytes($m['css_bytes']),
+                    'ref' => human_bytes((int)$b['css_bytes'])]);
             } elseif ($d >= max(12, $dropPct / 2)) {
-                $warn[] = sprintf('Poids CSS en baisse de %.0f %% (%s / %s).',
-                    $d, human_bytes($m['css_bytes']), human_bytes((int)$b['css_bytes']));
+                $warn[] = t('Poids CSS en baisse de {pct} % ({now} / {ref}).', [
+                    'pct' => Ui::num($d, 0), 'now' => human_bytes($m['css_bytes']),
+                    'ref' => human_bytes((int)$b['css_bytes'])]);
             }
         }
 

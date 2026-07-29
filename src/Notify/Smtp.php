@@ -22,7 +22,8 @@ final class Smtp
 
         $transport = $secure === 'ssl' ? 'ssl://' : '';
         $fp = @stream_socket_client($transport . $host . ':' . $port, $errno, $errstr, 15);
-        if (!$fp) return ['ok' => false, 'info' => 'Connexion SMTP impossible : ' . ($errstr ?: $errno)];
+        if (!$fp) return ['ok' => false, 'info' => t('Connexion SMTP impossible : {detail}',
+                                                     ['detail' => (string)($errstr ?: $errno)])];
         stream_set_timeout($fp, 15);
 
         $log = [];

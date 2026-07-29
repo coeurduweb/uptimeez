@@ -98,6 +98,21 @@ file_put_contents("$tmp/site/lente.html", str_replace('<body>',
     . '<script src="https://cdn.deux.test/b.js"></script>'
     . '<script src="https://cdn.trois.test/c.js"></script>'
     . '<script src="https://cdn.quatre.test/d.js"></script>')));
+// Page volontairement plus grosse que la lecture maximale, servie en blocs de
+// tailles variables d'un appel à l'autre : c'est exactement ce que fait un
+// serveur réel, et c'est ce qui rendait la coupure — donc l'empreinte de
+// contenu — différente à chaque passe.
+file_put_contents("$tmp/site/enorme.php", "<?php\n"
+    . "header('Content-Type: text/html; charset=utf-8');\n"
+    . "echo \"<!doctype html><html><head><title>Enorme</title></head><body>\";\n"
+    . "\$bloc = str_repeat('x', 7919);\n"
+    . "\$n = 0;\n"
+    . "while (\$n < 3_400_000) {\n"
+    . "    \$len = 500 + ((\$n / 7919) % 2 ? 6000 : 1000);\n"
+    . "    echo substr(\$bloc, 0, \$len); \$n += \$len;\n"
+    . "    if (\$n % 100000 < \$len) { flush(); usleep(200); }\n"
+    . "}\n"
+    . "echo '<footer>Mentions legales 2026</footer></body></html>';\n");
 file_put_contents("$tmp/site/robots.txt",   "User-agent: *\nSitemap: $SITE/sitemap.xml\n");
 file_put_contents("$tmp/site/sitemap.xml",
     '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
@@ -1052,6 +1067,51 @@ $r = $req('/cron.php?key=cle-e2e');
 ok('cron par URL avec clé', $r['code'] === 200 && str_contains($r['body'], 'Terminé en'), str_cut(trim($r['body']), 60));
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'maintenance_cron']);
 ok('entretien manuel', $has($r, 'Entretien exécuté'));
+
+// =========================================================================
+title('Page trop volumineuse : une lecture partielle ne conclut rien');
+// =========================================================================
+// Http lit au plus 3 Mo. Au-delà, le corps est coupé et la fin de la page n'est
+// pas lue. Le drapeau existait depuis toujours et personne ne le lisait : une
+// chaîne de contrôle placée en pied de page était donc déclarée absente, ce qui
+// veut dire « la base de données ne répond plus ». Fausse panne permanente.
+$big1 = Uptimer\Http::fetch("$SITE/enorme.php", ['timeout' => 30]);
+$big2 = Uptimer\Http::fetch("$SITE/enorme.php", ['timeout' => 30]);
+ok('la page dépasse la lecture maximale', $big1->truncated, human_bytes(strlen($big1->body)));
+ok('le corps est coupé exactement à la borne', strlen($big1->body) === Uptimer\Http::MAX_BODY,
+   number_format(strlen($big1->body), 0, ',', ' ') . ' octets');
+// Le point qui compte : deux lectures de la même page, servie en blocs de
+// tailles différentes, donnent le même corps. Sinon l'empreinte de contenu
+// change à chaque passe et « le contenu a changé » se déclenche pour rien.
+ok('deux lectures de la même page donnent le même corps',
+   strlen($big1->body) === strlen($big2->body) && $big1->body === $big2->body,
+   strlen($big1->body) . ' vs ' . strlen($big2->body));
+ok('et donc la même empreinte de contenu',
+   Uptimer\Runner::contentHash($big1->body) === Uptimer\Runner::contentHash($big2->body));
+
+// Puis le verdict : la sonde ne doit pas déclarer de panne sur cette base.
+$tokB = $csrf();
+$req('/index.php?p=import', ['csrf' => $tokB, 'action' => 'import',
+    'list' => "$SITE/enorme.php | Page enorme | Mentions legales 2026",
+    'interval_sec' => 3600, 'pages' => 1, 'check_css' => 0, 'check_db' => 0,
+    'check_ssl' => 0, 'check_noindex' => 0]);
+$bid = (int)$val("SELECT id FROM monitors WHERE url LIKE '%enorme.php%' LIMIT 1");
+if ($bid) {
+    // On isole le contrôle : l'analyse CSS d'une page de 3 Mo sans feuille de
+    // style produit son propre verdict, qui masquerait celui qu'on mesure ici.
+    Uptimer\Db::q('UPDATE monitors SET expect_string = ?, setup_state = ?, check_css = 0,
+                   check_content = 1, css_state = NULL WHERE id = ?',
+          ['Mentions legales 2026', 'done', $bid]);
+    $rr = $req('/api.php?action=check', ['csrf' => $tokB, 'id' => $bid]);
+    $j  = json_decode($rr['body'], true);
+    $st = $j['result']['state'] ?? '?';
+    $rs = $j['result']['reason'] ?? '';
+    ok('aucune panne inventée sur une page coupée', $st !== 'down', 'état=' . $st . ' cause=' . $rs);
+    ok('et la raison est nommée', $rs === 'BODY_TRUNCATED' || $st === 'up', $rs ?: 'aucune');
+    $req('/index.php?p=monitors', ['csrf' => $tokB, 'action' => 'delete_monitor', 'id' => $bid]);
+} else {
+    ok('page énorme importée', false, 'sonde non créée');
+}
 
 // =========================================================================
 title('Fichiers sensibles');

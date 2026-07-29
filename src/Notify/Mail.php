@@ -13,7 +13,7 @@ final class Mail
         if ($to === '') return ['ok' => false, 'info' => t('Aucun destinataire configuré')];
 
         $recipients = array_values(array_filter(array_map('trim', preg_split('~[,;]~', $to) ?: [])));
-        if (!$recipients) return ['ok' => false, 'info' => 'Destinataire invalide'];
+        if (!$recipients) return ['ok' => false, 'info' => t('Destinataire invalide')];
 
         $from     = trim((string)Config::get('notify.mail.from', '')) ?: ('uptimer@' . (gethostname() ?: 'localhost'));
         $fromName = trim((string)Config::get('notify.mail.from_name', 'Uptimer'));

@@ -160,7 +160,7 @@ final class Notifier
                 'slack'   => Slack::send($title, $lines, $sev, $mon),
                 'mail'    => Mail::send($title, $lines, $sev, $mon),
                 'webhook' => Webhook::send($title, $lines, $sev, $mon),
-                default   => ['ok' => false, 'info' => 'canal inconnu'],
+                default   => ['ok' => false, 'info' => t('Canal inconnu')],
             };
             if (!empty($res['ok'])) $ok++;
             self::log($mon, $ch, $sev, (bool)($res['ok'] ?? false), (string)($res['info'] ?? ''));
@@ -247,32 +247,36 @@ final class Notifier
             'DNS'             => t('Nom de domaine non résolu'),
             'CONNECT'         => 'Connexion impossible',
             'CONNECT_RESET'   => t('Connexion coupée par le serveur'),
-            'SSL_INVALID'     => 'Certificat SSL invalide',
+            'SSL_INVALID'     => t('Certificat SSL invalide'),
             'SSL_EXPIRED'     => t('Certificat SSL expiré'),
+            'SSL_NOT_YET'     => t('Certificat pas encore valide'),
             'SSL_SOON'        => t('Certificat SSL bientôt expiré'),
             'SSL_HANDSHAKE'   => t('Échec de la négociation TLS'),
-            'HTTP_5XX'        => 'Erreur serveur (5xx)',
-            'HTTP_4XX'        => 'Erreur client (4xx)',
-            'HTTP_404'        => 'Page introuvable (404)',
+            'HTTP_5XX'        => t('Erreur serveur (5xx)'),
+            'HTTP_4XX'        => t('Erreur client (4xx)'),
+            'HTTP_404'        => t('Page introuvable (404)'),
             'HTTP_403'        => t('Accès interdit (403)'),
-            'HTTP_401'        => 'Authentification requise (401)',
+            'HTTP_401'        => t('Authentification requise (401)'),
             'HTTP_429'        => t('Quota de requêtes atteint (429)'),
-            'HTTP_3XX'        => 'Redirection inattendue',
-            'REDIRECT_LOOP'   => 'Boucle de redirection',
+            'HTTP_3XX'        => t('Redirection inattendue'),
+            'REDIRECT_LOOP'   => t('Boucle de redirection'),
             'DB_DOWN'         => t('Base de données injoignable'),
-            'APP_ERROR'       => 'Erreur applicative (PHP)',
+            'DB_ERROR_VISIBLE'  => t('Erreur de base affichée sur le site'),
+            'APP_ERROR_VISIBLE' => t('Erreur PHP affichée sur le site'),
+            'APP_ERROR'       => t('Erreur applicative (PHP)'),
             'CSS_BROKEN'      => t('Mise en page cassée (CSS)'),
             'CSS_DEGRADED'    => t('CSS dégradé'),
             'STRING_MISSING'  => t('Chaîne de contrôle absente'),
             'STRING_FORBIDDEN'=> t('Chaîne interdite présente'),
             'JSON_INVALID'    => t('Réponse JSON invalide'),
-            'JSON_PATH'       => 'Champ JSON absent',
-            'JSON_VALUE'      => 'Valeur JSON inattendue',
-            'NOINDEX'         => 'Page en noindex',
+            'JSON_PATH'       => t('Champ JSON absent'),
+            'JSON_VALUE'      => t('Valeur JSON inattendue'),
+            'NOINDEX'         => t('Page en noindex'),
             'SLOW'            => t('Temps de réponse élevé'),
+            'BODY_TRUNCATED'  => t('Page trop volumineuse pour être vérifiée'),
             'HEARTBEAT_LATE'  => t('Signal attendu non reçu'),
             'NET_ERROR'       => t('Erreur réseau'),
-            null              => 'Anomalie',
+            null              => t('Anomalie'),
             default           => $code,
         };
     }
@@ -306,7 +310,7 @@ final class Notifier
     /** Test manuel depuis la page de réglages. */
     public static function test(string $channel): array
     {
-        $mon = ['id' => 0, 'name' => 'Test de configuration', 'url' => (string)Config::get('app.base_url', 'https://exemple.fr'),
+        $mon = ['id' => 0, 'name' => t('Test de configuration'), 'url' => (string)Config::get('app.base_url', 'https://exemple.fr'),
                 'notify_channels' => $channel];
         $lines = [
             [t('Message'), t('Ceci est un test envoyé depuis {app}.')],
@@ -317,7 +321,7 @@ final class Notifier
             'slack'   => Slack::send('✅ Test Uptimer', $lines, 'up', $mon),
             'mail'    => Mail::send('✅ Test Uptimer', $lines, 'up', $mon),
             'webhook' => Webhook::send('✅ Test Uptimer', $lines, 'up', $mon),
-            default   => ['ok' => false, 'info' => 'Canal inconnu'],
+            default   => ['ok' => false, 'info' => t('Canal inconnu')],
         };
         self::log($mon, $channel, 'test', (bool)$res['ok'], (string)($res['info'] ?? ''));
         return $res;

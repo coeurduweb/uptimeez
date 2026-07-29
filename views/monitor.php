@@ -20,7 +20,8 @@ $mon = Db::one('SELECT m.*, s.domain AS site_domain, s.name AS site_name, s.cms 
                 FROM monitors m LEFT JOIN sites s ON s.id = m.site_id WHERE m.id = ?', [$id]);
 if (!$mon) {
     echo '<div class="panel"><div class="empty"><h3>' . te('Cette sonde n\'existe plus') . '</h3>'
-       . '<a class="btn mt" href="' . e(u('dashboard')) . '">Retour au tableau de bord</a></div></div>';
+       . '<a class="btn mt" href="' . e(u('dashboard')) . '">' . te('Retour au tableau de bord')
+       . '</a></div></div>';
     return;
 }
 

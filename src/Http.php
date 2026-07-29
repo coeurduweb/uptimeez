@@ -168,9 +168,23 @@ final class Http
                 return $len;
             },
             CURLOPT_WRITEFUNCTION  => function ($ch2, string $chunk) use ($job) {
-                $len = strlen($chunk);
-                if (strlen($job->body) < $job->max) $job->body .= $chunk;
-                else $job->truncated = true;
+                $len  = strlen($chunk);
+                $room = $job->max - strlen($job->body);
+                if ($room <= 0) {
+                    $job->truncated = true;
+                } elseif ($len <= $room) {
+                    $job->body .= $chunk;
+                } else {
+                    // On coupe À la borne, pas au bloc suivant. L'ancienne version
+                    // ajoutait le bloc entier dès que le corps était encore sous la
+                    // limite : la longueur finale dépendait donc du découpage réseau,
+                    // qui change d'une requête à l'autre. Conséquence sur une page
+                    // tronquée : l'empreinte de contenu changeait à chaque passe, et
+                    // « le contenu de la page a changé » se déclenchait pour rien,
+                    // indéfiniment.
+                    $job->body .= substr($chunk, 0, $room);
+                    $job->truncated = true;
+                }
                 return $len;
             },
         ]);

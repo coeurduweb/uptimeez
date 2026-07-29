@@ -107,7 +107,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
 <main class="wrap" style="max-width:760px">
   <div class="row mt-lg" style="justify-content:center;gap:9px">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12h4l3 8 4-16 3 8h6"/></svg>
-    <h1>Installation de Uptimer</h1>
+    <h1><?= te('Installation de {app}') ?></h1>
   </div>
   <p class="center muted small"><?= te('Surveillance de sites : fonctionne sur un hébergement mutualisé, sans Docker.') ?></p>
 
@@ -150,7 +150,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
       <label class="f"><span>Confirmation</span>
         <input type="password" name="password2" required minlength="8" autocomplete="new-password"></label>
 
-      <label class="f"><span>Adresse publique de Uptimer (facultatif)</span>
+      <label class="f"><span><?= te('Adresse publique de {app} (facultatif)') ?></span>
         <input type="text" name="base_url" placeholder="https://exemple.fr/uptimer"
                value="<?= e((($_SERVER['HTTPS'] ?? '') && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://'
                     . ($_SERVER['HTTP_HOST'] ?? '') . rtrim(dirname((string)($_SERVER['SCRIPT_NAME'] ?? '')), '/')) ?>">

@@ -104,6 +104,19 @@ d'erreur. Sa disparition alors que la page répond encore `200` signifie que la 
 **Chaîne interdite.** L'inverse : un texte qui ne doit jamais apparaître. C'est ce que reprennent les mots-clés
 inversés des autres outils lors d'un import.
 
+**« Erreur affichée » n'est pas « site en panne ».** Une signature trouvée dans une page ne suffit pas à conclure :
+un article de blog qui explique comment corriger « Error establishing a database connection » contient la phrase
+sans être en panne, et pour une agence dont des clients sont hébergeurs ou développeurs, c'est la fausse alerte de
+trois heures du matin garantie. Il faut donc au moins un autre signe, et un seul suffit : le serveur répond 5xx, ou
+la page est courte — une vraie page d'erreur WordPress pèse quelques centaines d'octets — ou la chaîne de preuve a
+disparu. Sans aucun des trois, le verdict est **dégradé** et dit ce qu'il voit : une erreur technique s'affiche sur
+une page qui fonctionne. C'est un vrai défaut, visible par les visiteurs, mais ce n'est pas une panne.
+
+**Ce qui n'a pas pu être lu ne prouve rien.** La lecture s'arrête à 3 Mo de HTML, pour ne pas épuiser la mémoire
+d'un mutualisé. Au-delà, la fin de la page n'est pas lue : une chaîne de contrôle placée dans le pied de page ne
+peut plus être trouvée, et son absence ne dit rien. Le verdict est alors « page trop volumineuse pour être vérifiée
+en entier », jamais « la base de données ne répond plus ».
+
 ---
 
 ## 4. Est-ce rapide pour le visiteur
@@ -133,7 +146,10 @@ Report. Sans clé, aucun chiffre n'est inventé. Voir [Vitesse ressentie](vitess
 ## 5. Est-ce que ça va casser bientôt
 
 **Certificat TLS, en deux passes.** Une lecture permissive pour établir les faits, une validation stricte façon
-navigateur pour le verdict. Expiration, chaîne, autorité, correspondance du domaine, avec préavis réglable.
+navigateur pour le verdict. Expiration, chaîne, autorité, correspondance du domaine, avec préavis réglable. Et le
+cas qu'on oublie toujours : un certificat **pas encore valide**, que le navigateur refuse exactement comme un
+certificat expiré. C'est une horloge serveur déréglée, ou un certificat émis d'avance et déployé trop tôt ; le
+verdict le dit au lieu de rendre le message brut d'OpenSSL.
 
 **Expiration du domaine**, par RDAP, une fois par jour. Un domaine expiré coupe le site *et* les e-mails, et peut
 être racheté par un tiers.

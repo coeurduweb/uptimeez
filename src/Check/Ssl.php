@@ -10,13 +10,14 @@ namespace Uptimer\Check;
  */
 final class Ssl
 {
-    /** @return array{checked:bool,valid:bool,error:?string,code:?string,days_left:?int,expires_at:?string,issuer:?string,subject:?string,self_signed:bool,host_match:bool,protocol:?string,alt_names:array} */
+    /** @return array{checked:bool,valid:bool,error:?string,code:?string,days_left:?int,expires_at:?string,issuer:?string,subject:?string,self_signed:bool,host_match:bool,protocol:?string,alt_names:array,starts_at:?string,not_yet:bool} */
     public static function inspect(string $host, int $port = 443, int $timeout = 10): array
     {
         $out = [
             'checked' => false, 'valid' => false, 'error' => null, 'code' => null,
             'days_left' => null, 'expires_at' => null, 'issuer' => null, 'subject' => null,
             'self_signed' => false, 'host_match' => true, 'protocol' => null, 'alt_names' => [],
+            'starts_at' => null, 'not_yet' => false,
         ];
         if (!function_exists('openssl_x509_parse') || !function_exists('stream_socket_client')) return $out;
 
@@ -36,7 +37,7 @@ final class Ssl
             STREAM_CLIENT_CONNECT, $ctx);
 
         if (!$sock) {
-            $out['error'] = $errstr !== '' ? $errstr : 'Connexion TLS impossible';
+            $out['error'] = $errstr !== '' ? $errstr : 'Connexion TLS impossible';   // msgid : voir lang/_dynamiques.php
             $out['code']  = str_contains(strtolower($errstr), 'timed out') ? 'TIMEOUT' : 'SSL_HANDSHAKE';
             return $out;
         }
@@ -54,6 +55,14 @@ final class Ssl
                 $out['expires_at'] = date('Y-m-d H:i:s', $validTo);
                 $out['days_left']  = (int)floor(($validTo - time()) / 86400);
             }
+            // Un certificat peut aussi être refusé parce qu'il n'est pas ENCORE
+            // valide : horloge du serveur déréglée, ou certificat émis d'avance
+            // et déployé trop tôt. Le navigateur le refuse exactement comme un
+            // certificat expiré, et sans ce relevé le verdict se contentait du
+            // message brut d'OpenSSL, que personne ne sait interpréter.
+            $validFrom = isset($info['validFrom_time_t']) ? (int)$info['validFrom_time_t'] : 0;
+            $out['starts_at'] = $validFrom > 0 ? date('Y-m-d H:i:s', $validFrom) : null;
+            $out['not_yet']   = $validFrom > 0 && $validFrom > time() + 60;
             $out['issuer']  = self::name($info['issuer'] ?? []);
             $out['subject'] = self::name($info['subject'] ?? []);
             $sanRaw = $info['extensions']['subjectAltName'] ?? '';
@@ -83,6 +92,12 @@ final class Ssl
             $out['valid'] = false;
             $out['error'] = self::humanError($errstr2, $out);
             $out['code']  = 'SSL_INVALID';
+        }
+
+        if ($out['not_yet']) {
+            $out['valid'] = false;
+            $out['code']  = 'SSL_NOT_YET';
+            $out['error'] = 'Certificat pas encore valide : vérifiez l\'horloge du serveur';
         }
 
         if ($out['days_left'] !== null && $out['days_left'] < 0) {
@@ -123,6 +138,8 @@ final class Ssl
     private static function humanError(string $raw, array $ctx): string
     {
         $r = strtolower($raw);
+        if (!empty($ctx['not_yet']))                   return 'Certificat pas encore valide : vérifiez l\'horloge du serveur';
+        if (str_contains($r, 'not yet valid'))         return 'Certificat pas encore valide : vérifiez l\'horloge du serveur';
         if ($ctx['self_signed'])                       return 'Certificat auto-signé';
         if (!$ctx['host_match'])                       return 'Le certificat ne couvre pas ce domaine';
         if (str_contains($r, 'expired'))               return 'Certificat expiré';
@@ -132,7 +149,7 @@ final class Ssl
         if (str_contains($r, 'self signed certificate in certificate chain')
             || str_contains($r, 'unable to get issuer'))  return 'Autorité de certification inconnue du système';
         if (str_contains($r, 'certificate has expired'))   return 'Certificat expiré';
-        if (str_contains($r, 'certificate verify failed')) return t('Vérification du certificat échouée');
+        if (str_contains($r, 'certificate verify failed')) return 'Vérification du certificat échouée';
         if ($raw === '') {
             // Certificat lisible mais refusé : dans la quasi-totalité des cas
             // l'autorité qui l'a signé n'est pas reconnue.

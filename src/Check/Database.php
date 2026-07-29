@@ -63,6 +63,14 @@ final class Database
         'redis connection'                              => 'Connexion Redis en échec',
     ];
 
+    /**
+     * En dessous de cette taille, une page qui contient une signature d'erreur
+     * EST une page d'erreur. La page WordPress « Error establishing a database
+     * connection » pèse un peu plus de 200 octets ; la plus bavarde des pages
+     * d'erreur de framework tient sous 8 Ko une fois le HTML compté.
+     */
+    private const ERROR_PAGE_BYTES = 8192;
+
     /** Signatures d'erreur applicative non-BDD, utiles à distinguer. */
     private const PHP_FATAL = [
         'fatal error:'      => 'Erreur fatale PHP',
@@ -74,6 +82,30 @@ final class Database
     ];
 
     /**
+     * Une signature trouvée dans une page conclut-elle à une panne ?
+     *
+     * Pas toujours, et c'était le trou. « Error establishing a database
+     * connection » dans un article de blog qui explique comment la corriger,
+     * « too many connections » dans une documentation d'hébergeur, « disk full »
+     * dans un billet technique : la sonde déclarait le site hors service. Pour
+     * une agence dont les clients sont parfois des hébergeurs ou des
+     * développeurs, c'est la fausse alerte de trois heures du matin garantie.
+     *
+     * Une vraie page d'erreur de base se reconnaît autrement que par un mot. Il
+     * en faut au moins un de ces trois signes, et un seul suffit :
+     *
+     *   - le serveur répond 5xx : il annonce lui-même son échec ;
+     *   - la page est courte : la page WordPress « connexion impossible » pèse
+     *     quelques centaines d'octets, un article qui en parle des dizaines de
+     *     milliers ;
+     *   - la chaîne de preuve a disparu. C'est le signe le plus fort : ce texte
+     *     ne peut venir que de la base, donc son absence dit que la couche
+     *     données est partie.
+     *
+     * Aucun des trois : la signature est affichée sur une page qui répond
+     * normalement, avec son pied de page intact. C'est un défaut visible, à
+     * montrer — mais « dégradé », pas « hors service ».
+     *
      * @return array{state:string,reason:?string,message:?string,evidence:?string,probe:?array}
      */
     public static function audit(Response $res, array $monitor, array $opt = []): array
@@ -86,30 +118,49 @@ final class Database
         $hay = strtolower(substr($body, 0, 60000));
         if (strlen($body) > 80000) $hay .= "\n" . strtolower(substr($body, -20000));
 
+        // La page se comporte-t-elle comme une page d'erreur ?
+        $expect  = trim((string)($monitor['expect_string'] ?? ''));
+        $proofOk = $expect !== '' && mb_stripos($body, $expect) !== false;
+        $broken  = $res->status >= 500
+                || strlen($body) < self::ERROR_PAGE_BYTES
+                || ($expect !== '' && !$proofOk);
+
         foreach (self::SIGNATURES as $needle => $label) {
-            if (str_contains($hay, $needle)) {
-                return [
-                    'state'    => 'down',
-                    'reason'   => 'DB_DOWN',
-                    // L'étiquette est un msgid : elle s'écrit dans la langue de
-                    // l'installation, celle du relevé technique.
-                    'message'  => t($label),
-                    'evidence' => self::excerpt($body, $needle),
-                    'probe'    => null,
-                ];
-            }
+            if (!str_contains($hay, $needle)) continue;
+            return $broken ? [
+                'state'    => 'down',
+                'reason'   => 'DB_DOWN',
+                // L'étiquette est un msgid : elle s'écrit dans la langue de
+                // l'installation, celle du relevé technique.
+                'message'  => t($label),
+                'evidence' => self::excerpt($body, $needle),
+                'probe'    => null,
+            ] : [
+                'state'    => 'degraded',
+                'reason'   => 'DB_ERROR_VISIBLE',
+                'message'  => t('{error} affichée sur une page qui répond normalement',
+                                ['error' => t($label)]),
+                'evidence' => self::excerpt($body, $needle),
+                'probe'    => null,
+            ];
         }
 
         foreach (self::PHP_FATAL as $needle => $label) {
-            if (str_contains($hay, $needle)) {
-                return [
-                    'state'    => 'down',
-                    'reason'   => 'APP_ERROR',
-                    'message'  => t($label),
-                    'evidence' => self::excerpt($body, $needle),
-                    'probe'    => null,
-                ];
-            }
+            if (!str_contains($hay, $needle)) continue;
+            return $broken ? [
+                'state'    => 'down',
+                'reason'   => 'APP_ERROR',
+                'message'  => t($label),
+                'evidence' => self::excerpt($body, $needle),
+                'probe'    => null,
+            ] : [
+                'state'    => 'degraded',
+                'reason'   => 'APP_ERROR_VISIBLE',
+                'message'  => t('{error} affichée sur une page qui répond normalement',
+                                ['error' => t($label)]),
+                'evidence' => self::excerpt($body, $needle),
+                'probe'    => null,
+            ];
         }
 
         return $out;
@@ -137,18 +188,21 @@ final class Database
             $sig = self::audit($res, []);
             if ($sig['state'] !== 'ok') {
                 return ['url' => $ep['url'], 'ok' => false, 'reason' => $sig['reason'],
-                        'message' => $sig['message'] . ' (sonde ' . $ep['label'] . ')'];
+                        'message' => t('{verdict} (sonde {probe})',
+                                       ['verdict' => $sig['message'], 'probe' => t($ep['label'])])];
             }
             if ($res->status >= 500) {
                 return ['url' => $ep['url'], 'ok' => false, 'reason' => 'DB_DOWN',
-                        'message' => 'Sonde ' . $ep['label'] . ' en erreur ' . $res->status];
+                        'message' => t('Sonde {probe} en erreur {code}',
+                                       ['probe' => t($ep['label']), 'code' => (string)$res->status])];
             }
             if ($res->status === 200 && $ep['expect'] !== '' && !str_contains($res->body, $ep['expect'])) {
                 continue; // endpoint non concluant, on tente le suivant
             }
             if ($res->status === 200) {
                 return ['url' => $ep['url'], 'ok' => true, 'reason' => null,
-                        'message' => 'Sonde ' . $ep['label'] . ' OK', 'ms' => $res->totalMs];
+                        'message' => t('Sonde {probe} OK', ['probe' => t($ep['label'])]),
+                        'ms' => $res->totalMs];
             }
         }
         return null;
