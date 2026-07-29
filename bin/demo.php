@@ -15,6 +15,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use Uptimeez\Config;
 use Uptimeez\Db;
+use Uptimeez\Heartbeat;
 use Uptimeez\Runner;
 use Uptimeez\Stats;
 
@@ -542,6 +543,55 @@ foreach (Db::all('SELECT id, name, cms FROM sites') as $st) {
         ]);
     }
 }
+// ---------------------------------------------------------------------------
+// LA VARIÉTÉ DES USAGES, ET POURQUOI ELLE COMPTE PLUS QUE LE NOMBRE DE SONDES.
+//
+// La démo ne montrait que des sondes de page et une d'API. Or les visiteurs
+// n'arrivent pas avec le même besoin : l'un veut savoir si son site répond, l'autre
+// si sa sauvegarde nocturne tourne encore, un troisième si son certificat expire.
+// Celui qui ne reconnaît pas SON usage en un coup d'oeil repart.
+//
+// Quatre battements couvrent le cas « ce n'est pas une page que je surveille, c'est
+// une tâche » : une sauvegarde, un import, un envoi de facturation, un cron WordPress.
+// L'un est volontairement en retard, parce que c'est là que la sonde battement se
+// comprend : ce n'est pas une erreur qui déclenche l'alerte, c'est un SILENCE.
+$battements = [
+    ['Nightly backup · Riverside Dental',  86400, 3600,  'ok'],
+    ['Stock import · Atlas Outdoor',        3600,  900,  'ok'],
+    ['Monthly invoicing · Maison Bertin', 2592000, 86400, 'ok'],
+    ['WP cron · Le Petit Gazette',           900,  600,  'retard'],
+];
+$nbBattements = 0;
+foreach ($battements as [$nom, $toutes, $tolerance, $etat]) {
+    $h = Heartbeat::create($nom, $toutes, $tolerance);
+    // Le dernier signal reçu : dans les temps pour trois, hors délai pour le
+    // quatrième, ce qui le fait remonter en tête de l'écran du jour.
+    $recu = $etat === 'ok'
+        ? time() - (int)($toutes * 0.3)
+        : time() - $toutes - $tolerance - 420;
+    Db::update('monitors', [
+        'heartbeat_at' => date('Y-m-d H:i:s', $recu),
+        'status'       => $etat === 'ok' ? 'up' : 'down',
+        'last_check_at' => now(),
+        'uptime_24h'   => $etat === 'ok' ? 100.0 : 91.4,
+    ], 'id = :__i', ['__i' => (int)$h['id']]);
+    $nbBattements++;
+}
+printf("battements : %d sonde(s), dont 1 en silence\n", $nbBattements);
+
+// Une sonde « clé attendue » explicite, pour montrer le cas le plus demandé : je
+// veux savoir que MON mot est encore sur la page. Les autres sondes l'utilisent
+// aussi, mais avec le nom du site, ce qui ne se remarque pas.
+$idCle = Db::val("SELECT id FROM monitors WHERE name = 'Atlas Outdoor' AND kind = 'page' LIMIT 1");
+if ($idCle) {
+    Db::update('monitors', [
+        'expect_string' => 'Add to basket',
+        'forbid_string' => 'Out of stock',
+        'setup_note'    => 'Shopify · proof string on the buy button',
+    ], 'id = :__i', ['__i' => (int)$idCle]);
+    echo "clé attendue : 1 sonde règlée sur le bouton d'achat\n";
+}
+
 echo 'inventaire : ' . Db::val('SELECT COUNT(*) FROM components') . " composant(s), "
    . Db::val('SELECT COUNT(*) FROM components WHERE vuln_count > 0') . " avec faille publiée\n";
 
