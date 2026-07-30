@@ -27,7 +27,7 @@ Nothing else. The installer checks all of it and tells you what is missing befor
 ## Standard installation
 
 ```bash
-git clone https://github.com/loran750/uptimeez.git
+git clone https://github.com/coeurduweb/uptimeez.git
 cd uptimeez
 chmod -R 775 data
 ```

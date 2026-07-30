@@ -655,6 +655,57 @@ foreach (array_keys(I18n::LANGS) as $lg) {
 }
 check('catalogues valides et variables préservées', $catBad, []);
 
+// --- Un catalogue par langue déclarée : on compte les FICHIERS -------------
+/*
+ * UN TEST QUI INTERROGE LA MÊME SOURCE QUE LE CODE TESTÉ NE TESTE RIEN.
+ *
+ * Constaté le 2026-07-30 : le garde-fou de cette suite comptait
+ * count(I18n::available()), c'est-à-dire la constante LANGS. Il comparait donc
+ * le code à lui-même et il est resté vert pendant que lang/fr.php n'existait
+ * pas : dix langues déclarées, neuf catalogues sur le disque, et le site
+ * annonçait « 10 interface languages » dans un tableau comparatif, face aux
+ * concurrents. La constante disait vrai sur elle-même ; le produit, non.
+ *
+ * Le seul recours est de changer de source : on lit le disque, pas la classe.
+ * Le disque est la deuxième source, celle que la constante prétend décrire.
+ *
+ * _dynamiques.php n'est pas une langue : c'est la liste des msgid que le code
+ * ne révèle pas par simple lecture (voir son en-tête). Il est exclu ici comme
+ * il l'est dans bin/deadcode.php, par le préfixe « _ » plutôt que par son nom,
+ * pour qu'un futur fichier de service n'ait pas à repasser par ce test.
+ */
+$fichiersLang = [];
+foreach (glob(__DIR__ . '/../lang/*.php') ?: [] as $f) {
+    $code = basename($f, '.php');
+    if (str_starts_with($code, '_')) continue;
+    $fichiersLang[$code] = $f;
+}
+ksort($fichiersLang);
+check('un catalogue pour chaque langue déclarée',
+    implode(' ', array_diff(array_keys(I18n::LANGS), array_keys($fichiersLang))), '');
+check('aucun catalogue orphelin dans lang/',
+    implode(' ', array_diff(array_keys($fichiersLang), array_keys(I18n::LANGS))), '');
+check('autant de catalogues que de langues', count($fichiersLang), count(I18n::LANGS));
+
+// Un fichier présent mais cassé (oubli du return, tableau devenu chaîne) vaut
+// un fichier absent : I18n::load() rend un tableau vide dans les deux cas, et
+// la langue retombe silencieusement sur l'anglais. C'est exactement le mode de
+// panne qu'on vient de laisser passer, donc on l'éprouve fichier par fichier.
+$catCassés = [];
+foreach ($fichiersLang as $code => $f) {
+    if (!is_array(require $f)) $catCassés[] = $code;
+}
+check('chaque catalogue rend bien un tableau', implode(' ', $catCassés), '');
+
+// Le catalogue de la langue source est l'identité, donc vide : les msgid SONT
+// les phrases françaises. On le vérifie pour que personne ne le remplisse en
+// croyant traduire, d'autant que I18n::init() ne le charge même pas.
+check('le catalogue de la langue source est l\'identité', I18n::catalogue(I18n::SOURCE), []);
+I18n::init('fr');
+check('français choisi : la phrase source s\'affiche', I18n::t('Aide'), 'Aide');
+check('français choisi : aucun repli anglais silencieux',
+    I18n::t('Aujourd\'hui') !== I18n::catalogue('en')['Aujourd\'hui'], true);
+
 // Le nom du produit ne doit JAMAIS entrer dans une clé : sinon un renommage
 // périme les neuf catalogues d'un coup. C'est arrivé deux fois.
 $withName = [];
@@ -2306,7 +2357,14 @@ $branches = preg_match_all(
     "/^\s{12}((?:'[A-Z][A-Z0-9_]*'\s*,\s*)*'[A-Z][A-Z0-9_]*')\s*=>/m",
     (string)file_get_contents(__DIR__ . '/../src/Diagnose.php'));
 $signaux = count((new ReflectionClass(Uptimeez\Check\Css::class))->getConstants()['HIDDEN_CLASSES'] ?? []);
-$langues = count(Uptimeez\I18n::available());
+// Les langues se comptent sur les FICHIERS de lang/, jamais sur la constante
+// LANGS : c'est LANGS que la documentation et le site recopient, donc la
+// comparer à elle-même validait « 10 langues » alors qu'un catalogue manquait
+// (voir la note de la section « Langues »). Une langue existe quand son
+// catalogue existe. Cette même section a déjà vérifié que le disque et la
+// constante coïncident, si bien qu'un écart casse ici ET là-bas.
+$langues = count(array_filter(glob(__DIR__ . '/../lang/*.php') ?: [],
+    static fn (string $f): bool => !str_starts_with(basename($f), '_')));
 
 check('les signatures de données se comptent', $sigs > 0, true);
 check('les causes expliquées se comptent', $branches > 0, true);
@@ -2353,6 +2411,41 @@ foreach ($annonces as $quoi => [$motif, $mesure]) {
     }
     check("« $quoi » : les textes annoncent $mesure partout",
         implode(' ', array_unique($faux)), '');
+}
+
+// ---------------------------------------------------------------------------
+// Le GRAND total des README doit être la somme de leur propre tableau.
+//
+// Constaté le 2026-07-30 : les README annonçaient « 1 466 contrôles, tous verts ».
+// Le chiffre n'était pas faux à l'origine, il était une SOMME, celle des dix suites
+// listées juste au-dessus, et elle tombait juste au contrôle près. Les sept contrôles
+// de langue ajoutés le même jour ont corrigé la ligne « selftest » du tableau sans
+// toucher au total, qui s'est donc mis à mentir de sept exactement.
+//
+// Le contrôle précédent ne pouvait pas le voir : il ne lit que la ligne de selftest.
+// Celui-ci relit le tableau et refait l'addition, donc le total ne peut plus dériver,
+// et ajouter une suite au tableau la fait entrer dans le compte sans y penser.
+//
+// Ce que ce contrôle ne fait PAS, et il faut le savoir : il ne lance pas les neuf
+// autres suites, donc il valide la cohérence de l'annonce, pas la réalité des 1 473.
+// Les autres chiffres du tableau sont pris pour argent comptant. Le seul moyen de les
+// vérifier est de lancer les suites, ce qui demande un réseau, un Chromium et un
+// MariaDB, c'est-à-dire précisément ce que ce fichier promet de ne pas exiger.
+foreach (['/../README.md' => ['/\*\*([\d,]+) checks, all green\*\*/', '/(\d+) checks   /'],
+          '/../README.fr.md' => ['/\*\*([\d\x{202f}\x{00a0} ]+) contrôles, tous verts\*\*/u', '/(\d+) contrôles   /']] as $f => [$motifTotal, $motifLigne]) {
+    $chemin = __DIR__ . $f;
+    if (!is_file($chemin)) continue;
+    $texte = (string)file_get_contents($chemin);
+
+    preg_match($motifTotal, $texte, $m);
+    // Les séparateurs de milliers diffèrent d'une langue à l'autre, et l'espace fine
+    // insécable du français ne s'attrape pas avec un simple \s.
+    $annonce = (int)preg_replace('/\D/', '', $m[1] ?? '0');
+
+    preg_match_all($motifLigne, $texte, $lignes);
+    $somme = array_sum(array_map('intval', $lignes[1] ?? []));
+
+    check(basename($f) . ' : le total est la somme de son tableau', $annonce, $somme);
 }
 
 // ---------------------------------------------------------------------------

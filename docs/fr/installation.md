@@ -28,7 +28,7 @@ Rien d'autre. L'installeur vérifie tout cela et vous dit ce qui manque avant d'
 ## Installation classique
 
 ```bash
-git clone https://github.com/loran750/uptimeez.git
+git clone https://github.com/coeurduweb/uptimeez.git
 cd uptimeez
 chmod -R 775 data
 ```
