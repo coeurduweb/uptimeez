@@ -2327,8 +2327,12 @@ check('chaque cause porte titre, explication ET correctif', implode(',', $incomp
 // Les textes, confrontés aux mesures. On lit les fichiers plutôt que de recopier
 // les nombres ici : recopier, c'est créer une troisième source à faire dériver.
 $textes = [];
-foreach (['/../README.md', '/../docs/en/coverage.md', '/../docs/fr/etendue.md',
-          '/../docs/en/detection.md', '/../docs/fr/detection.md'] as $f) {
+// README.fr.md manquait à cette liste, et c'est par là que « 45 signatures » a survécu
+// au balayage du 2026-07-29 : le contrôle passait au vert en ne regardant pas le fichier
+// où le chiffre s'écrivait « ≈45 ». Un garde-fou qui ne lit pas tout ne garde rien.
+foreach (['/../README.md', '/../README.fr.md', '/../docs/en/coverage.md',
+          '/../docs/fr/etendue.md', '/../docs/en/detection.md',
+          '/../docs/fr/detection.md', '/../docs/fr/sondes.md'] as $f) {
     $chemin = __DIR__ . $f;
     if (is_file($chemin)) $textes[$f] = (string)file_get_contents($chemin);
 }

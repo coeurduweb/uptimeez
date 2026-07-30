@@ -56,7 +56,7 @@ sur chaque page qu'il vérifie, sans vous demander d'en configurer une seule.
 |---|---|---|
 | **Est-ce que ça répond ?** | Code HTTP comparé à une plage attendue, temps de DNS, de connexion, de TLS et de premier octet, chaîne de redirections, relances avant d'alerter | Une panne, un délai dépassé, une négociation de certificat qui échoue, une boucle de redirection, un site passé en `www` |
 | **Est-ce que la page est juste ?** | Chaque feuille de style, script et police : disponibilité, type MIME, `nosniff`, contenu mixte, CSP, SRI, poids comparé à une référence apprise, couverture des classes, media queries, blocs en attente d'animation | Un déploiement qui met le CSS en 404, la moitié de la feuille disparue, la mise en page responsive perdue, une page *invisible* |
-| **Est-ce que les données répondent ?** | Environ 45 signatures de panne de base, une sonde CMS qui traverse réellement la base, et une chaîne de preuve déduite du contenu du site | WordPress qui sert une page d'erreur avec un `200` impeccable, une table tronquée, un disque plein |
+| **Est-ce que les données répondent ?** | 41 signatures de panne de base, une sonde CMS qui traverse réellement la base, et une chaîne de preuve déduite du contenu du site | WordPress qui sert une page d'erreur avec un `200` impeccable, une table tronquée, un disque plein |
 | **Est-ce rapide pour le visiteur ?** | Temps de réponse du serveur en millisecondes, fichiers qui bloquent l'affichage avec leur poids exact, image du haut de page et son poids, images sans dimensions, polices sans `font-display`, scripts tiers. Et les vrais LCP, INP et CLS avec une clé gratuite du Chrome UX Report | Une image de bandeau en chargement différé, 400 Ko de CSS bloquant, une page qui saute pendant le chargement |
 | **Est-ce que ça va casser bientôt ?** | Expiration du certificat (inspection TLS en deux passes), expiration du domaine par RDAP, failles publiées sur les versions lues dans le HTML, et un battement dead-man pour les tâches qui doivent tourner | Un certificat expiré un samedi, un domaine que personne n'a renouvelé, une extension avec un avis de trois jours, une sauvegarde arrêtée en silence |
 
@@ -212,7 +212,7 @@ et quand le design change exprès, un bouton réapprend la référence.
 ### La base de données tombée derrière un 200 impeccable
 
 WordPress, Laravel, Doctrine, PDO et Symfony ont chacun leur façon d'annoncer une panne de base, et tous
-renvoient volontiers `200 OK`. UptimeEZ embarque **≈45 signatures d'erreur**, croise avec une sonde CMS qui
+renvoient volontiers `200 OK`. UptimeEZ embarque **41 signatures d'erreur**, croise avec une sonde CMS qui
 traverse réellement la base (l'API REST de WordPress, pas la page d'accueil en cache), et surveille la **chaîne
 de preuve** : un texte qui ne peut venir que de la base, comme le copyright du pied de page.
 
@@ -550,12 +550,12 @@ uptimeez/
 ├── src/
 │   ├── Runner.php            le collecteur : curl_multi, relances, incidents, alertes
 │   ├── Check/Css.php         les neuf signaux de mise en page + reconstitution console
-│   ├── Check/Database.php    ~45 signatures de panne de base
+│   ├── Check/Database.php    41 signatures de panne de base
 │   ├── Check/Ssl.php         inspection du certificat en deux passes
 │   ├── Detect/Cms.php        empreinte de la technologie
 │   ├── Detect/Discovery.php  choix des pages + déduction de la chaîne de preuve
 │   ├── Triage.php            transforme des états en liste de tâches
-│   ├── Diagnose.php          23 causes → ce que ça veut dire, quoi faire
+│   ├── Diagnose.php          25 causes → ce que ça veut dire, quoi faire
 │   ├── Tune.php              seuils auto-ajustés + journal des décisions
 │   ├── Heartbeat.php         le dead-man switch
 │   ├── Fail.php              la panne d'UptimeEZ lui-même : cause, remède, et rien de public
