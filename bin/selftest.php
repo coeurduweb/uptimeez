@@ -7,6 +7,15 @@
  */
 declare(strict_types=1);
 
+// GARDE D'EXÉCUTION, POSÉE AVANT LE CHARGEMENT DU MOTEUR.
+//
+// Ce dépôt s'installe chez des tiers, souvent derrière Apache, et le dossier bin/
+// est sous la racine web. Sans cette ligne, ce fichier était exécutable par une
+// simple requête HTTP : il lit des sources, parle de chemins et fait tourner des
+// mesures, ce qu'un visiteur n'a pas à provoquer. Elle précède le require pour
+// qu'une requête HTTP ne charge même pas la configuration.
+if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
+
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 // LA SUITE FIXE SA LANGUE, ELLE NE L'HÉRITE PAS.
@@ -1316,18 +1325,71 @@ foreach (['', 'v1', 'v1.a', 'v2.a.b', 'v1..', '....', 'v1.!!!.???'] as $mauvais)
 // La propriété à vérifier n'est pas « la liste se vide » : les jetons encore
 // valides doivent y rester, sinon ils repasseraient. C'est « aucun jeton périmé
 // n'y survit », ce qui borne la liste par construction.
+$expB = fn(): array => array_map('intval', array_column(
+    Uptimeez\Db::all("SELECT v FROM settings WHERE k LIKE 'bridge_nonce:%'"), 'v'));
 for ($i = 0; $i < 20; $i++) Uptimeez\Auth::attemptToken((string)Uptimeez\Auth::makeToken(5));
-$usedB = jdec(Uptimeez\Db::setting('bridge_used'));
-check('les jetons employés sont mémorisés', count($usedB) >= 20, true);
-$courts = count(array_filter($usedB, fn($exp): bool => (int)$exp <= time() + 6));
+check('les jetons employés sont mémorisés', Uptimeez\Auth::bridgeNonceCount() >= 20, true);
+$courts = count(array_filter($expB(), fn(int $exp): bool => $exp <= time() + 6));
 check('dont les vingt à courte durée de vie', $courts >= 20, true);
 
 sleep(7);
 Uptimeez\Auth::attemptToken((string)Uptimeez\Auth::makeToken(60));
-$apres = jdec(Uptimeez\Db::setting('bridge_used'));
 check('aucun jeton périmé ne survit à la purge',
-    count(array_filter($apres, fn($exp): bool => (int)$exp <= time())), 0);
-check('et les vingt jetons courts ont bien disparu', count($apres) < 20, true);
+    count(array_filter($expB(), fn(int $exp): bool => $exp <= time())), 0);
+check('et les vingt jetons courts ont bien disparu', Uptimeez\Auth::bridgeNonceCount() < 20, true);
+
+// --- Le rejeu EN PARALLÈLE, qui est le seul rejeu qu'on tente vraiment ----
+//
+// Le registre était un tableau JSON lu, modifié, puis réécrit. Entre la lecture
+// et l'écriture, une seconde requête portant le même jeton lisait un registre où
+// il était encore absent : les deux passaient. Un attaquant qui rejoue un jeton
+// capturé le fait précisément comme ça, en parallèle et le plus vite possible ;
+// le contrôle séquentiel ci-dessus ne voyait donc pas le seul cas qui compte.
+//
+// Huit processus réels, un même jeton, un rendez-vous à une date commune. Le
+// contrat est arithmétique et ne laisse pas de place à l'interprétation : la
+// somme des succès vaut UN.
+$cfgP = sys_get_temp_dir() . '/self-pont-' . bin2hex(random_bytes(4)) . '.php';
+file_put_contents($cfgP, "<?php return " . var_export([
+    'db'   => ['driver' => 'sqlite', 'sqlite' => $tmpB],
+    'auth' => ['password_hash' => password_hash('x', PASSWORD_DEFAULT),
+               'session_name' => 'uptimeezpont', 'bridge_secret' => $secretB],
+], true) . ";\n");
+// L'ouvrier vit dans /tmp : le chemin du moteur y est écrit en absolu, il ne
+// peut pas se déduire de sa propre position.
+$ouvrier = sys_get_temp_dir() . '/self-pont-' . bin2hex(random_bytes(4)) . '-ouvrier.php';
+file_put_contents($ouvrier,
+    "<?php\n"
+  . 'require ' . var_export(dirname(__DIR__) . '/src/bootstrap.php', true) . ";\n"
+  . "[\$jeton, \$depart] = [\$argv[1], (float)\$argv[2]];\n"
+  // Rendez-vous en attente active : à cette échelle, usleep() rendrait la main
+  // avec une imprécision du même ordre que ce qu'on cherche à provoquer.
+  . "while (microtime(true) < \$depart) { }\n"
+  . "echo Uptimeez\\Auth::attemptToken(\$jeton) ? '1' : '0';\n");
+
+$jetonP  = (string)Uptimeez\Auth::makeToken(60);
+$depart  = microtime(true) + 0.6;
+$procs   = [];
+$tubes   = [];
+for ($i = 0; $i < 8; $i++) {
+    $procs[$i] = proc_open([PHP_BINARY, $ouvrier, $jetonP, (string)$depart],
+        [1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']], $tubes[$i], sys_get_temp_dir(),
+        ['UPTIMEEZ_CONFIG' => $cfgP, 'PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+}
+$succes = 0;
+$rendus = 0;
+foreach ($procs as $i => $h) {
+    if (!is_resource($h)) continue;
+    $out = trim((string)stream_get_contents($tubes[$i][1]));
+    fclose($tubes[$i][1]);
+    proc_close($h);
+    if ($out === '1' || $out === '0') $rendus++;
+    $succes += (int)($out === '1');
+}
+check('les huit processus concurrents ont bien répondu', $rendus, 8);
+check('un jeton rejoué en parallèle ne passe qu\'UNE fois', $succes, 1);
+check('et il ne repasse pas ensuite', Uptimeez\Auth::attemptToken($jetonP), false);
+foreach ([$cfgP, $ouvrier, dirname($ouvrier) . '/uptimeez-ouvrier-racine.php'] as $f) @unlink($f);
 
 Uptimeez\Config::set('auth.bridge_secret', '');
 Uptimeez\Db::disconnect();

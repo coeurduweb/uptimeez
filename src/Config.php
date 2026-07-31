@@ -18,8 +18,31 @@ final class Config
         $sample = UPTIMEEZ_ROOT . '/config.sample.php';
         // UPTIMEEZ_CONFIG permet de faire tourner une instance isolée (tests E2E,
         // seconde installation) sans toucher au config.php de production.
-        $env    = getenv('UPTIMEEZ_CONFIG');
-        $file   = ($env && is_file($env)) ? $env : UPTIMEEZ_ROOT . '/config.php';
+        //
+        // QUAND ELLE EST POSÉE, ELLE FAIT LOI. Il n'y a PAS de repli sur le
+        // config.php de la racine, et c'est le seul comportement défendable :
+        // plusieurs installations partagent souvent un même dossier de code, et un
+        // repli silencieux fait servir à une instance la configuration d'une autre,
+        // donc sa base, ses sondes et ses secrets. Le défaut est fonctionnel et
+        // muet : personne ne vient s'en plaindre, on le découvre en lisant les
+        // données d'un client dans l'écran d'un autre.
+        //
+        // Le repli existait pour un cas qui, lui, ne marchait pas non plus :
+        // installer une instance dont la configuration n'existe pas encore. Le
+        // repli faisait alors écrire l'installateur dans le config.php partagé, pas
+        // dans le fichier demandé. Créer le fichier d'abord, même vide, est donc à
+        // la fois la marche à suivre et ce que le message d'erreur indique.
+        $env = getenv('UPTIMEEZ_CONFIG');
+        $env = is_string($env) ? trim($env) : '';
+        if ($env !== '' && !is_file($env)) {
+            throw new \RuntimeException(
+                'UPTIMEEZ_CONFIG désigne « ' . $env .' », qui n\'existe pas. '
+                . 'UptimeEZ ne se replie PAS sur ' . UPTIMEEZ_ROOT . '/config.php : ce repli '
+                . 'ferait servir la configuration, la base et les secrets d\'une autre '
+                . 'installation. Pour une nouvelle instance, créez le fichier avec '
+                . '« <?php return []; » puis ouvrez install.php ; sinon corrigez la variable.');
+        }
+        $file = $env !== '' ? $env : UPTIMEEZ_ROOT . '/config.php';
         self::$file = $file;
 
         self::$data = is_file($sample) ? (require $sample) : [];

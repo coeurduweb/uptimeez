@@ -27,6 +27,12 @@ Add the server to your MCP client configuration:
 `UPTIMEEZ_CONFIG` is only needed if your `config.php` is not in the project root. To allow the agent to act and
 not just read, add `--write` to `args`.
 
+**If it is set, it is the only file considered.** A path that does not exist stops UptimeEZ with an error naming
+the variable, instead of quietly falling back to the `config.php` in the project root. That fallback used to
+exist, and on a machine hosting several instances from one copy of the code it served one instance the database
+and secrets of another: it worked, and it said nothing. To install a new instance at a custom path, create the
+file first with `<?php return [];`, then open `install.php`.
+
 Check it works before wiring it up:
 
 ```bash

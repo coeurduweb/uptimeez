@@ -43,6 +43,16 @@ final class Demo
         // Ajouter une sonde, c'est faire chercher une URL choisie par le
         // visiteur : c'est LE vecteur d'abus, celui qui compte vraiment.
         'preview', 'import', 'save_monitor',
+        // « setup » explore le site d'une sonde et CRÉE les sondes des pages
+        // trouvées. Il agrandit donc le parc et le fait chercher des adresses que
+        // le visiteur n'a pas tapées mais qu'une page peut lui souffler : c'est un
+        // ajout de sonde, avec un nom qui ne le dit pas.
+        'setup',
+        // L'export CSV n'est pas un formulaire, c'est un GET. Il figure quand même
+        // dans cette liste, unique, plutôt que dans une seconde règle en face de
+        // l'appelant : le point d'entrée qui le sert interroge refuses() comme les
+        // autres. Une démo n'a pas à laisser repartir un fichier de données.
+        'export_csv',
         // Les réglages portent le mot de passe, la clé de cron, le jeton public
         // et les canaux d'alerte. Le premier visiteur fermerait la démo derrière
         // lui, ou la ferait émettre où il veut.
@@ -61,7 +71,7 @@ final class Demo
     ];
 
     /** Opérations de masse refusées, même quand « bulk » est autorisé. */
-    private const REFUSED_BULK = ['delete'];
+    private const REFUSED_BULK = ['delete', 'setup'];
 
     private static ?bool $on = null;
 
@@ -118,6 +128,26 @@ final class Demo
         if (in_array($action, self::REFUSED, true)) return true;
         return $action === 'bulk' && $bulkOp !== null
                && in_array($bulkOp, self::REFUSED_BULK, true);
+    }
+
+    /**
+     * Rend un secret présentable à un visiteur de démonstration.
+     *
+     * POURQUOI C'EST INDISPENSABLE, ET PAS COSMÉTIQUE. L'écran des réglages est
+     * navigable en démonstration, et c'est voulu : c'est là que le produit se
+     * montre. Mais il affichait en clair, dans des champs texte, la clé de la
+     * tâche planifiée (qui déclenche les vérifications), le jeton de la page
+     * publique (qui ouvre l'état de tout le parc) et les adresses des webhooks
+     * d'alerte. Le mot de passe de la démo est écrit dans la documentation
+     * publique : tout ce qu'elle affiche est donc public. Refuser l'ENREGISTREMENT
+     * des réglages ne suffisait pas, puisque le mal était déjà fait à la lecture.
+     *
+     * Le masque ne remplace jamais une valeur vide : un champ vide doit rester
+     * vide, sinon la démonstration donne à croire qu'un canal est configuré.
+     */
+    public static function hide(string $secret, string $masque = '••••••••'): string
+    {
+        return self::on() && $secret !== '' ? $masque : $secret;
     }
 
     /** Le message rendu à l'écran quand une action est refusée. */

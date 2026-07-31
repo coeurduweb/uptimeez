@@ -171,9 +171,16 @@ What is refused, which is where the value is:
 | Expired token, or dated in the future | 30 s of tolerance to absorb clock skew, no more |
 | Declared lifetime over 120 s | Otherwise a lenient, or compromised, issuer could mint a token valid for a year |
 
-Verified by 26 checks in `bin/selftest.php` and 7 in `bin/e2e.php`, including replay over HTTP.
+Verified by 28 checks in `bin/selftest.php` and 7 in `bin/e2e.php`, including replay over HTTP.
 That last one found a defect the unit checks could not see: single use requires storage, and the
 login screen renders before the schema is migrated. The bridge did not work at all in reality.
+
+**Single use is one write, not three.** The used-token registry is one row per token, and the
+primary key of that row is what arbitrates: a token is new if the insert inserted, already used if
+it did not. It used to be a JSON list read, modified and written back, so two requests presenting
+the same token at the same instant both read a registry where it was missing, and both got in. The
+only replay worth testing is the parallel one: eight real processes, one token, exactly one
+success.
 
 ### Public demo mode
 
@@ -188,8 +195,15 @@ What is locked, and why:
 | Private ranges blocked outright | UptimeEZ fetches the URLs it is given: that is the product. On a public demo, without this, anyone can have it scan `127.0.0.1` and the host's local network |
 | No sender emits | The lock sits in **every** sender, not in the dispatcher: re-enabling a channel from the settings does not reopen it. Otherwise a webhook set by a visitor becomes an exfiltration channel |
 | Adding a monitor refused | That is the main abuse vector, the one that actually matters |
+| Automatic site setup refused | It crawls a monitored site and **creates** monitors for the pages it finds: an addition, under a name that does not say so |
 | Settings, client access, reports refused | The first visitor would lock the demo behind them, or make it send wherever they like |
 | Deletion refused | Reversible at the hourly reset, but the demo would sit empty until the next hour |
+| CSV export refused | It is a `GET`, so it never went through the form guard, and a visitor left with the incident file |
+| Secrets on the settings screen masked | The screen is browsable on purpose, and it displayed the cron key, the public-page token and the alert webhook addresses in plain text. A demo password is written in its own documentation: whatever that screen shows is public. Refusing to *save* settings was never enough, the damage was done on *read* |
+
+The guard is asked in **every** entry point that acts: `index.php` for forms, the CSV export path
+for its `GET`, and `api.php`, which runs its own mutating actions and had no demo guard at all. A
+guard you can walk around by calling the file next door is not a guard.
 
 **What stays allowed, deliberately**: everything you can look at, checking a monitor now,
 pausing, acknowledging an incident, relearning a baseline, switching language, switching detail

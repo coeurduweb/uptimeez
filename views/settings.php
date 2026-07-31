@@ -8,6 +8,7 @@
 use Uptimeez\Auth;
 use Uptimeez\Config;
 use Uptimeez\Db;
+use Uptimeez\Demo;
 use Uptimeez\Ui;
 
 $csrf      = Auth::csrf();
@@ -16,8 +17,12 @@ $phpBin    = PHP_BINDIR . '/php';
 $lastRun   = Db::setting('last_run_at');
 $lastStats = jdec(Db::setting('last_run_stats'));
 $baseUrl   = (string)Config::get('app.base_url', '');
-$cronKey   = (string)Config::get('app.cron_key', '');
-$token     = (string)Config::get('app.public_token', '');
+// Les valeurs sensibles passent par Demo::hide() : la démonstration est
+// publique et son mot de passe est écrit dans la documentation, donc tout ce que
+// cet écran affiche est public. Hors démonstration, hide() rend la valeur telle
+// quelle et rien ne change pour l'exploitant.
+$cronKey   = Demo::hide((string)Config::get('app.cron_key', ''));
+$token     = Demo::hide((string)Config::get('app.public_token', ''));
 $cronOk    = $lastRun && strtotime((string)$lastRun) > time() - 900;
 $channels  = ['discord' => 'Discord', 'slack' => 'Slack', 'mail' => 'E-mail', 'webhook' => 'Webhook'];
 $activeCh  = [];
@@ -87,7 +92,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
           <span class="sw-text"><span class="sw-title"><?= te('Envoyer les alertes sur Discord') ?></span></span></label>
         <div class="field">
           <label for="dw"><?= te('URL du webhook') ?></label>
-          <input id="dw" type="text" name="discord_webhook" value="<?= e((string)Config::get('notify.discord.webhook', '')) ?>"
+          <input id="dw" type="text" name="discord_webhook" value="<?= e(Demo::hide((string)Config::get('notify.discord.webhook', ''))) ?>"
                  placeholder="<?= te('https://discord.com/api/webhooks/…') ?>" spellcheck="false">
           <span class="hint"><?= te('Dans Discord : salon → Paramètres → Intégrations → Webhooks.') ?></span>
         </div>
@@ -98,7 +103,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
           <span class="sw-text"><span class="sw-title"><?= te('Envoyer les alertes sur Slack') ?></span></span></label>
         <div class="field">
           <label for="sw"><?= te('URL du webhook entrant') ?></label>
-          <input id="sw" type="text" name="slack_webhook" value="<?= e((string)Config::get('notify.slack.webhook', '')) ?>"
+          <input id="sw" type="text" name="slack_webhook" value="<?= e(Demo::hide((string)Config::get('notify.slack.webhook', ''))) ?>"
                  placeholder="<?= te('https://hooks.slack.com/services/…') ?>" spellcheck="false">
         </div>
       </fieldset>
@@ -111,13 +116,13 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
       <div class="field-row">
         <div class="field" style="flex:2 1 260px">
           <label for="mto"><?= te('Destinataires') ?></label>
-          <input id="mto" type="text" name="mail_to" value="<?= e((string)Config::get('notify.mail.to', '')) ?>"
+          <input id="mto" type="text" name="mail_to" value="<?= e(Demo::hide((string)Config::get('notify.mail.to', ''))) ?>"
                  placeholder="<?= te('vous@agence.fr, astreinte@agence.fr') ?>" inputmode="email">
           <span class="hint"><?= te('Séparés par des virgules.') ?></span>
         </div>
         <div class="field" style="flex:1 1 200px">
           <label for="mfrom"><?= te('Expéditeur') ?></label>
-          <input id="mfrom" type="text" name="mail_from" value="<?= e((string)Config::get('notify.mail.from', '')) ?>"
+          <input id="mfrom" type="text" name="mail_from" value="<?= e(Demo::hide((string)Config::get('notify.mail.from', ''))) ?>"
                  placeholder="<?= te('uptimeez@votredomaine.fr') ?>" inputmode="email">
           <span class="hint"><?= te('Une adresse de votre domaine hébergé passe mieux les filtres.') ?></span>
         </div>
@@ -136,7 +141,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
       <div class="field-row" id="smtp-block" <?= Config::get('notify.mail.transport') === 'smtp' ? '' : 'hidden' ?>>
         <div class="field" style="flex:2 1 220px">
           <label for="sh"><?= te('Serveur SMTP') ?></label>
-          <input id="sh" type="text" name="smtp_host" value="<?= e((string)Config::get('notify.mail.smtp.host', '')) ?>"
+          <input id="sh" type="text" name="smtp_host" value="<?= e(Demo::hide((string)Config::get('notify.mail.smtp.host', ''))) ?>"
                  placeholder="<?= te('smtp.votredomaine.fr') ?>" spellcheck="false">
         </div>
         <div class="field" style="flex:0 1 110px">
@@ -153,7 +158,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
         </div>
         <div class="field" style="flex:1 1 180px">
           <label for="su"><?= te('Identifiant') ?></label>
-          <input id="su" type="text" name="smtp_user" value="<?= e((string)Config::get('notify.mail.smtp.user', '')) ?>" autocomplete="off">
+          <input id="su" type="text" name="smtp_user" value="<?= e(Demo::hide((string)Config::get('notify.mail.smtp.user', ''))) ?>" autocomplete="off">
         </div>
         <div class="field" style="flex:1 1 180px">
           <label for="spw"><?= te('Mot de passe') ?></label>
@@ -170,7 +175,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
           <span class="hint"><?= te('Pour brancher n8n, Make, Teams, un SMS…') ?></span></span></label>
       <div class="field">
         <label for="wu"><?= te('URL de destination') ?></label>
-        <input id="wu" type="text" name="webhook_url" value="<?= e((string)Config::get('notify.webhook.url', '')) ?>"
+        <input id="wu" type="text" name="webhook_url" value="<?= e(Demo::hide((string)Config::get('notify.webhook.url', ''))) ?>"
                placeholder="<?= te('https://n8n.exemple.fr/webhook/uptimeez') ?>" spellcheck="false">
       </div>
     </fieldset>

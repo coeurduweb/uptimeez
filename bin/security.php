@@ -108,6 +108,73 @@ ok('A05', 'en-tête noindex sur toutes les pages',
 ok('A05', 'réinstallation refusée quand déjà installé',
    str_contains((string)file_get_contents($ROOT . '/install.php'), '403'));
 
+// --- bin/ n'est pas une surface web ---------------------------------------
+// Ce dépôt s'installe chez des tiers, et bin/ se retrouve sous la racine web.
+// Les suites lisent des sources, nomment des chemins et lancent des mesures :
+// aucune n'a de raison d'être joignable par HTTP. Deux barrières indépendantes,
+// parce que la première dépend du serveur et la seconde de PHP.
+$sansGarde = [];
+foreach (glob($ROOT . '/bin/*.php') ?: [] as $f) {
+    if (!preg_match('~PHP_SAPI\s*!==\s*[\'"]cli[\'"]~', (string)file_get_contents($f))) {
+        $sansGarde[] = basename($f);
+    }
+}
+ok('A05', 'chaque script de bin/ refuse d\'être exécuté par HTTP',
+   $sansGarde === [], implode(' ', $sansGarde));
+$htRoot = (string)@file_get_contents($ROOT . '/.htaccess');
+ok('A05', 'et le .htaccess refuse bin/ comme src, data et views',
+   (bool)preg_match('~RedirectMatch\s+404[^\n]*\bbin\b~', $htRoot));
+
+// --- Une instance ne sert pas la configuration d'une autre -----------------
+// UPTIMEEZ_CONFIG existe pour faire cohabiter plusieurs installations sur un
+// même code. Le repli silencieux sur le config.php de la racine, quand la
+// variable désignait un fichier absent, faisait servir à une instance la base et
+// les secrets d'une autre : fonctionnel, muet, et découvert en lisant les données
+// d'un client dans l'écran d'un autre.
+$cfgIso = sys_get_temp_dir() . '/uptimeez-iso-' . bin2hex(random_bytes(4)) . '.php';
+file_put_contents($cfgIso, "<?php return ['app' => ['name' => 'INSTANCE ISOLEE']];\n");
+$probeCfg = function (string $cfg) use ($ROOT): string {
+    $f = sys_get_temp_dir() . '/uptimeez-iso-probe-' . bin2hex(random_bytes(4)) . '.php';
+    // « CHARGÉ: » n'est pas décoratif : c'est le témoin. S'il apparaît alors que la
+    // variable désigne un fichier absent, c'est qu'un repli a eu lieu.
+    file_put_contents($f, "<?php\nrequire " . var_export($ROOT . '/src/bootstrap.php', true) . ";\n"
+        . "echo 'CHARGE:' . Uptimeez\\Config::file() . '|' . Uptimeez\\Config::get('app.name');\n");
+    $out = (string)shell_exec(($cfg === '' ? '' : 'UPTIMEEZ_CONFIG=' . escapeshellarg($cfg) . ' ')
+        . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($f) . ' 2>&1');
+    @unlink($f);
+    return trim($out);
+};
+$isoPosee  = $probeCfg($cfgIso);
+$isoAbsent = $probeCfg($cfgIso . '-absent');
+$isoSans   = $probeCfg('');
+ok('A05', 'UPTIMEEZ_CONFIG posée : ce fichier, et lui seul',
+   str_contains($isoPosee, 'CHARGE:' . $cfgIso . '|INSTANCE ISOLEE'), $isoPosee);
+ok('A05', 'sans la variable, le config.php de la racine reste le défaut',
+   str_contains($isoSans, 'CHARGE:' . $ROOT . '/config.php'), $isoSans);
+// Le détail est résumé : la réponse est une page de diagnostic entière, et la
+// recracher noierait la ligne de résultat.
+ok('A05', 'UPTIMEEZ_CONFIG introuvable : aucun repli sur une autre installation',
+   !str_contains($isoAbsent, 'CHARGE:') && str_contains($isoAbsent, 'UPTIMEEZ_CONFIG'),
+   (str_contains($isoAbsent, 'CHARGE:') ? 'REPLI OBSERVÉ' : 'aucun repli')
+   . ', ' . (str_contains($isoAbsent, 'UPTIMEEZ_CONFIG') ? 'variable nommée' : 'variable NON nommée'));
+@unlink($cfgIso);
+
+// --- Usage unique des jetons de pont : une seule écriture ------------------
+// Le registre anti-rejeu était lu, modifié, puis réécrit, et tronqué à 500
+// entrées. Deux requêtes simultanées portant le même jeton lisaient toutes les
+// deux un registre où il était absent : l'usage unique, seule raison d'être du
+// registre, tombait précisément dans le cas qu'un attaquant provoque. La preuve
+// du comportement est dans bin/selftest.php, avec huit processus réels ; ici on
+// vérifie la forme, qui est ce qui empêche la régression : une écriture, arbitrée
+// par la clé primaire, et plus aucune troncature aveugle.
+$authSrc = (string)file_get_contents($ROOT . '/src/Auth.php');
+ok('A07', 'le registre anti-rejeu s\'écrit en une opération arbitrée par la base',
+   (bool)preg_match('~INSERT (OR )?IGNORE INTO settings~', $authSrc)
+   && str_contains($authSrc, 'rowCount() === 1'));
+ok('A07', 'et plus aucun registre lu-modifié-réécrit, ni tronqué',
+   !preg_match("~setSetting\(\s*'bridge_used'~", $authSrc)
+   && !preg_match('~array_slice\(\$used~', $authSrc));
+
 title('A03 Injection : revue statique');
 // Toute requête doit passer par des marqueurs ; on cherche l'interpolation directe.
 // Le risque n'est pas qu'une entrée HTTP côtoie le mot « from » dans un nom de
@@ -252,6 +319,47 @@ $refus = $demoProbe(
 ok('A04', 'les actions qui exposent ou vident la démo sont refusées', $refus === 'toutes refusées', $refus);
 ok('A04', 'une suppression en masse est refusée',
    $demoProbe('echo Uptimeez\\Demo::refuses("bulk", "delete") ? "refusée" : "PASSE";') === 'refusée');
+
+// L'export CSV n'est pas un formulaire : c'est un GET, il n'entre donc pas par
+// handle_post() où vivait la seule garde. Un visiteur repartait avec le fichier
+// des incidents.
+ok('A04', 'l\'export CSV est refusé, et le point d\'entrée le demande',
+   $demoProbe('echo Uptimeez\\Demo::refuses("export_csv") ? "refusé" : "PASSE";') === 'refusé'
+   && (bool)preg_match('~Demo::refuses\(\s*\'export_csv\'~', (string)file_get_contents($ROOT . '/index.php')));
+
+// api.php exécute ses propres actions mutantes, sans passer par handle_post() :
+// « setup » y explorait un site et créait des sondes, en démonstration comprise,
+// alors que l'ajout de sonde était refusé trois écrans plus loin.
+$apiSrc = (string)file_get_contents($ROOT . '/api.php');
+ok('A04', 'api.php interroge la garde de démonstration avant d\'agir',
+   (bool)preg_match('~Demo::refuses\(\$action\)~', $apiSrc)
+   && strpos($apiSrc, 'Demo::refuses(') < strpos($apiSrc, "case 'check'"));
+ok('A04', 'et la préparation d\'un site, qui crée des sondes, y est refusée',
+   $demoProbe('echo Uptimeez\\Demo::refuses("setup") && Uptimeez\\Demo::refuses("bulk", "setup")'
+            . ' ? "refusée" : "PASSE";') === 'refusée');
+
+// L'écran des réglages est navigable en démonstration, et c'est voulu. Il
+// affichait en clair la clé de la tâche planifiée, le jeton de la page publique
+// et les adresses des webhooks. Le mot de passe de la démo étant écrit dans la
+// documentation, tout ce que cet écran montre est public.
+ok('A04', 'un secret des réglages est masqué en démonstration',
+   $demoProbe('echo Uptimeez\\Demo::hide("cle-en-clair-1234");') !== 'cle-en-clair-1234'
+   && $demoProbe('echo Uptimeez\\Demo::hide("cle-en-clair-1234");', false) === 'cle-en-clair-1234');
+ok('A04', 'un champ vide reste vide, la démo ne prétend rien configurer',
+   $demoProbe('echo "[" . Uptimeez\\Demo::hide("") . "]";') === '[]');
+$setSrc = (string)file_get_contents($ROOT . '/views/settings.php');
+$nus = [];
+foreach (['app.cron_key', 'app.public_token', 'notify.discord.webhook', 'notify.slack.webhook',
+          'notify.webhook.url', 'notify.mail.to', 'notify.mail.smtp.host',
+          'notify.mail.smtp.user'] as $cle) {
+    // La forme cherchée est celle qui rend la valeur dans un attribut sans passer
+    // par le masque, quel que soit l'ordre des appels autour.
+    if (preg_match('~(?<!hide\()\(string\)Config::get\(\'' . preg_quote($cle, '~') . '\'~', $setSrc)
+        && !preg_match('~hide\(\(string\)Config::get\(\'' . preg_quote($cle, '~') . '\'~', $setSrc)) {
+        $nus[] = $cle;
+    }
+}
+ok('A04', 'aucun secret des réglages n\'est rendu sans ce masque', $nus === [], implode(' ', $nus));
 
 // Une démo qui ne laisse rien faire ne démontre rien : ces actions restent
 // ouvertes, et c'est un choix.

@@ -27,6 +27,12 @@ Ajoutez le serveur à la configuration de votre client MCP :
 `UPTIMEEZ_CONFIG` n'est nécessaire que si votre `config.php` n'est pas à la racine du projet. Pour autoriser
 l'agent à agir et pas seulement à lire, ajoutez `--write` dans `args`.
 
+**Quand elle est posée, elle fait loi.** Un chemin qui n'existe pas arrête UptimeEZ sur une erreur qui nomme la
+variable, au lieu de se replier en silence sur le `config.php` de la racine. Ce repli existait, et sur une
+machine qui héberge plusieurs instances depuis une seule copie du code il faisait servir à une instance la base
+et les secrets d'une autre : ça fonctionnait, et ça ne disait rien. Pour installer une instance à un chemin
+choisi, créez d'abord le fichier avec `<?php return [];`, puis ouvrez `install.php`.
+
 Vérifiez que ça répond avant de le brancher :
 
 ```bash

@@ -137,12 +137,38 @@ final class Auth
         return true;
     }
 
+    /** Préfixe des lignes de registre. Un jeton employé = une ligne, pas une liste. */
+    private const NONCE_KEY = 'bridge_nonce:';
+
     /**
      * Marque un jeton comme employé. Rend false s'il l'était déjà.
      *
-     * Les jetons vivent deux minutes au plus : la table des employés est donc
-     * naturellement minuscule, et on la purge à chaque passage. Pas de table
-     * dédiée pour ça, un réglage suffit.
+     * POURQUOI UNE LIGNE PAR JETON, ET PAS UNE LISTE JSON.
+     *
+     * Le registre était un seul réglage contenant un tableau JSON, lu, modifié,
+     * puis réécrit. Trois opérations distinctes, donc une fenêtre entre la lecture
+     * et l'écriture : deux requêtes qui présentent le MÊME jeton en même temps
+     * lisent toutes les deux un registre où il est absent, et passent toutes les
+     * deux. L'usage unique, seule raison d'être de ce registre, tombait
+     * exactement dans le cas qu'un attaquant provoque volontairement : rejouer un
+     * jeton capturé, en parallèle, aussi vite que possible. La troncature à 500
+     * entrées aggravait le tout : la dernière écriture écrasait ce que l'autre
+     * requête venait d'inscrire.
+     *
+     * La clé de la table des réglages est une clé PRIMAIRE. Un INSERT sur une clé
+     * déjà présente ne peut donc pas réussir, et c'est la base de données qui
+     * l'arbitre, en une seule opération : ligne insérée = jeton neuf, aucune ligne
+     * insérée = jeton déjà employé. Il n'y a plus de fenêtre parce qu'il n'y a
+     * plus qu'une opération. Cela vaut pour SQLite comme pour MySQL, avec la même
+     * garantie et sans transaction explicite.
+     *
+     * La liste ne peut plus gonfler non plus : chaque ligne porte sa date
+     * d'expiration et la purge les retire, alors qu'une troncature aveugle
+     * pouvait, elle, retirer un jeton encore valide et le laisser repasser.
+     *
+     * Le nonce est stocké HACHÉ : la longueur de la clé est bornée quoi que
+     * l'émetteur envoie (la colonne est un VARCHAR(120) sous MySQL), et le
+     * registre ne conserve pas la valeur d'origine.
      */
     private static function consumeNonce(string $nonce, int $exp): bool
     {
@@ -156,20 +182,43 @@ final class Auth
             // schéma ici. La migration est idempotente et elle tourne déjà à
             // chaque requête authentifiée.
             Db::migrate();
-            $used = jdec(Db::setting('bridge_used'));
-            $now  = time();
-            foreach ($used as $k => $until) {
-                if ((int)$until <= $now) unset($used[$k]);
-            }
-            if (isset($used[$nonce])) return false;
-            $used[$nonce] = $exp;
-            // Garde-fou : si une horloge part en arrière, la liste ne gonfle pas.
-            if (count($used) > 500) $used = array_slice($used, -500, null, true);
-            Db::setSetting('bridge_used', jenc($used));
-            return true;
+
+            // Purge des jetons périmés, et abandon de l'ancien registre JSON s'il
+            // traîne encore : après mise à jour, il n'est plus lu par personne.
+            //
+            // Deux détails qui ont chacun coûté un test au vert pour de mauvaises
+            // raisons. « v + 0 » et non un CAST : les deux moteurs ne nomment pas
+            // le même type entier, l'arithmétique, si. Et « ? + 0 » sur le
+            // paramètre : la couche PDO les transmet tous en TEXTE, or SQLite
+            // classe tout entier avant toute chaîne, si bien que « v + 0 <= ? »
+            // était VRAI pour n'importe quelle valeur et purgeait le registre
+            // entier à chaque passage, c'est-à-dire supprimait l'usage unique en
+            // ayant l'air de le ranger.
+            Db::q('DELETE FROM settings WHERE (k LIKE ? AND v + 0 <= ? + 0) OR k = ?',
+                  [self::NONCE_KEY . '%', time(), 'bridge_used']);
+
+            $k = self::NONCE_KEY . hash('sha256', $nonce);
+            // Le seul verrou nécessaire est celui de la clé primaire. « IGNORE »
+            // transforme la violation de contrainte en zéro ligne insérée, ce qui
+            // est précisément la réponse cherchée : ce jeton a déjà servi.
+            $sql = Db::driver() === 'mysql'
+                ? 'INSERT IGNORE INTO settings (k, v) VALUES (?, ?)'
+                : 'INSERT OR IGNORE INTO settings (k, v) VALUES (?, ?)';
+            return Db::q($sql, [$k, (string)$exp])->rowCount() === 1;
         } catch (\Throwable) {
             // Sans base, on ne peut pas garantir l'usage unique : on refuse.
             return false;
+        }
+    }
+
+    /** Nombre de jetons de pont mémorisés. Sert aux suites de tests. */
+    public static function bridgeNonceCount(): int
+    {
+        try {
+            return (int)Db::val('SELECT COUNT(*) FROM settings WHERE k LIKE ?',
+                                [self::NONCE_KEY . '%'], 0);
+        } catch (\Throwable) {
+            return 0;
         }
     }
 

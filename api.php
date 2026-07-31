@@ -28,6 +28,17 @@ Uptimeez\Fail::trusted();
 Db::migrate();
 
 $action  = (string)($_REQUEST['action'] ?? '');
+
+// Démonstration publique : la garde est ici AUSSI, et pas seulement dans
+// index.php. Ce fichier exécute ses propres actions mutantes, sans passer par
+// handle_post() : « setup » y explorait un site et créait des sondes, en
+// démonstration comme ailleurs, alors que le même verrou refusait l'ajout de
+// sonde à trois écrans de là. Une garde qu'on peut contourner en appelant le
+// fichier d'à côté n'est pas une garde (voir src/Demo.php, principe 2).
+if (Uptimeez\Demo::refuses($action)) {
+    json_out(['ok' => false, 'error' => 'demo', 'message' => Uptimeez\Demo::refusal()[1]], 403);
+}
+
 $isWrite = in_array($action, ['check', 'toggle', 'setup', 'fix', 'undo'], true);
 if ($isWrite) {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') json_out(['error' => 'method'], 405);

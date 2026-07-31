@@ -13,7 +13,12 @@ DirectoryIndex index.php
     </IfModule>
 </FilesMatch>
 
-RedirectMatch 404 ^/(.*/)?(src|data|views)/.*$
+# « bin » est dans cette liste depuis le 2026-07-31. Les suites de tests et les
+# outils de maintenance vivent sous la racine web sur une installation ordinaire :
+# chacun porte désormais sa garde « ligne de commande seulement », et ce refus est
+# la seconde barrière, celle qui vaut aussi pour bin/e2e-browser.mjs, qu'aucune
+# garde PHP ne protège.
+RedirectMatch 404 ^/(.*/)?(src|data|views|bin)/.*$
 
 # Pas d'indexation de l'outil
 <IfModule mod_headers.c>

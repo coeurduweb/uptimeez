@@ -11,6 +11,15 @@
  */
 declare(strict_types=1);
 
+// GARDE D'EXÉCUTION, POSÉE AVANT LE CHARGEMENT DU MOTEUR.
+//
+// Ce dépôt s'installe chez des tiers, souvent derrière Apache, et le dossier bin/
+// est sous la racine web. Sans cette ligne, ce fichier était exécutable par une
+// simple requête HTTP : il lit des sources, parle de chemins et fait tourner des
+// mesures, ce qu'un visiteur n'a pas à provoquer. Elle précède le require pour
+// qu'une requête HTTP ne charge même pas la configuration.
+if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
+
 require __DIR__ . '/../src/bootstrap.php';
 
 use Uptimeez\I18n;

@@ -492,12 +492,12 @@ Un outil de surveillance qui vous ment est pire que pas d'outil du tout. La logi
 testée contre de vraies pannes, et l'interface est testée dans un vrai navigateur.
 
 ```
-php bin/selftest.php      805 contrôles   logique de détection, hors ligne, sans réseau
+php bin/selftest.php      808 contrôles   logique de détection, hors ligne, sans réseau
 php bin/bench.php          73 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
 php bin/e2e.php           240 contrôles   parcours complet en HTTP réel, instance isolée
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
 php bin/chaos.php          35 contrôles   859 requêtes hostiles d'un utilisateur qui fait tout de travers
-php bin/security.php      113 contrôles   OWASP Top 10, trois profondeurs, face à un site hostile local
+php bin/security.php      126 contrôles   OWASP Top 10, trois profondeurs, face à un site hostile local
 php bin/infra.php          61 contrôles   UptimeEZ en panne : ce qu'il dit, et ce qu'il ne divulgue pas
 php bin/mysql.php          43 contrôles   le pilote MySQL / MariaDB, sur un vrai serveur
 php bin/mcp.php            n/a            serveur MCP pour les agents (27 des contrôles ci-dessus le testent)
@@ -505,7 +505,7 @@ php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, ms
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**1 475 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**1 491 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
 Quatre suites méritent un mot.
 

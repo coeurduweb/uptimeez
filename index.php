@@ -129,8 +129,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 
 // --- Export CSV : doit sortir avant tout HTML ----------------------------
+// La garde de démonstration est répétée ici, et ce n'est pas un oubli de
+// factorisation : l'export est un GET, il n'entre donc pas par handle_post() où
+// vit la garde des formulaires. Un visiteur de la démo repartait avec le fichier.
 if ($page === 'incidents' && ($_GET['export'] ?? '') === 'csv') {
-    export_incidents_csv();
+    if (Uptimeez\Demo::refuses('export_csv')) {
+        $flash = Uptimeez\Demo::refusal();
+    } else {
+        export_incidents_csv();
+    }
 }
 
 // --- Rendu ---------------------------------------------------------------
