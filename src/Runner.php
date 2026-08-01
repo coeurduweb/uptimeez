@@ -175,12 +175,26 @@ final class Runner
             ? (int)(($phase + (int)round($rang * $intervalle / $taille)) % $intervalle)
             : $phase;
 
+        // LA FENÊTRE COURANTE D'ABORD, LA SUIVANTE SEULEMENT SI LE CRÉNEAU EST PASSÉ.
+        //
+        // La première version visait toujours « fenêtre suivante + créneau ». En régime
+        // établi c'est correct, puisque la sonde vient de passer à son créneau et que le
+        // prochain est exactement un intervalle plus loin. Mais tout ce qui replanifie
+        // HORS de ce rythme ouvrait un trou : mesuré le 2026-08-01 après un changement
+        // d'intervalle sur les 200 sondes d'un client, plus une seule vérification pendant
+        // onze minutes. Le même trou s'ouvrait à chaque modification d'un réglage depuis
+        // l'écran, à la reprise d'une sonde en pause, et à la première passe après une
+        // panne du planificateur, c'est-à-dire précisément au moment où l'on veut savoir.
+        //
+        // Le trou était d'autant plus traître qu'il ne ressemble pas à une panne : les
+        // écrans affichent les derniers relevés, tout paraît normal, il ne se passe
+        // simplement rien.
         $debutFenetre = intdiv($maintenant, $intervalle) * $intervalle;
-        $passage = $debutFenetre + $intervalle + $creneau;
+        $passage = $debutFenetre + $creneau;
 
-        // Le créneau peut tomber avant « maintenant » quand la sonde a pris du retard :
-        // on avance d'une fenêtre plutôt que de replanifier dans le passé, ce qui la ferait
-        // repartir immédiatement et en boucle.
+        // Créneau déjà passé dans cette fenêtre : on prend celui de la suivante. La boucle
+        // couvre aussi le cas d'une sonde très en retard, où plusieurs fenêtres ont pu
+        // s'écouler ; replanifier dans le passé la ferait repartir en boucle.
         while ($passage <= $maintenant) $passage += $intervalle;
 
         return $passage;

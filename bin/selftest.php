@@ -2751,6 +2751,25 @@ for ($i = 1; $i < count($avecPhase); $i++) $ecartsPhase[] = $avecPhase[$i] - $av
 check('la phase préserve l\'espacement minimal de 30 s', min($ecartsPhase), 30);
 check('la phase ne pousse aucun créneau hors de la fenêtre', max($avecPhase) < $intervalle, true);
 
+// PAS DE TROU À LA REPLANIFICATION. Une sonde replanifiée en milieu de fenêtre, dont le
+// créneau est encore DEVANT, doit partir dans cette fenêtre-ci et pas dans la suivante.
+// Mesuré avant correction sur le parc réel : après un changement d'intervalle sur 200
+// sondes, plus une seule vérification pendant onze minutes. Le trou ne ressemblait pas à
+// une panne, les écrans affichant les derniers relevés comme si de rien n'était.
+$debut = intdiv($maintenant, $intervalle) * $intervalle;
+$creneauTard = 800;                       // créneau situé tard dans la fenêtre
+$maintenantTot = $debut + 10;             // on replanifie juste après le début
+$p = $debut + $creneauTard;
+while ($p <= $maintenantTot) $p += $intervalle;
+check('un créneau encore devant part dans la fenêtre courante', $p - $maintenantTot, 790);
+
+$creneauTot = 30;                         // créneau déjà passé
+$maintenantTard = $debut + 500;
+$p2 = $debut + $creneauTot;
+while ($p2 <= $maintenantTard) $p2 += $intervalle;
+check('un créneau déjà passé part dans la fenêtre suivante', $p2, $debut + $intervalle + $creneauTot);
+check('et jamais dans le passé', $p2 > $maintenantTard, true);
+
 // L'ANCRAGE : c'est ce qui empêche la dérive. Deux fenêtres consécutives doivent donner
 // exactement le même créneau, décalé d'un intervalle, quelle que soit l'heure d'appel
 // DANS la fenêtre. Sans ancrage, le temps de la requête s'ajoutait à chaque passage et
