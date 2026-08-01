@@ -87,7 +87,7 @@ final class Runner
                 continue;
             }
             foreach ($items as $it) {
-                Notifier::sendIncident($it['monitor'], $it['incident'], true);
+                Notifier::sendIncident($it['monitor'], $it['incident'], 'nouveau');
                 $sent++;
             }
         }
@@ -998,7 +998,7 @@ final class Runner
             : strtotime((string)$open['started_at']);
         if ($escalated || ($resend > 0 && $last > 0 && time() - $last >= $resend * 60)) {
             $inc = Db::one('SELECT * FROM incidents WHERE id = ?', [(int)$open['id']]);
-            if ($inc && !$inc['ack_at']) Notifier::sendIncident($mon, $inc, false);
+            if ($inc && !$inc['ack_at']) Notifier::sendIncident($mon, $inc, $escalated ? 'aggrave' : 'rappel');
         }
     }
 

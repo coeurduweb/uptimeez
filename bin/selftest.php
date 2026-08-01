@@ -2778,6 +2778,48 @@ $a = intdiv($maintenant + 3, $intervalle) * $intervalle + $intervalle + 120;
 $b = intdiv($maintenant + 800, $intervalle) * $intervalle + $intervalle + 120;
 check('le créneau ne dérive pas avec l\'heure d\'appel', $b - $a, 0);
 
+section("Alertes de suivi : une aggravation n'est pas une répétition");
+// ---------------------------------------------------------------------------
+// LE DÉFAUT : sendIncident() prenait un booléen « isNew », et TOUT ce qui n'était pas
+// nouveau partait sous « Toujours hors service ». L'aggravation d'un incident, quand une
+// sonde passe de DÉGRADÉ à HORS SERVICE, est pourtant une information neuve : c'est le
+// moment où un ralentissement devient une panne. Elle arrivait déguisée en répétition,
+// donc au milieu des messages que le lecteur a appris à ne plus ouvrir. La seule alerte
+// de suivi qui méritait d'être lue était la mieux cachée.
+
+$refl = new ReflectionMethod(Uptimeez\Notify\Notifier::class, 'sendIncident');
+$param = $refl->getParameters()[2] ?? null;
+check('sendIncident distingue la NATURE et non un booléen',
+    $param && (string)$param->getType() === 'string', true);
+
+// Les trois natures doivent produire trois titres DIFFÉRENTS. Deux natures qui rendent le
+// même texte, c'est le défaut d'origine réintroduit sans que rien ne le dise.
+$titres = [];
+foreach (['nouveau', 'aggrave', 'rappel'] as $nature) {
+    $titres[$nature] = ($nature === 'nouveau' ? '🔴 ' . t('HORS SERVICE')
+        : ($nature === 'aggrave' ? '🔴 ' . t('AGGRAVÉ : la panne est maintenant totale')
+                                 : '🔁 ' . t('Toujours hors service')));
+}
+check('les trois natures donnent trois titres distincts', count(array_unique($titres)), 3);
+check('seul le rappel porte le pictogramme de répétition',
+    (int)(str_contains($titres['rappel'], '🔁'))
+    + (int)(str_contains($titres['nouveau'], '🔁'))
+    + (int)(str_contains($titres['aggrave'], '🔁')), 1);
+check("l'aggravation ne se lit pas comme une répétition",
+    str_contains(mb_strtolower($titres['aggrave']), mb_strtolower(t('Toujours'))), false);
+
+// LE RAPPEL SE COUPE VRAIMENT. « resend_after_min = 0 » doit éteindre le rappel
+// périodique, et ne PAS éteindre l'aggravation, qui n'est pas un rappel. La condition
+// du collecteur est « escalated OU (resend > 0 ET délai écoulé) » : on éprouve les deux
+// branches, parce qu'un réglage à 0 qui étoufferait aussi l'aggravation transformerait
+// « moins de bruit » en « on ne saura pas que ça a empiré ».
+$partirait = static fn (bool $escalade, int $resend, int $ecouleSec): bool
+    => $escalade || ($resend > 0 && $ecouleSec >= $resend * 60);
+check('resend 0 : aucun rappel même après des heures', $partirait(false, 0, 86400), false);
+check('resend 0 : une aggravation part quand même',   $partirait(true,  0, 1), true);
+check('resend 60 : rien avant l\'heure',              $partirait(false, 60, 3599), false);
+check('resend 60 : rappel après l\'heure',            $partirait(false, 60, 3600), true);
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.

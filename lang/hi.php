@@ -209,4 +209,5 @@ return [
     '{n} Mo' => '{n} MB',
     '{n} Go' => '{n} GB',
     '{n} To' => '{n} TB',
+    'AGGRAVÉ : la panne est maintenant totale' => 'स्थिति बिगड़ी: साइट अब पूरी तरह बंद है',
 ];

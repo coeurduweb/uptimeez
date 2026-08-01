@@ -21,16 +21,35 @@ final class Notifier
     ];
 
     /** Nouvelle alerte (ou relance) sur un incident. */
-    public static function sendIncident(array $mon, array $incident, bool $isNew): void
+    /**
+     * @param  'nouveau'|'aggrave'|'rappel'  $nature  ce qui motive CETTE alerte
+     */
+    public static function sendIncident(array $mon, array $incident, string $nature = 'nouveau'): void
     {
         $sev   = $incident['severity'] === 'degraded' ? 'degraded' : 'down';
+
+        // TROIS NATURES ET NON DEUX, PARCE QUE « PAS NOUVEAU » N'EST PAS « RIEN DE NEUF ».
+        //
+        // Ce paramètre était un booléen « isNew », et tout ce qui n'était pas nouveau
+        // partait sous le titre « Toujours hors service ». Or l'aggravation d'un incident,
+        // quand une sonde passe de DÉGRADÉ à HORS SERVICE, est une information NEUVE :
+        // c'est le moment où un ralentissement devient une panne. Elle arrivait annoncée
+        // comme une répétition, donc au milieu de messages que le lecteur a appris à ne
+        // plus ouvrir. La seule alerte de rappel qui méritait d'être lue était la mieux
+        // déguisée en bruit.
+        //
+        // Le rappel périodique, lui, ne dit rien de neuf par construction : il répète un
+        // incident déjà annoncé et déjà visible à l'écran. Il reste possible
+        // (« notify.resend_after_min »), mais il est désormais le seul à porter le 🔁.
+        $titres = [
+            'nouveau' => ($sev === 'down' ? '🔴 ' . t('HORS SERVICE') : '🟠 ' . t('DÉGRADÉ')),
+            'aggrave' => '🔴 ' . t('AGGRAVÉ : la panne est maintenant totale'),
+            'rappel'  => '🔁 ' . ($sev === 'down' ? t('Toujours hors service') : t('Toujours dégradé')),
+        ];
         // Le titre part dans une alerte : il suit la langue de l'installation,
         // comme tout ce que le collecteur écrit.
-        $title = ($sev === 'down' ? '🔴 ' . t('HORS SERVICE') : '🟠 ' . t('DÉGRADÉ')) . ' : ' . $mon['name'];
-        if (!$isNew) {
-            $title = '🔁 ' . ($sev === 'down' ? t('Toujours hors service') : t('Toujours dégradé'))
-                   . ' : ' . $mon['name'];
-        }
+        $title = ($titres[$nature] ?? $titres['nouveau']) . ' : ' . $mon['name'];
+        $isNew = $nature === 'nouveau';
 
         $lines = [
             [t('Cause'), self::reasonLabel($incident['reason_code'])],

@@ -140,7 +140,7 @@ final class Heartbeat
                     'message' => $msg, 'started_at' => now(), 'checks_failed' => 1,
                 ]);
                 $inc = Db::one('SELECT * FROM incidents WHERE id = ?', [$incId]);
-                if ($inc) Notifier::sendIncident($mon, $inc, true);
+                if ($inc) Notifier::sendIncident($mon, $inc, 'nouveau');
                 $late++;
             } else {
                 $open = Db::one('SELECT * FROM incidents WHERE monitor_id = ? AND ended_at IS NULL ORDER BY id DESC LIMIT 1', [$id]);
