@@ -86,8 +86,15 @@ foreach ($args as $a) {
     }
 }
 
-// --- Verrou : jamais deux passes en parallèle -----------------------------
-$lockFile = UPTIMEEZ_ROOT . '/data/cron.lock';
+// --- Verrou : jamais deux passes en parallèle SUR LA MÊME INSTANCE --------
+//
+// Le verrou vit à côté de la configuration de l'instance, pas à côté du code.
+// Il était pris sur UPTIMEEZ_ROOT/data/cron.lock, c'est-à-dire dans le dossier du
+// moteur, qui est PARTAGÉ dès que plusieurs instances tournent sur un seul
+// exemplaire du code : à dix clients, neuf passes recevaient « une passe est déjà
+// en cours » chaque minute et repartaient sans rien vérifier, en silence. Voir
+// Config::dataDir() pour le raisonnement complet.
+$lockFile = Config::dataDir() . '/cron.lock';
 if (!is_dir(dirname($lockFile))) @mkdir(dirname($lockFile), 0775, true);
 $lock = @fopen($lockFile, 'c');
 if ($lock === false) {

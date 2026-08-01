@@ -170,11 +170,15 @@ $cleanup = function () use ($siteSrv, $appSrv, $tmp, $appPort, $sitePort): void 
         }
         proc_close($h);
     }
-    foreach (['/site', ''] as $sub) {
-        foreach (glob($tmp . $sub . '/*') ?: [] as $f) if (is_file($f)) @unlink($f);
-        if ($sub !== '') @rmdir($tmp . $sub);
+    // Récursif : le verrou de passe vit désormais dans $tmp/data, et la seconde
+    // instance du contrôle de verrou dans $tmp/instance2/data. Un ménage écrit
+    // dossier par dossier laisse traîner ce qu'on ajoute ensuite.
+    if (is_dir($tmp)) {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST);
+        foreach ($it as $f) { $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname()); }
     }
-    foreach (glob($tmp . '/*') ?: [] as $f) @unlink($f);
     @rmdir($tmp);
 };
 register_shutdown_function($cleanup);
@@ -1072,6 +1076,131 @@ $r = $req('/cron.php?key=cle-e2e');
 ok('cron par URL avec clé', $r['code'] === 200 && str_contains($r['body'], 'Terminé en'), str_cut(trim($r['body']), 60));
 $r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'maintenance_cron']);
 ok('entretien manuel', $has($r, 'Entretien exécuté'));
+
+// =========================================================================
+title('Le verrou de passe appartient à l\'instance, pas au code partagé');
+// =========================================================================
+// LE DÉFAUT REPRODUIT ICI. Le verrou était pris sur UPTIMEEZ_ROOT/data/cron.lock,
+// c'est-à-dire dans le dossier du MOTEUR. Or plusieurs instances partagent un seul
+// exemplaire du code : c'est toute la raison d'être de UPTIMEEZ_CONFIG, et c'est
+// ainsi qu'un serveur fait tourner dix clients. Le verrou était donc COMMUN aux dix.
+// Constaté le 2026-08-01 sur un serveur à deux instances : un seul cron.lock.
+//
+// Conséquence, et elle est muette des deux côtés : la première passe de la minute
+// prend le verrou, les neuf autres affichent « une passe est déjà en cours, on laisse
+// la main » et repartent SANS AVOIR RIEN VÉRIFIÉ. Chaque passe se termine proprement.
+// Neuf clients sur dix ne sont pas surveillés et personne ne peut le voir.
+//
+// Ce contrôle est BEHAVIORAL et non de source : on retire le verrou du dossier de
+// code, on lance une passe désignant la configuration de CETTE instance, et on
+// regarde où le verrou est réapparu. Remettre le défaut fait échouer la seconde
+// ligne, pas la première : c'est ce qui distingue « le verrou existe » de « le verrou
+// est au bon endroit ».
+$verrouInstance = $tmp . '/data/cron.lock';
+$verrouPartage  = $ROOT . '/data/cron.lock';
+@unlink($verrouInstance);
+@unlink($verrouPartage);
+$out = shell_exec('UPTIMEEZ_CONFIG=' . escapeshellarg($cfgFile) . ' '
+    . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --setup 2>&1');
+ok('la passe s\'exécute et prend son verrou',
+   $out !== null && !preg_match('~Impossible d\'ouvrir le verrou|Fatal|Uncaught~', (string)$out),
+   str_cut(trim((string)$out), 60));
+clearstatcache();
+ok('le verrou est posé à côté de la configuration de l\'instance',
+   is_file($verrouInstance), is_file($verrouInstance) ? basename(dirname($tmp)) . '/…/data/cron.lock'
+                                                     : 'ABSENT : ' . $verrouInstance);
+ok('et RIEN n\'est posé dans le dossier du code, que toutes les instances partagent',
+   !is_file($verrouPartage),
+   is_file($verrouPartage) ? 'verrou COMMUN recréé dans ' . $verrouPartage
+                             . ' : les instances s\'affament entre elles' : '');
+
+// Deux instances doivent pouvoir passer EN MÊME TEMPS. C'est la conséquence utile
+// du correctif, et le seul moyen de la prouver est de lancer les deux passes en
+// parallèle et de regarder si la seconde a laissé la main.
+$cfg2 = $tmp . '/instance2/config.php';
+@mkdir($tmp . '/instance2/data', 0775, true);
+copy($cfgFile, $cfg2);
+file_put_contents($cfg2, str_replace($tmp . '/e2e.sqlite', $tmp . '/instance2/e2e2.sqlite',
+                                     (string)file_get_contents($cfg2)));
+$lance = function (string $cfg) use ($ROOT): array {
+    $h = proc_open([PHP_BINARY, $ROOT . '/cron.php', '--setup'],
+                   [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $p, $ROOT,
+                   ['UPTIMEEZ_CONFIG' => $cfg, 'PATH' => getenv('PATH') ?: '/usr/bin:/bin']);
+    return [$h, $p];
+};
+[$h1, $p1] = $lance($cfgFile);
+[$h2, $p2] = $lance($cfg2);
+$s1 = stream_get_contents($p1[1]) . stream_get_contents($p1[2]);
+$s2 = stream_get_contents($p2[1]) . stream_get_contents($p2[2]);
+foreach ([[$h1, $p1], [$h2, $p2]] as [$h, $p]) {
+    foreach ($p as $f) if (is_resource($f)) fclose($f);
+    if (is_resource($h)) proc_close($h);
+}
+$mainLevee = str_contains($s1, 'déjà en cours') || str_contains($s2, 'déjà en cours');
+ok('deux instances passent en parallèle sans se voler la main', !$mainLevee,
+   $mainLevee ? 'une passe a laissé la main : le verrou est encore commun' : '');
+$deuxVerrous = is_file($tmp . '/data/cron.lock') && is_file($tmp . '/instance2/data/cron.lock');
+ok('et chacune a son propre verrou', $deuxVerrous, $deuxVerrous ? '' : 'un verrou par instance attendu');
+
+// =========================================================================
+title('Sonde d\'API : la préparation ne lui pose pas une preuve HTML');
+// =========================================================================
+// LE DÉFAUT REPRODUIT ICI, ET IL S'EST PRODUIT EN DIRECT LE 2026-08-01. Importer::
+// setup() appliquait la chaîne de preuve du SITE à toute sonde qui n'en avait pas,
+// sans regarder « kind ». La chaîne du site est du texte HTML ; une sonde d'API rend
+// quinze octets de JSON. Cette chaîne ne peut JAMAIS s'y trouver : la sonde n'est pas
+// fragile, elle est condamnée à tomber en panne dès que la file de préparation
+// l'atteint. Six sondes saines sont passées en PANNE quinze minutes après une pose
+// vérifiée sans une seule fausse alerte.
+//
+// Le contrôle se fait en DEUX temps, parce que la première correction en production
+// n'avait fait que le premier et s'est défaite toute seule : vider la chaîne ne suffit
+// pas si la sonde reste dans la file de préparation, qui la repose au passage suivant.
+$monApi = Uptimeez\Db::insert('monitors', [
+    'site_id' => $sid, 'name' => 'API JSON e2e', 'url' => "$SITE/api.php", 'kind' => 'api',
+    'role' => 'secondary', 'method' => 'GET', 'interval_sec' => 900, 'timeout_sec' => 10,
+    'retries' => 0, 'slow_ms' => 9000, 'expect_status' => '200-299',
+    'json_path' => 'status', 'json_expect' => '', 'expect_string' => null,
+    'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0, 'check_noindex' => 0,
+    'follow_redirects' => 1, 'enabled' => 1, 'status' => 'unknown',
+    'setup_state' => 'pending', 'created_at' => now(), 'next_check_at' => now(),
+]);
+$siteProof = (string)$val('SELECT expect_string FROM sites WHERE id = ?', [$sid]);
+ok('le site porte bien une chaîne de preuve HTML, sinon ce contrôle ne prouve rien',
+   trim($siteProof) !== '', 'chaîne du site : « ' . $siteProof . ' »');
+
+$rr = $req('/api.php?action=setup', ['csrf' => $tok, 'id' => $monApi]);
+ok('la préparation de la sonde d\'API aboutit', $rr['code'] === 200 && $noPhpError($rr),
+   'HTTP ' . $rr['code']);
+$apres = Uptimeez\Db::one('SELECT expect_string, setup_state FROM monitors WHERE id = ?', [$monApi]);
+$posee = trim((string)($apres['expect_string'] ?? ''));
+ok('aucune chaîne de preuve textuelle posée sur une sonde d\'API', $posee === '',
+   $posee === '' ? '' : 'reçu « ' . $posee . ' » : STRING_MISSING garanti à la passe suivante');
+ok('et la sonde sort de la file de préparation',
+   (string)($apres['setup_state'] ?? '') === 'done', (string)($apres['setup_state'] ?? '?'));
+$siteApres = (string)$val('SELECT expect_string FROM sites WHERE id = ?', [$sid]);
+ok('la chaîne du SITE n\'a pas été effacée au passage', $siteApres === $siteProof,
+   $siteApres === $siteProof ? '' : 'préparer une sonde d\'API ne doit rien retirer aux autres sondes du site');
+
+// Le second temps : la sonde est remise dans la file, comme les 85 sondes du parc
+// réel l'étaient. La passe de cron doit la préparer SANS lui reposer la chaîne.
+Uptimeez\Db::q('UPDATE monitors SET setup_state = ? WHERE id = ?', ['pending', $monApi]);
+shell_exec('UPTIMEEZ_CONFIG=' . escapeshellarg($cfgFile) . ' '
+    . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($ROOT . '/cron.php') . ' --setup 2>&1');
+$apres2 = Uptimeez\Db::one('SELECT expect_string, setup_state FROM monitors WHERE id = ?', [$monApi]);
+$reposee = trim((string)($apres2['expect_string'] ?? ''));
+ok('la file de préparation ne repose pas la chaîne au passage suivant', $reposee === '',
+   $reposee === '' ? '' : 'reçu « ' . $reposee
+     . ' » : la correction se défait toute seule, c\'est ce qui s\'est passé en production');
+
+// Et la sonde doit être VERTE : c'est la preuve utile, le reste n'est que de la
+// donnée. Son json_path est sa preuve, et il suffit.
+$rr = $req('/api.php?action=check', ['csrf' => $tok, 'id' => $monApi]);
+$j  = json_decode($rr['body'], true);
+ok('la sonde d\'API est verte, sa preuve étant son chemin JSON',
+   ($j['result']['state'] ?? '?') === 'up',
+   'état=' . ($j['result']['state'] ?? '?') . ' cause=' . ($j['result']['reason'] ?? '—'));
+Uptimeez\Db::q('DELETE FROM monitors WHERE id = ?', [$monApi]);
 
 // =========================================================================
 title('Page trop volumineuse : une lecture partielle ne conclut rien');

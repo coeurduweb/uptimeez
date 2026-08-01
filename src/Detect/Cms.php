@@ -19,7 +19,27 @@ final class Cms
     public static function detect(Response $res): array
     {
         $html = substr($res->body, 0, 400000);
-        $low  = strtolower($html);
+        // LES INDICES SE CHERCHENT DANS LE BALISAGE, PAS DANS LE TEXTE LU PAR LE
+        // VISITEUR. C'est la correction du 2026-08-01 et elle vient d'un cas mesuré :
+        // https://uptimeez.com/ était annoncé « WordPress » alors que c'est du
+        // Laravel. La cause tient en une phrase de sa page d'accueil, dans un <p> :
+        // « one stylesheet returns 404: /wp-content/cache/min/1/absent.css ». Le
+        // motif « /wp-content/ » valait 40 points, soit le double du seuil, et il
+        // était trouvé dans une PHRASE.
+        //
+        // Le défaut est structurel, pas anecdotique : toute page qui PARLE d'une
+        // technologie était détectée comme étant faite avec. Ça vise en plein le parc
+        // qu'on surveille — sites d'agences, articles de blog techniques, pages de
+        // documentation — et ça a des conséquences : l'inventaire logiciel et la
+        // veille de sécurité s'appuient sur cette détection, donc un faux WordPress
+        // fait chercher des greffons qui n'existent pas, et rend des avis de sécurité
+        // qui ne concernent pas le site.
+        //
+        // Le corps des <script> et des <style> est CONSERVÉ : « var prestashop »,
+        // « odoo.define » ou « drupal-settings-json » y vivent, et c'est du code, pas
+        // du texte lisible. Les commentaires HTML aussi : c'est là que les greffons de
+        // cache laissent leur signature.
+        $low  = strtolower(self::markupOnly($html));
         $hdr  = $res->headers;
         $out  = ['cms' => null, 'confidence' => 0, 'builder' => null, 'theme' => null,
                  'server' => null, 'cache' => null, 'generator' => null, 'signals' => []];
@@ -134,6 +154,40 @@ final class Cms
             }
         }
 
+        return $out;
+    }
+
+    /**
+     * Ne garde du HTML que ce qui est du balisage : les balises avec leurs
+     * attributs, les commentaires, et le corps des <script> et <style>.
+     *
+     * Ce qui part, c'est le texte que lit le visiteur, c'est-à-dire le seul endroit
+     * où un nom de technologie peut se trouver sans que la technologie soit là.
+     * Voir le commentaire de detect() pour le cas qui l'a rendu nécessaire.
+     *
+     * Écrit en parcours de chaîne et non en expression rationnelle : sur 400 ko de
+     * HTML, une rationnelle non ancrée avec retour arrière peut coûter très cher, et
+     * ce code tourne pour chaque sonde de chaque passe.
+     */
+    private static function markupOnly(string $html): string
+    {
+        $out = '';
+        $i = 0;
+        $len = strlen($html);
+        while ($i < $len && ($lt = strpos($html, '<', $i)) !== false) {
+            $gt = strpos($html, '>', $lt);
+            if ($gt === false) break;   // balise tronquée en fin de corps lu
+            $balise = substr($html, $lt, $gt - $lt + 1);
+            $out .= $balise . "\n";
+            $i = $gt + 1;
+            // Le corps d'un script ou d'un style est du code : on le garde entier.
+            if (preg_match('~^<\s*(script|style)\b~i', $balise, $m)) {
+                $fin = stripos($html, '</' . strtolower($m[1]), $i);
+                if ($fin === false) { $out .= substr($html, $i) . "\n"; break; }
+                $out .= substr($html, $i, $fin - $i) . "\n";
+                $i = $fin;
+            }
+        }
         return $out;
     }
 

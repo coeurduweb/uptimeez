@@ -92,15 +92,15 @@ and it locks for that time, which is why it never invites itself.
 ## Command line
 
 ```bash
-php bin/selftest.php          # 774 checks: detection logic, offline, no network
+php bin/selftest.php          # 829 checks: detection logic, offline, no network
 php bin/bench.php             # 73 checks: real failures reproduced end to end
-php bin/e2e.php               # 240 checks: full user journey, isolated instance
+php bin/e2e.php               # 252 checks: full user journey, isolated instance
 node bin/e2e-browser.mjs      # 105 checks: real Chromium
 php bin/chaos.php             # 35 checks: 859 hostile requests, nothing must break
 php bin/chaos.php --long      # adds the bulky payloads
 php bin/infra.php             # 61 checks: UptimeEZ down, what it says and what it withholds
 php bin/mysql.php             # 43 checks: the MySQL driver, skipped without a test database
-php bin/security.php          # 113 checks: OWASP Top 10, three depths
+php bin/security.php          # 126 checks: OWASP Top 10, three depths
 php bin/security.php --niveau=1   # light only: configuration, secrets, surface
 php bin/security.php --niveau=2   # deep only: active OWASP tests
 php bin/security.php --niveau=3   # very deep only: SSRF, XXE, bombs, timing

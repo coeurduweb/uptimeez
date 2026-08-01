@@ -309,13 +309,10 @@ final class Importer
         $rules  = Cms::rules($detect['cms'], $detect['builder']);
         $html   = $res->body;
 
-        $expect = trim((string)($mon['expect_string'] ?? ''));
-        if ($expect === '') {
-            $siteExpect = $mon['site_id'] ? (string)Db::val('SELECT expect_string FROM sites WHERE id = ?', [(int)$mon['site_id']], '') : '';
-            $expect = trim($siteExpect) !== ''
-                ? $siteExpect
-                : (string)(Discovery::suggestExpectString($html, $res->status) ?? '');
-        }
+        $siteExpect = $mon['site_id']
+            ? (string)Db::val('SELECT expect_string FROM sites WHERE id = ?', [(int)$mon['site_id']], '')
+            : '';
+        $expect = (string)(self::proofFor($mon, $res, $siteExpect) ?? '');
 
         $badStatus = $res->status < 200 || $res->status >= 300;
         $upd = [
@@ -332,15 +329,21 @@ final class Importer
         Db::update('monitors', $upd, 'id = :__i', ['__i' => $monitorId]);
 
         if ($mon['site_id']) {
-            Db::update('sites', [
+            $majSite = [
                 'cms'        => $detect['cms'],
                 'cms_detail' => jenc([
                     'confidence' => $detect['confidence'], 'builder' => $detect['builder'],
                     'theme' => $detect['theme'], 'server' => $detect['server'],
                     'cache' => $detect['cache'], 'generator' => $detect['generator'],
                 ]),
-                'expect_string' => $expect !== '' ? $expect : null,
-            ], 'id = :__s', ['__s' => (int)$mon['site_id']]);
+            ];
+            // La chaîne du SITE ne s'écrit que si on en a une. Elle était remise à
+            // NULL quand la sonde préparée n'en produisait pas : préparer une sonde
+            // d'API effaçait alors la preuve du site, dont dépendent toutes les
+            // autres sondes de ce site. Une préparation ne doit rien retirer à
+            // personne.
+            if ($expect !== '') $majSite['expect_string'] = $expect;
+            Db::update('sites', $majSite, 'id = :__s', ['__s' => (int)$mon['site_id']]);
         }
 
         // ---- Pages filles -------------------------------------------------
@@ -413,6 +416,71 @@ final class Importer
         ];
     }
 
+    /**
+     * Cette sonde peut-elle porter une chaîne de preuve TEXTUELLE ?
+     *
+     * Non pour une sonde d'API : sa preuve est le chemin JSON, pas un fragment de
+     * texte. Non non plus pour une sonde qui porte un json_path, quel que soit son
+     * genre : c'est le même raisonnement, et le genre n'est pas toujours juste sur
+     * une sonde posée à la main ou importée d'un concurrent.
+     */
+    public static function acceptsTextProof(array $mon): bool
+    {
+        if ((string)($mon['kind'] ?? 'page') === 'api') return false;
+        return trim((string)($mon['json_path'] ?? '')) === '';
+    }
+
+    /**
+     * La chaîne de preuve d'une sonde qu'on prépare.
+     *
+     * CE QUE CETTE MÉTHODE RÉPARE, ET ÇA S'EST PRODUIT EN DIRECT. Le bloc qu'elle
+     * remplace ne regardait PAS le genre de la sonde. Quand une sonde n'avait pas de
+     * chaîne de preuve, la préparation lui appliquait celle du site, qui est du
+     * texte HTML — un titre d'accueil, une mention de pied de page. Sur une sonde
+     * d'API dont le corps fait quinze octets (« [{"id":149}] »), cette chaîne NE
+     * PEUT JAMAIS s'y trouver : la sonde n'est pas fragile, elle est condamnée à
+     * tomber en panne dès que la file de préparation l'atteint.
+     *
+     * Le 2026-08-01, sur un parc de 200 sondes posé et vérifié sans une seule fausse
+     * alerte, six sondes « la base répond (REST) » sont passées EN PANNE quinze
+     * minutes plus tard, motif STRING_MISSING, sur des sites parfaitement sains. 27
+     * des 85 sondes JSON avaient déjà reçu une chaîne HTML, les 58 autres l'auraient
+     * reçue passe après passe.
+     *
+     * Ce que le cas d'école apprend : la sonde était juste au moment où on l'a
+     * posée, et une fonction d'assistance l'a cassée plus tard, silencieusement. Une
+     * recette qui s'arrête à la première passe verte ne voit pas ce que la file de
+     * préparation fera ensuite.
+     *
+     * DEUXIÈME GARDE, indépendante de la première : on ne déduit pas une chaîne de
+     * preuve d'un corps qui n'est pas du HTML. Discovery::suggestExpectString() lit
+     * un titre, un pied de page, une navigation ; sur du JSON ou du XML elle
+     * travaille sur une syntaxe qu'elle ne connaît pas, et ce qu'elle en tirerait
+     * n'aurait aucune valeur de preuve.
+     *
+     * @param string $siteExpect La chaîne du site, ou '' s'il n'en a pas.
+     * @return ?string null quand aucune chaîne ne doit être posée.
+     */
+    public static function proofFor(array $mon, Response $res, string $siteExpect = ''): ?string
+    {
+        // Ce que l'utilisateur a posé lui-même gagne toujours : la préparation
+        // assiste, elle ne décide pas à sa place.
+        $own = trim((string)($mon['expect_string'] ?? ''));
+        if ($own !== '') return $own;
+
+        if (!self::acceptsTextProof($mon)) return null;
+
+        $siteExpect = trim($siteExpect);
+        if ($siteExpect !== '') return $siteExpect;
+
+        // Response::isHtml() est le juge déjà en place dans le moteur : type déclaré
+        // ou, à défaut, doctype en tête de corps. On ne s'en écrit pas un second.
+        if (!$res->isHtml()) return null;
+
+        $found = Discovery::suggestExpectString($res->body, $res->status);
+        return ($found !== null && trim($found) !== '') ? $found : null;
+    }
+
     /** Sondes en attente de préparation. */
     public static function pending(int $limit = 20): array
     {
@@ -435,7 +503,13 @@ final class Importer
             'retries'        => (int)$parent['retries'],
             'slow_ms'        => (int)$parent['slow_ms'],
             'expect_status'  => '200-299',
-            'expect_string'  => $kind === 'page' ? ($expect ?: null) : ($expect ?: null),
+            // Les deux branches de ce ternaire étaient identiques : il annonçait une
+            // distinction par genre qu'il ne faisait pas. La distinction est bien
+            // réelle, mais elle appartient à l'appelant, qui sait ce qu'il cherche :
+            // une page fille reçoit la preuve textuelle du site, une sonde d'API
+            // reçoit la sienne (« "namespaces" » sur /wp-json/), et une sonde sans
+            // preuve appropriée n'en reçoit aucune.
+            'expect_string'  => $expect !== '' ? $expect : null,
             'check_ssl'      => 0, // le certificat est déjà suivi par la sonde principale
             'check_css'      => $kind === 'page' ? (int)$parent['check_css'] : 0,
             'check_db'       => (int)$parent['check_db'],

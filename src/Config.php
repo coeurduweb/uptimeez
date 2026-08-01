@@ -109,6 +109,38 @@ final class Config
         return self::$file !== '' ? self::$file : UPTIMEEZ_ROOT . '/config.php';
     }
 
+    /**
+     * Le dossier de travail de CETTE instance, à côté de sa configuration.
+     *
+     * POURQUOI CETTE MÉTHODE EXISTE. Plusieurs installations partagent souvent un
+     * même dossier de code : c'est tout l'objet de UPTIMEEZ_CONFIG, et c'est la
+     * façon dont un hébergeur fait tourner dix instances sur un seul exemplaire du
+     * moteur. Tout fichier de travail calculé depuis UPTIMEEZ_ROOT est alors
+     * COMMUN aux dix, alors qu'il devrait appartenir à une seule.
+     *
+     * Le verrou de passe l'était : cron.php le prenait sur
+     * UPTIMEEZ_ROOT/data/cron.lock, donc sur le dossier du code. Constaté le
+     * 2026-08-01 sur un serveur à deux instances : un seul cron.lock pour tout le
+     * monde. Conséquence à dix clients : la première passe de la minute prend le
+     * verrou, les neuf autres reçoivent « une passe est déjà en cours, on laisse la
+     * main » et repartent SANS AVOIR RIEN VÉRIFIÉ. Le défaut est muet des deux
+     * côtés : chaque passe se termine proprement, et rien ne dit qu'elle n'a rien
+     * fait. Neuf clients sur dix ne sont pas surveillés.
+     *
+     * L'identité d'une instance, c'est son fichier de configuration : c'est lui qui
+     * désigne sa base, ses secrets et ses sondes. Le dossier de travail se déduit
+     * donc de lui, jamais du code. Sur une installation ordinaire, où config.php
+     * est à la racine, le résultat est inchangé : UPTIMEEZ_ROOT/data.
+     *
+     * @param ?string $configFile Pour éprouver la déduction sans dépendre de
+     *                            l'environnement ; null en usage réel.
+     */
+    public static function dataDir(?string $configFile = null): string
+    {
+        $f = ($configFile !== null && $configFile !== '') ? $configFile : self::file();
+        return dirname($f) . '/data';
+    }
+
     public static function save(array $patch): bool
     {
         $file    = self::file();

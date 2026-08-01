@@ -233,6 +233,53 @@ $sh = new Response();
 $sh->body = '<html><body><script src="https://cdn.shopify.com/s/x.js"></script></body></html>';
 check('Shopify identifié', Cms::detect($sh)['cms'], 'Shopify');
 
+// ---------------------------------------------------------------------------
+// Une page qui PARLE d'une technologie n'est pas faite avec.
+//
+// LE DÉFAUT MESURÉ, le 2026-08-01 : https://uptimeez.com/ était annoncé
+// « WordPress » à 40 % de confiance alors que c'est du Laravel. La cause tient en
+// une phrase de sa page d'accueil, dans un <p> : « one stylesheet returns 404:
+// /wp-content/cache/min/1/absent.css ». Le motif « /wp-content/ » vaut 40 points,
+// soit le double du seuil, et il était cherché dans le texte lu par le visiteur.
+//
+// Le défaut n'est pas anecdotique, il est structurel, et il vise en plein le parc
+// qu'on surveille : sites d'agences, articles techniques, pages de documentation.
+// Il a une conséquence, et ce n'est pas la surveillance : l'inventaire logiciel et
+// la veille de sécurité s'appuient sur cette détection, donc un faux WordPress fait
+// chercher des greffons qui n'existent pas et rattache des avis publics qui ne
+// concernent pas le site.
+$prose = new Response();
+$prose->contentType = 'text/html';
+$prose->body = '<!doctype html><html><head><title>Notre outil de surveillance</title></head><body>'
+    . '<p>one stylesheet returns 404: /wp-content/cache/min/1/absent.css</p>'
+    . '<p>Nous surveillons aussi /wp-includes/ et l\'API wp-json de chaque site.</p>'
+    . '</body></html>';
+check('une phrase qui cite /wp-content/ ne fait pas un WordPress', Cms::detect($prose)['cms'], null);
+check('et aucune confiance résiduelle n\'est annoncée', Cms::detect($prose)['confidence'], 0);
+// Le même chemin dans un attribut, lui, est un vrai indice : c'est le serveur qui
+// l'a écrit, pas un rédacteur.
+$attr = new Response();
+$attr->contentType = 'text/html';
+$attr->body = '<html><head><link rel="stylesheet" href="/wp-content/themes/astra/style.css">'
+    . '</head><body>Bienvenue</body></html>';
+check('le même chemin dans un attribut reste un indice', Cms::detect($attr)['cms'], 'WordPress');
+// Le corps d'un script est du code, pas du texte lisible : ses indices sont gardés.
+$js = new Response();
+$js->contentType = 'text/html';
+$js->body = '<html><body><p>Boutique</p><script>var prestashop = {"static_token":"x"};</script></body></html>';
+check('les indices du corps d\'un script sont gardés', Cms::detect($js)['cms'], 'PrestaShop');
+// Les commentaires HTML aussi : c'est là que les greffons de cache signent.
+$com = new Response();
+$com->contentType = 'text/html';
+$com->body = '<html><body><p>rien</p><!-- Performance optimized by W3 Total Cache --></body></html>';
+check('la signature de cache laissée en commentaire est gardée',
+    Cms::detect($com)['cache'], 'W3 Total Cache');
+$comTexte = new Response();
+$comTexte->contentType = 'text/html';
+$comTexte->body = '<html><body><p>Nous installons W3 Total Cache chez nos clients.</p></body></html>';
+check('un texte qui NOMME un greffon de cache n\'en révèle aucun',
+    Cms::detect($comTexte)['cache'], null);
+
 section('Déduction de la chaîne de contrôle');
 $page = '<html><head><title>Nos tarifs : Agence Bellevue</title>
 <meta property="og:site_name" content="Agence Bellevue"></head>
@@ -242,6 +289,91 @@ check('nom de marque retenu', Discovery::suggestExpectString($page), 'Agence Bel
 $err = '<html><head><title>404 Not Found</title></head><body><h1>Not Found</h1></body></html>';
 check('rien déduit d\'une page 404', Discovery::suggestExpectString($err, 404), null);
 check('rien déduit d\'un titre d\'erreur', Discovery::suggestExpectString($err, 200), null);
+
+section('Chaîne de preuve : une sonde d\'API n\'en reçoit aucune');
+// ---------------------------------------------------------------------------
+// LE DÉFAUT, ET IL S'EST DÉCLENCHÉ EN DIRECT LE 2026-08-01. Importer::setup()
+// appliquait la chaîne de preuve du SITE à toute sonde qui n'en avait pas, sans
+// regarder « kind ». La chaîne d'un site est du texte HTML : un titre d'accueil,
+// une mention de pied de page. Une sonde d'API, elle, rend quinze octets de JSON,
+// « [{"id":149}] ». Cette chaîne ne peut JAMAIS s'y trouver.
+//
+// La sonde n'est donc pas « fragile », elle est CONDAMNÉE : elle tombera en panne à
+// coup sûr dès que la file de préparation l'atteindra. Sur un parc de 200 sondes
+// posé et vérifié sans une seule fausse alerte, six sondes « la base répond (REST) »
+// sont passées en PANNE quinze minutes plus tard, motif STRING_MISSING, sur des
+// sites parfaitement sains. 27 des 85 sondes JSON avaient déjà reçu une chaîne HTML,
+// les 58 autres l'auraient reçue passe après passe.
+//
+// Le motif est parfait comme cas d'école : la sonde était juste au moment où on l'a
+// posée, et une fonction d'assistance l'a cassée plus tard, silencieusement. Une
+// recette qui s'arrête à la première passe verte ne voit pas ce que la file de
+// préparation fera ensuite.
+$htmlRes = new Response();
+$htmlRes->ok = true; $htmlRes->status = 200; $htmlRes->contentType = 'text/html';
+$htmlRes->body = '<html><head><title>Nos tarifs : Agence Bellevue</title>'
+    . '<meta property="og:site_name" content="Agence Bellevue"></head><body><h1>Nos tarifs</h1>'
+    . '<footer>© 2026 Agence Bellevue</footer></body></html>';
+$jsonRes = new Response();
+$jsonRes->ok = true; $jsonRes->status = 200; $jsonRes->contentType = 'application/json';
+$jsonRes->body = '[{"id":149}]';
+
+$sondePage = ['kind' => 'page', 'json_path' => null, 'expect_string' => null];
+$sondeApi  = ['kind' => 'api',  'json_path' => '0.id', 'expect_string' => null];
+
+check('une sonde de page reçoit bien la chaîne du site',
+    Uptimeez\Importer::proofFor($sondePage, $htmlRes, 'Agence Bellevue'), 'Agence Bellevue');
+check('une sonde d\'API ne reçoit PAS la chaîne du site',
+    Uptimeez\Importer::proofFor($sondeApi, $jsonRes, 'Agence Bellevue'), null);
+check('ni celle du site quand elle n\'a même pas de json_path',
+    Uptimeez\Importer::proofFor(['kind' => 'api', 'json_path' => null, 'expect_string' => null],
+        $jsonRes, 'Faites rayonner votre site bien au-delà de vos murs.'), null);
+check('un json_path protège la sonde quel que soit son genre annoncé',
+    Uptimeez\Importer::proofFor(['kind' => 'page', 'json_path' => 'status', 'expect_string' => null],
+        $jsonRes, 'Agence Bellevue'), null);
+check('ce que l\'utilisateur a posé lui-même est toujours conservé',
+    Uptimeez\Importer::proofFor(['kind' => 'api', 'json_path' => '0.id', 'expect_string' => '"id"'],
+        $jsonRes, 'Agence Bellevue'), '"id"');
+check('rien n\'est déduit d\'un corps qui n\'est pas du HTML',
+    Uptimeez\Importer::proofFor($sondePage, $jsonRes, ''), null);
+check('mais une page déduit toujours son nom de marque',
+    Uptimeez\Importer::proofFor($sondePage, $htmlRes, ''), 'Agence Bellevue');
+check('une sonde d\'API n\'accepte aucune preuve textuelle',
+    Uptimeez\Importer::acceptsTextProof($sondeApi), false);
+check('une sonde de page, si', Uptimeez\Importer::acceptsTextProof($sondePage), true);
+
+section('Verrou de passe : une instance, un verrou');
+// ---------------------------------------------------------------------------
+// LE DÉFAUT : cron.php prenait son verrou sur UPTIMEEZ_ROOT/data/cron.lock,
+// c'est-à-dire dans le dossier du MOTEUR. Or plusieurs instances partagent souvent
+// un seul exemplaire du code : c'est toute la raison d'être de UPTIMEEZ_CONFIG, et
+// c'est ainsi qu'un serveur fait tourner dix clients sur un seul dépôt. Le verrou
+// était donc COMMUN aux dix. Mesuré le 2026-08-01 : un seul cron.lock pour tout le
+// monde dans /home/uptimeez/moteur/data.
+//
+// Conséquence à dix clients : la première passe de la minute prend le verrou, les
+// neuf autres affichent « une passe est déjà en cours, on laisse la main » et
+// repartent SANS AVOIR RIEN VÉRIFIÉ. Le défaut est muet des deux côtés, puisque
+// chaque passe se termine proprement. Neuf clients sur dix ne sont pas surveillés.
+// Le défaut touche aussi les auto-hébergés qui font tourner plusieurs instances.
+$cfgA = '/home/uptimeez/instances/client-a/config.php';
+$cfgB = '/home/uptimeez/instances/client-b/config.php';
+check('le dossier de travail se déduit de la configuration, pas du code',
+    Uptimeez\Config::dataDir($cfgA), '/home/uptimeez/instances/client-a/data');
+check('deux instances, deux dossiers de travail',
+    Uptimeez\Config::dataDir($cfgA) === Uptimeez\Config::dataDir($cfgB), false);
+check('et aucun des deux dans le dossier du moteur',
+    str_starts_with(Uptimeez\Config::dataDir($cfgA), UPTIMEEZ_ROOT), false);
+check('une installation ordinaire reste exactement où elle était',
+    Uptimeez\Config::dataDir(UPTIMEEZ_ROOT . '/config.php'), UPTIMEEZ_ROOT . '/data');
+// Garde de source, parce que la déduction peut être juste sans que cron.php s'en
+// serve : c'est LUI qui avait le défaut, pas Config.
+$cronSrc = (string)file_get_contents(UPTIMEEZ_ROOT . '/cron.php');
+preg_match('~\$lockFile\s*=\s*(.+?);~', $cronSrc, $mLock);
+check('cron.php calcule son verrou depuis la configuration de l\'instance',
+    str_contains($mLock[1] ?? '', 'Config::dataDir()'), true);
+check('et jamais depuis UPTIMEEZ_ROOT, qui est partagé',
+    str_contains($mLock[1] ?? '', 'UPTIMEEZ_ROOT'), false);
 
 section('Détection du noindex');
 $ni = new Response();
