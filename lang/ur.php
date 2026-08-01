@@ -210,4 +210,5 @@ return [
     '{n} Go' => '{n} GB',
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => 'بگاڑ: سائٹ اب مکمل طور پر بند ہے',
+    '({n} sources, aucune ne répond)' => '({n} ذرائع، کوئی جواب نہیں دیتا)',
 ];

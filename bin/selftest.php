@@ -462,12 +462,50 @@ check('attribut illisible : pas de faux positif', Css::sriMatches('md5-zzz', $bo
 check('algorithme lu', Css::sriAlgo('sha512-xxx'), '512');
 
 section('Polices déclarées en @font-face');
+// ---------------------------------------------------------------------------
+// CE BLOC A CHANGÉ DE CONTRAT LE 2026-08-02, ET LE CHANGEMENT EST LE CORRECTIF.
+//
+// extractFontUrls() rendait UNE adresse par @font-face : la première « url() » du bloc.
+// Or la première est, par convention, celle destinée à Internet Explorer :
+//
+//     src: url('fa.eot');                                  <- lue par la version d'avant
+//     src: url('fa.eot?#iefix') format('embedded-opentype'),
+//          url('fa.woff2')      format('woff2'), …          <- ce que lit un vrai navigateur
+//
+// Le contrôle vérifiait donc le seul fichier qu'aucun navigateur moderne ne demande, et
+// criait quand il manquait. Sur le parc réel, c'était la cause de la majorité des sites
+// « dégradés », tous parfaitement affichés.
+//
+// La méthode rend désormais une LISTE par bloc, sans les formats hérités, et l'appelant
+// ne conclut à une police manquante que si AUCUNE source ne répond.
 $fontCss = '@font-face{font-family:Inter;src:url("/fonts/inter.woff2") format("woff2")}'
          . '@font-face{font-family:Alt;src:url(data:font/woff2;base64,AAA) format("woff2")}'
          . '@font-face{font-family:Deux;src:url(/fonts/deux.woff2)}';
 $fonts = Css::extractFontUrls($fontCss, 'https://exemple.fr/style.css');
-check('polices distantes extraites', count($fonts), 2);
-check('police en data: ignorée', implode(',', $fonts), 'https://exemple.fr/fonts/inter.woff2,https://exemple.fr/fonts/deux.woff2');
+check('un groupe par @font-face utile', count($fonts), 2);
+check('police en data: ignorée',
+    implode(',', array_map(fn (array $g): string => implode('|', $g), $fonts)),
+    'https://exemple.fr/fonts/inter.woff2,https://exemple.fr/fonts/deux.woff2');
+
+// Le cas réel, celui qui produisait les fausses alertes : le .eot en tête.
+$avecEot = '@font-face{font-family:FA;'
+         . "src:url('../webfonts/fa.eot');"
+         . "src:url('../webfonts/fa.eot?#iefix') format('embedded-opentype'),"
+         . "url('../webfonts/fa.woff2') format('woff2'),"
+         . "url('../webfonts/fa.ttf') format('truetype')}";
+$g = Css::extractFontUrls($avecEot, 'https://exemple.fr/wp-content/plugins/x/css/all.css');
+check('le .eot de tête est écarté', count($g), 1);
+check('les formats modernes sont retenus, dans l\'ordre', implode('|', $g[0] ?? []),
+    'https://exemple.fr/wp-content/plugins/x/webfonts/fa.woff2|https://exemple.fr/wp-content/plugins/x/webfonts/fa.ttf');
+
+// LA BASE DE RÉSOLUTION, qui est l'autre moitié du défaut. « ../webfonts/… » écrit dans
+// une feuille rangée dans « /css/ » ne désigne PAS la racine du site. Résolu contre la
+// page, il donnait « https://exemple.fr/webfonts/… », qui n'existe nulle part, et TOUTES
+// les polices de TOUS les sites étaient déclarées manquantes en permanence.
+check('la base est la feuille, pas la page',
+    str_contains(($g[0][0] ?? ''), '/wp-content/plugins/x/webfonts/'), true);
+check('résolue contre la page, l\'adresse serait fausse',
+    resolve_url('https://exemple.fr/', '../webfonts/fa.woff2'), 'https://exemple.fr/webfonts/fa.woff2');
 
 section('Périodes d\'affichage');
 check('365 jours reconnu', Ui::rangeSeconds('365d'), 31536000);
@@ -2819,6 +2857,60 @@ check('resend 0 : aucun rappel même après des heures', $partirait(false, 0, 86
 check('resend 0 : une aggravation part quand même',   $partirait(true,  0, 1), true);
 check('resend 60 : rien avant l\'heure',              $partirait(false, 60, 3599), false);
 check('resend 60 : rappel après l\'heure',            $partirait(false, 60, 3600), true);
+
+section('Faux positifs du détecteur CSS, tous relevés sur le parc réel');
+// ---------------------------------------------------------------------------
+// Quatre défauts trouvés le 2026-08-02 en vérifiant, à la demande du propriétaire, si les
+// dégradations signalées étaient réelles. Sur 47 sondes non vertes, 43 étaient fausses.
+// Chaque contrôle ci-dessous rejoue le CONTENU EXACT qui a produit l'erreur.
+
+// 1. « --warning: » DE BOOTSTRAP LU COMME UNE TRACE PHP.
+// Le motif « Warning:\s » était appliqué sans distinction de casse. Toute feuille dérivée
+// de Bootstrap ouvre par ses variables de thème, dont « --warning: #ffc107 ». Treize sites
+// étaient déclarés HORS SERVICE, au même rang qu'un serveur qui ne répond plus.
+$cssBootstrap = ':root {  --blue: #007bff;  --success: #28a745;  --warning: #ffc107;  --danger: #dc3545; }';
+$repCss = new Uptimeez\Response();
+$repCss->body = $cssBootstrap; $repCss->contentType = 'text/css'; $repCss->status = 200;
+$estErreur = (new ReflectionMethod(Uptimeez\Check\Css::class, 'looksLikeErrorPage'));
+$estErreur->setAccessible(true);
+check('une variable --warning n\'est pas une trace PHP', $estErreur->invoke(null, $repCss), false);
+
+// La vraie trace PHP reste détectée : le correctif ne doit pas rendre le contrôle aveugle.
+$repPhp = new Uptimeez\Response();
+$repPhp->body = "Warning: include(): Failed opening 'x.php' in /home/u/public_html/wp-config.php on line 42";
+$repPhp->contentType = 'text/html'; $repPhp->status = 200;
+check('une vraie trace PHP est toujours vue', $estErreur->invoke(null, $repPhp), true);
+
+$repPhpGras = new Uptimeez\Response();
+$repPhpGras->body = "<b>Fatal error</b>:  Uncaught Error: Call to undefined function";
+$repPhpGras->contentType = 'text/html'; $repPhpGras->status = 200;
+check('la variante en gras aussi', $estErreur->invoke(null, $repPhpGras), true);
+
+// 2. UN <link> ÉCRIT DANS UNE CHAÎNE JSON N'EST PAS UNE FEUILLE CHARGÉE.
+// Un site du parc embarque un aperçu de sa propre page dans un <script>, barres obliques
+// échappées. L'extracteur les ramassait, et « https:\/\/ » n'étant pas reconnu comme
+// absolu, il fabriquait « https://site/https:\/\/site\/… » : onze 404 fantômes.
+$htmlPiege = '<html><head>'
+    . '<link rel="stylesheet" href="/vrai.css">'
+    . '<script>var d={"paths":"<link rel=\'stylesheet\' href=\'https:\\/\\/exemple.fr\\/faux.css\' />"};</script>'
+    . '</head><body></body></html>';
+$feuilles = Uptimeez\Check\Css::extractStylesheets($htmlPiege, 'https://exemple.fr/');
+check('le <link> du <script> est ignoré', count($feuilles), 1);
+check('seule la vraie feuille est retenue', $feuilles[0]['url'] ?? '', 'https://exemple.fr/vrai.css');
+
+// Le commentaire HTML non plus : un bloc commenté n'est pas chargé par le navigateur.
+$htmlCommente = '<html><head><link rel="stylesheet" href="/a.css"><!-- <link rel="stylesheet" href="/b.css"> --></head></html>';
+check('le <link> commenté est ignoré', count(Uptimeez\Check\Css::extractStylesheets($htmlCommente, 'https://exemple.fr/')), 1);
+
+// Et <noscript> est CONSERVÉ : son contenu s'applique vraiment, sans JavaScript.
+$htmlNoscript = '<html><head><noscript><link rel="stylesheet" href="/sans-js.css"></noscript></head></html>';
+check('le <link> de <noscript> est conservé', count(Uptimeez\Check\Css::extractStylesheets($htmlNoscript, 'https://exemple.fr/')), 1);
+
+// 3. UNE ADRESSE ÉCHAPPÉE POUR JSON REDEVIENT UNE ADRESSE, filet pour les attributs data-*.
+$htmlEchappe = '<link rel="stylesheet" href="https:\/\/exemple.fr\/x.css">';
+$f = Uptimeez\Check\Css::extractStylesheets($htmlEchappe, 'https://exemple.fr/');
+check('l\'adresse échappée n\'est pas prise pour un chemin relatif',
+    $f[0]['url'] ?? '', 'https://exemple.fr/x.css');
 
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un

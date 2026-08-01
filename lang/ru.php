@@ -210,4 +210,5 @@ return [
     '{n} Go' => '{n} ГБ',
     '{n} To' => '{n} ТБ',
     'AGGRAVÉ : la panne est maintenant totale' => 'УХУДШЕНИЕ: сайт полностью недоступен',
+    '({n} sources, aucune ne répond)' => '({n} источников, ни один не отвечает)',
 ];

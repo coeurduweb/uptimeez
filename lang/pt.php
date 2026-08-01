@@ -210,4 +210,5 @@ return [
     '{n} Go' => '{n} GB',
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => 'AGRAVADO: o site está agora totalmente fora do ar',
+    '({n} sources, aucune ne répond)' => '({n} fontes, nenhuma responde)',
 ];

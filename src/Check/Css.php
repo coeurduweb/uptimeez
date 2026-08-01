@@ -40,6 +40,17 @@ final class Css
     private const MAX_SHEETS      = 30;
     private const MAX_SCRIPTS     = 25;
     private const MAX_FONTS       = 4;
+
+    /**
+     * Formats de police qu'aucun navigateur encore utilisé ne demande.
+     *
+     * « eot » est propre à Internet Explorer, dont la dernière version a cessé d'être
+     * maintenue en 2022 ; « svg » ne servait qu'à Safari 4 et aux vieux WebKit mobiles.
+     * Les deux restent déclarés dans presque tous les @font-face du web, parce que les
+     * générateurs de polices continuent de les produire. Leur absence sur le serveur est
+     * donc l'état NORMAL d'un site moderne, pas une panne.
+     */
+    private const FORMATS_HERITES = ['eot', 'svg'];
     private const MAX_SHEET_BYTES = 1_500_000;
     private const MAX_CLASSES     = 60;
 
@@ -164,7 +175,10 @@ final class Css
         }
 
         // ---- 3. Analyse ressource par ressource ---------------------------
-        $cssParts = [$inline];
+        // Chaque morceau de CSS garde SA base de résolution. Le style intégré se résout
+        // contre la page ; une feuille externe se résout contre ELLE-MÊME.
+        $cssParts   = [$inline];
+        $cssSources = [[$inline, $pageUrl]];
         foreach ($responses as $key => $res) {
             $ref  = $index[$key] ?? ['url' => $res->url, 'kind' => 'css', 'media' => 'all', 'integrity' => null];
             $kind = ($ref['kind'] ?? 'css') === 'js' ? 'js' : 'css';
@@ -184,9 +198,24 @@ final class Css
                 $cons  = ['err', 'GET ' . $url . ' net::ERR_ABORTED ' . $res->status
                         . ' (' . ($res->status === 404 ? 'Not Found' : 'Error') . ')'];
             } elseif ($bytes === 0) {
-                $issue = 'EMPTY';
-                $note  = t('fichier vide (0 octet)');
-                $cons  = ['warn', 'Empty response body for ' . $url];
+                // UN FICHIER VIDE SERVI EN 200 N'EST PAS UNE PANNE, C'EST UNE FEUILLE SANS
+                // RÈGLE.
+                //
+                // Les greffons WordPress génèrent couramment une feuille vide quand la
+                // fonction qu'elle habille n'est pas utilisée : le méga-menu d'Astra, les
+                // styles conditionnels d'Elementor, les feuilles compilées à la demande.
+                // Le navigateur la charge, n'en tire rien, et la page s'affiche
+                // parfaitement. Mesuré le 2026-08-02 : trois des quatre derniers sites
+                // « cassés » du parc l'étaient pour cette seule raison, et les trois
+                // s'affichaient normalement.
+                //
+                // La distinction qui compte est celle du SERVEUR : un 200 avec zéro octet
+                // est une réponse délibérée, là où un 404 ou une coupure de connexion
+                // signalent une vraie absence, et sont traités plus haut. Le signal reste
+                // donc noté dans les métriques, pour qu'une chute soudaine du poids total
+                // des feuilles reste détectable par comparaison à la référence, mais il ne
+                // déclenche plus rien à lui seul.
+                $metrics['sheets_empty'] = ($metrics['sheets_empty'] ?? 0) + 1;
             } elseif (self::looksLikeErrorPage($res)) {
                 $issue = 'NOT_' . strtoupper($kind);
                 $note  = t('le serveur renvoie du HTML ou une trace PHP au lieu du {kind}',
@@ -255,7 +284,7 @@ final class Css
                         : t('Script secondaire en échec : {detail}', ['detail' => $label]);
                 }
             } else {
-                if ($kind === 'css') { $metrics['sheets_ok']++; $cssParts[] = $res->body; }
+                if ($kind === 'css') { $metrics['sheets_ok']++; $cssParts[] = $res->body; $cssSources[] = [$res->body, $url]; }
                 else $metrics['js_ok']++;
                 $metrics['fingerprint'][self::assetKey($url)] = ['bytes' => $bytes, 'sha1' => $asset['sha1']];
             }
@@ -276,18 +305,61 @@ final class Css
         $metrics['layout_score']  = self::layoutScore($clean);
 
         // ---- 5. Polices déclarées en @font-face ---------------------------
-        $fonts = self::extractFontUrls($clean, $pageUrl);
-        if ($fonts) {
-            foreach (Http::fetchMany(array_map(fn($u) => [$u, $fetchOpt + ['range' => '0-2048']], $fonts), 4) as $r) {
+        // UNE POLICE EST MANQUANTE QUAND AUCUNE DE SES SOURCES NE RÉPOND, PAS QUAND LA
+        // PREMIÈRE MANQUE. La liste de « src » d'un @font-face EST un mécanisme de repli :
+        // signaler la première absence, c'est signaler que le repli fonctionne.
+        // LA BASE EST CELLE DE LA FEUILLE, PAS CELLE DE LA PAGE, ET C'EST TOUT LE SUJET.
+        //
+        // Les « url() » d'un @font-face sont relatives au FICHIER CSS qui les déclare, la
+        // règle est celle de CSS depuis toujours. En concaténant toutes les feuilles puis
+        // en résolvant contre l'adresse de la page, le contrôle cherchait chaque police à
+        // une adresse qui n'existe pas. Exemple mesuré sur le parc le 2026-08-02 :
+        //
+        //   écrit dans …/plugins/elementor/assets/lib/font-awesome/css/all.min.css :
+        //       url(../webfonts/fa-brands-400.woff2)
+        //   résolu contre la PAGE     -> https://site/webfonts/fa-brands-400.woff2   404
+        //   résolu contre la FEUILLE  -> https://site/wp-content/…/webfonts/…woff2   200
+        //
+        // Toutes les polices déclarées dans une feuille rangée ailleurs qu'à la racine
+        // étaient donc signalées manquantes, sur tous les sites, en permanence. C'est la
+        // cause de la quasi-totalité des sites « dégradés » du parc, et le défaut était
+        // d'autant plus crédible que le message citait un vrai nom de fichier.
+        $groupes = [];
+        foreach ($cssSources as [$corpsCss, $baseCss]) {
+            foreach (self::extractFontUrls(self::stripComments($corpsCss), $baseCss) as $g) {
+                $groupes[] = $g;
+                if (count($groupes) >= self::MAX_FONTS) break 2;
+            }
+        }
+        if ($groupes) {
+            $aTester = [];
+            foreach ($groupes as $g => $candidats) {
+                foreach ($candidats as $i => $u) $aTester["f{$g}_{$i}"] = [$u, $fetchOpt + ['range' => '0-2048']];
+            }
+            $reponses = Http::fetchMany($aTester, 4);
+
+            foreach ($groupes as $g => $candidats) {
                 $metrics['fonts_checked']++;
-                if (!$r->ok || $r->status >= 400) {
-                    $metrics['fonts_failed']++;
-                    $soft++;
-                    $result['messages'][] = t('Police introuvable : {asset} → {status}', [
-                        'asset'  => self::shortAsset($r->url),
-                        'status' => (string)($r->status ?: Http::errorLabel($r->errorCode)),
-                    ]);
-                    $console[] = ['level' => 'err', 'text' => 'GET ' . $r->url . ' net::ERR_ABORTED ' . ($r->status ?: 0)];
+                $echecs = [];
+                $uneMarche = false;
+                foreach ($candidats as $i => $u) {
+                    $r = $reponses["f{$g}_{$i}"] ?? null;
+                    if ($r && $r->ok && $r->status < 400) { $uneMarche = true; break; }
+                    $echecs[] = [$u, $r ? (string)($r->status ?: Http::errorLabel($r->errorCode)) : '—'];
+                }
+                if ($uneMarche || !$echecs) continue;
+
+                $metrics['fonts_failed']++;
+                $soft++;
+                [$u, $etat] = $echecs[0];
+                $result['messages'][] = t('Police introuvable : {asset} → {status}', [
+                    'asset'  => self::shortAsset($u) . (count($echecs) > 1
+                        ? ' ' . t('({n} sources, aucune ne répond)', ['n' => count($echecs)])
+                        : ''),
+                    'status' => $etat,
+                ]);
+                foreach ($echecs as [$eu, $es]) {
+                    $console[] = ['level' => 'err', 'text' => 'GET ' . $eu . ' net::ERR_ABORTED ' . $es];
                 }
             }
         }
@@ -377,8 +449,55 @@ final class Css
     // =====================================================================
 
     /** @return array<int,array{url:string,media:string,rel:string,integrity:?string,critical:bool}> */
+    /**
+     * Le HTML débarrassé de ce qui RESSEMBLE à du balisage sans en être.
+     *
+     * LE DÉFAUT QUE ÇA FERME, RELEVÉ SUR UN SITE RÉEL
+     *
+     * www.provencepromotion.com embarque, dans une chaîne JSON à l'intérieur d'un
+     * <script>, un aperçu de sa propre page :
+     *
+     *     "paths":"<link rel='stylesheet' href='https:\/\/…\/grid.css' …>…"
+     *
+     * L'extracteur balayait tout le document et ramassait ces <link>-là. Pire, leurs
+     * barres obliques sont échappées pour JSON : « https:\/\/ » n'est pas reconnu comme
+     * une adresse absolue, donc resolve_url() le prenait pour un chemin RELATIF et
+     * fabriquait « https://site/https:\/\/site\/… ». Résultat mesuré : onze feuilles
+     * déclarées en échec sur une page qui n'en a aucune de cassée, et le site classé
+     * hors service.
+     *
+     * On vide donc le CONTENU des <script> et des <template> en gardant leur balise
+     * ouvrante, ce qui préserve les « src » que extractScripts() doit voir. Les
+     * commentaires HTML partent aussi : un bloc commenté n'est pas chargé par le
+     * navigateur, et l'auditer revient à surveiller du code mort.
+     *
+     * <noscript> est CONSERVÉ : son contenu est du vrai balisage, appliqué aux visiteurs
+     * sans JavaScript. Le retirer masquerait une feuille réellement utilisée.
+     */
+    private static function sansContenusInertes(string $html): string
+    {
+        $html = preg_replace('~<!--.*?-->~s', ' ', $html) ?? $html;
+        $html = preg_replace('~(<script\b[^>]*>).*?</script\s*>~is', '$1</script>', $html) ?? $html;
+        $html = preg_replace('~(<template\b[^>]*>).*?</template\s*>~is', '$1</template>', $html) ?? $html;
+
+        return $html;
+    }
+
+    /**
+     * Une adresse écrite pour JSON redevient une adresse.
+     *
+     * Filet de sécurité pour les cas que sansContenusInertes() ne couvre pas, par exemple
+     * un attribut « data-* » qui transporte du JSON. Sans lui, « https:\/\/exemple.fr »
+     * est traité comme un chemin relatif et produit un 404 fantôme.
+     */
+    private static function desechapper(string $href): string
+    {
+        return str_contains($href, '\\/') ? str_replace('\\/', '/', $href) : $href;
+    }
+
     public static function extractStylesheets(string $html, string $base): array
     {
+        $html = self::sansContenusInertes($html);
         $out = []; $seen = [];
         if (preg_match_all('~<link\b[^>]*>~i', $html, $tags)) {
             foreach ($tags[0] as $tag) {
@@ -389,7 +508,7 @@ final class Css
                 if (!$href) continue;
                 if (!(str_contains($rel, 'stylesheet') || ($rel === 'preload' && $as === 'style'))) continue;
                 if ($media !== '' && preg_match('~^\s*print\s*$~', $media)) continue;  // print : n'affecte pas l'écran
-                $url = resolve_url($base, html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                $url = resolve_url($base, self::desechapper(html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
                 if (!$url) continue;
                 $k = self::dedupeKey($url);
                 if (isset($seen[$k])) continue;
@@ -410,6 +529,11 @@ final class Css
      */
     public static function extractScripts(string $html, string $base): array
     {
+        // Même assainissement que pour les feuilles : un « <script src=… > » écrit dans une
+        // chaîne JSON n'est pas un script chargé. C'est de là que venaient les alertes
+        // « Secondary script failed: …/gtag\/js » vues sur huit sites du parc : l'antislash
+        // trahissait l'origine, une adresse échappée pour JSON.
+        $html = self::sansContenusInertes($html);
         $out = []; $seen = [];
         if (!preg_match_all('~<script\b[^>]*>~i', $html, $tags)) return [];
         foreach ($tags[0] as $tag) {
@@ -417,7 +541,7 @@ final class Css
             if (!$src) continue;
             $type = strtolower(self::attr($tag, 'type') ?? '');
             if ($type !== '' && !in_array($type, ['text/javascript', 'application/javascript', 'module'], true)) continue;
-            $url = resolve_url($base, html_entity_decode($src, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            $url = resolve_url($base, self::desechapper(html_entity_decode($src, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
             if (!$url) continue;
             $k = self::dedupeKey($url);
             if (isset($seen[$k])) continue;
@@ -457,19 +581,64 @@ final class Css
     }
 
     /** URLs de polices déclarées en @font-face (une par famille, échantillon). */
+    /**
+     * Les polices déclarées, GROUPÉES PAR @font-face et sans les formats que plus aucun
+     * navigateur ne demande.
+     *
+     * CE QUE FAISAIT LA VERSION PRÉCÉDENTE, ET POURQUOI ELLE SE TROMPAIT PRESQUE TOUJOURS
+     *
+     * Elle prenait la PREMIÈRE « url() » de chaque bloc, une seule, et l'appelait « la
+     * police ». Or un @font-face s'écrit par convention ainsi :
+     *
+     *     @font-face {
+     *       font-family: 'FontAwesome';
+     *       src: url('fa.eot');
+     *       src: url('fa.eot?#iefix') format('embedded-opentype'),
+     *            url('fa.woff2')      format('woff2'),
+     *            url('fa.woff')       format('woff'),
+     *            url('fa.ttf')        format('truetype');
+     *     }
+     *
+     * La première ligne existe pour Internet Explorer, qui ne sait pas lire la liste de
+     * formats. Elle est déclarée en tête EXPRÈS, et aucun navigateur moderne ne la
+     * demande jamais. Le contrôle vérifiait donc, systématiquement, le seul fichier qui
+     * n'a aucun effet sur aucun visiteur, et criait quand il manquait.
+     *
+     * Mesuré sur le parc réel le 2026-08-02 : la majorité des sites « dégradés » l'étaient
+     * pour un .eot absent. Le site s'affichait parfaitement.
+     *
+     * DEUX RÈGLES REMPLACENT LA PREMIÈRE URL
+     *
+     * 1. Les formats hérités sont ÉCARTÉS du jugement (.eot pour IE, .svg pour Safari 4).
+     *    Leur absence est invisible sur tout navigateur encore utilisé.
+     * 2. On rend une LISTE par bloc, et l'appelant ne conclura à une police manquante que
+     *    si AUCUNE source du bloc ne répond. C'est exactement ce que la liste de
+     *    « src » veut dire : des solutions de repli. Alerter sur la première qui manque,
+     *    c'est alerter sur le fonctionnement normal du mécanisme.
+     *
+     * @return list<list<string>>  une liste d'adresses par @font-face
+     */
     public static function extractFontUrls(string $css, string $base): array
     {
-        $out = [];
+        $groupes = [];
         if (preg_match_all('~@font-face\s*\{([^}]*)\}~i', $css, $blocks)) {
             foreach ($blocks[1] as $b) {
-                if (!preg_match('~url\(\s*["\']?([^"\')\s]+)~i', $b, $m)) continue;
-                if (str_starts_with($m[1], 'data:')) continue;
-                $u = resolve_url($base, $m[1]);
-                if ($u && !in_array($u, $out, true)) $out[] = $u;
-                if (count($out) >= self::MAX_FONTS) break;
+                if (!preg_match_all('~url\(\s*["\']?([^"\')\s]+)~i', $b, $m)) continue;
+                $candidats = [];
+                foreach ($m[1] as $brut) {
+                    if (str_starts_with($brut, 'data:')) continue;
+                    // Le format se lit sur l'extension, avant l'éventuel « ?#iefix ».
+                    $ext = strtolower(pathinfo(parse_url($brut, PHP_URL_PATH) ?? $brut, PATHINFO_EXTENSION));
+                    if (in_array($ext, self::FORMATS_HERITES, true)) continue;
+                    $u = resolve_url($base, $brut);
+                    if ($u && !in_array($u, $candidats, true)) $candidats[] = $u;
+                }
+                if ($candidats) $groupes[] = $candidats;
+                if (count($groupes) >= self::MAX_FONTS) break;
             }
         }
-        return $out;
+
+        return $groupes;
     }
 
     /** Classes les plus utilisées dans le corps du document. */
@@ -536,12 +705,60 @@ final class Css
             : (str_contains($ct, 'javascript') || str_contains($ct, 'ecmascript') || str_contains($ct, 'text/plain'));
     }
 
+    /**
+     * La réponse est-elle une page d'erreur déguisée en ressource ?
+     *
+     * CE CONTRÔLE A DÉCLARÉ TREIZE SITES HORS SERVICE ALORS QU'ILS ALLAIENT BIEN.
+     *
+     * Il cherchait « Warning:\s » SANS DISTINCTION DE CASSE dans les 1 500 premiers
+     * signes. Or toute feuille dérivée de Bootstrap ouvre par ses variables de thème :
+     *
+     *     :root { --primary: #007bff; --success: #28a745; --warning: #ffc107; … }
+     *
+     * « --warning: » contient « warning: » suivi d'une espace. Le motif tombait donc sur
+     * une feuille de style parfaitement valide, servie en 200 avec le type text/css et
+     * 200 ko de contenu. Comme une feuille en échec est CRITIQUE, le site passait HORS
+     * SERVICE, au même rang qu'un serveur qui ne répond plus. Mesuré le 2026-08-02 sur le
+     * parc réel : treize sites, presque tous sous JupiterX ou Elementor, c'est-à-dire la
+     * majorité du WordPress moderne.
+     *
+     * Trois corrections, et la première seule n'aurait pas suffi.
+     *
+     * 1. LE TYPE ANNONCÉ FAIT FOI QUAND IL EST BON. Un serveur qui renvoie une page
+     *    d'erreur n'annonce pas « text/css » : il annonce « text/html ». Se fier au type
+     *    quand il est correct élimine d'un coup toute la classe des faux positifs par
+     *    ressemblance textuelle, sans rien perdre, puisque le cas « type faux » est déjà
+     *    traité par mimeOk() juste à côté.
+     * 2. LES MOTIFS D'ERREUR PHP SONT ANCRÉS SUR LEUR VRAIE FORME. PHP écrit
+     *    « Warning: message in /chemin/fichier.php on line 42 » ou sa variante HTML
+     *    « <b>Warning</b>: ». Exiger la suite (« in … on line N », ou le gras) distingue
+     *    une vraie trace d'un mot du dictionnaire. La casse redevient significative :
+     *    PHP écrit « Warning », jamais « warning ».
+     * 3. « Not Found</title> » ET SES SŒURS RESTENT, mais seulement dans du HTML, sinon
+     *    un commentaire CSS citant un titre de page suffirait à déclencher l'alarme.
+     */
     private static function looksLikeErrorPage(Response $res): bool
     {
         $head = ltrim(substr($res->body, 0, 1500));
         if ($head === '') return false;
+
+        // Ouverture HTML ou PHP : sans appel, c'est une page et pas une ressource.
         if (preg_match('~^(<!doctype|<html|<\?xml|<\?php)~i', $head)) return true;
-        return (bool)preg_match('~(Fatal error|Parse error|Warning:\s|Notice:\s|Not Found</title>|Forbidden</title>|Internal Server Error)~i', $head);
+
+        // Le type annoncé est cohérent avec du CSS ou du JavaScript : on le croit. Le
+        // désaccord entre type annoncé et contenu est le travail de mimeOk(), pas d'ici.
+        $ct = strtolower((string)$res->contentType);
+        if ($ct !== '' && (str_contains($ct, 'css') || str_contains($ct, 'javascript') || str_contains($ct, 'ecmascript'))) {
+            return false;
+        }
+
+        // Une trace PHP réelle, avec sa queue. « Warning: » tout seul est un mot.
+        if (preg_match('~(Fatal error|Parse error|Warning|Notice|Deprecated)\s*:\s.{0,300}? in .{1,200}? on line \d+~s', $head)) return true;
+        if (preg_match('~<b>\s*(Fatal error|Parse error|Warning|Notice|Deprecated)\s*</b>\s*:~i', $head)) return true;
+        if (preg_match('~^(Fatal error|Parse error):\s~m', $head)) return true;
+
+        // Titres de pages d'erreur : seulement s'il y a bien du HTML autour.
+        return (bool)preg_match('~<title>[^<]*(Not Found|Forbidden|Internal Server Error)~i', $head);
     }
 
     /** Vérifie un attribut integrity (« sha384-base64 », plusieurs valeurs possibles). */

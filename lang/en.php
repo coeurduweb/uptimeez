@@ -1530,4 +1530,5 @@ return [
     '{n} Go' => '{n} GB',
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => 'ESCALATED: the site is now fully down',
+    '({n} sources, aucune ne répond)' => '({n} sources, none answers)',
 ];
