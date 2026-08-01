@@ -2646,6 +2646,89 @@ foreach (['/../README.md' => ['/\*\*([\d,]+) checks, all green\*\*/', '/(\d+) ch
 // Le nombre de contrôles annoncé dans les README doit être le vrai.
 //
 // Il dérive à chaque ajout de test, exactement comme « 45 signatures » avant lui, et
+section('Étalement par serveur : ne pas ressembler à une attaque');
+// ---------------------------------------------------------------------------
+// LE DÉFAUT : la sonde repartait sur « maintenant + intervalle + random_int(0, …) »,
+// avec un aléa plafonné à 45 secondes. Sur un intervalle de quinze minutes, quarante
+// sites d'un même hébergement mutualisé partaient donc dans une fenêtre de moins d'une
+// minute, ce qui est le profil qu'un pare-feu applicatif appelle une attaque. Et un aléa
+// est SANS MÉMOIRE : deux sondes peuvent tirer la même valeur à chaque passage.
+//
+// Ce qui est éprouvé ici n'est pas « il y a un peu de dispersion », c'est l'ESPACEMENT
+// MINIMAL entre deux sondes d'un même serveur, qui est la grandeur que la cible subit.
+
+$fauxMons = [];
+for ($i = 1; $i <= 30; $i++) {
+    $fauxMons[] = ['id' => $i, 'url' => "https://site$i.example/", 'last_ip' => '203.0.113.7',
+                   'interval_sec' => 900, 'enabled' => 1, 'kind' => 'http'];
+}
+// Trois sondes ailleurs, pour vérifier qu'on ne mélange pas les grappes.
+foreach ([101, 102, 103] as $i) {
+    $fauxMons[] = ['id' => $i, 'url' => "https://autre$i.example/", 'last_ip' => '198.51.100.9',
+                   'interval_sec' => 900, 'enabled' => 1, 'kind' => 'http'];
+}
+
+check('la grappe suit l\'adresse et non le domaine',
+    Uptimeez\Runner::grappeServeur($fauxMons[0]) === Uptimeez\Runner::grappeServeur($fauxMons[9]),
+    true);
+check('deux adresses différentes font deux grappes',
+    Uptimeez\Runner::grappeServeur($fauxMons[0]) === Uptimeez\Runner::grappeServeur($fauxMons[30]),
+    false);
+check('sans adresse connue, repli sur le nom',
+    Uptimeez\Runner::grappeServeur(['url' => 'https://Exemple.FR/x', 'last_ip' => '']),
+    'hote:exemple.fr');
+
+// L'ENTRELACEMENT : aucun paquet parallèle ne doit contenir deux sondes du même serveur.
+// On mélange d'abord, pour ne pas éprouver un ordre d'entrée favorable.
+$melange = $fauxMons;
+usort($melange, static fn (array $a, array $b): int => ((int)$a['id'] % 7) <=> ((int)$b['id'] % 7));
+$ordonne = Uptimeez\Runner::entrelacerParServeur($melange);
+
+check('l\'entrelacement ne perd ni n\'invente de sonde', count($ordonne), count($fauxMons));
+
+$idsAvant = array_map(static fn (array $m): int => (int)$m['id'], $fauxMons);
+$idsApres = array_map(static fn (array $m): int => (int)$m['id'], $ordonne);
+sort($idsAvant); sort($idsApres);
+check('l\'entrelacement conserve exactement le même ensemble', $idsApres, $idsAvant);
+
+// Avec 2 grappes et des paquets de 10, on ne peut pas garantir mieux que « pas deux de
+// suite » : c'est la borne théorique, et c'est elle qu'on exige.
+$colles = 0;
+for ($i = 1; $i < count($ordonne); $i++) {
+    if (Uptimeez\Runner::grappeServeur($ordonne[$i]) === Uptimeez\Runner::grappeServeur($ordonne[$i - 1])) {
+        $colles++;
+    }
+}
+// 30 sondes sur une grappe et 3 sur l'autre : la grosse grappe ne PEUT pas être séparée
+// partout, il reste au mieux 30 - 3 - 1 = 26 adjacences. On exige l'optimum, pas zéro,
+// parce qu'exiger l'impossible ferait supprimer le contrôle au premier échec.
+check('l\'entrelacement atteint la borne théorique d\'adjacences', $colles, 26);
+
+// LES CRÉNEAUX. On ne peut pas appeler prochainPassage() sans base, puisqu'il interroge
+// la table pour connaître le rang. On éprouve donc la formule elle-même, sur les mêmes
+// valeurs : rang × intervalle / taille, ancré sur la grille.
+$intervalle = 900; $taille = 30; $maintenant = 1_800_000_000;
+$creneaux = [];
+for ($rang = 0; $rang < $taille; $rang++) {
+    $debut = intdiv($maintenant, $intervalle) * $intervalle;
+    $creneaux[] = $debut + $intervalle + (int)round($rang * $intervalle / $taille);
+}
+$ecarts = [];
+for ($i = 1; $i < count($creneaux); $i++) $ecarts[] = $creneaux[$i] - $creneaux[$i - 1];
+
+check('30 sondes sur 15 minutes : espacement minimal de 30 s', min($ecarts), 30);
+check('aucune paire ne part à la même seconde', count(array_unique($creneaux)), $taille);
+check('tous les créneaux tiennent dans une seule fenêtre',
+    max($creneaux) - min($creneaux) < $intervalle, true);
+
+// L'ANCRAGE : c'est ce qui empêche la dérive. Deux fenêtres consécutives doivent donner
+// exactement le même créneau, décalé d'un intervalle, quelle que soit l'heure d'appel
+// DANS la fenêtre. Sans ancrage, le temps de la requête s'ajoutait à chaque passage et
+// les créneaux finissaient par se recouvrir au bout de quelques heures.
+$a = intdiv($maintenant + 3, $intervalle) * $intervalle + $intervalle + 120;
+$b = intdiv($maintenant + 800, $intervalle) * $intervalle + $intervalle + 120;
+check('le créneau ne dérive pas avec l\'heure d\'appel', $b - $a, 0);
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.

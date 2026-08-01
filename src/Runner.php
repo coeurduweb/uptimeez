@@ -94,6 +94,170 @@ final class Runner
         return $sent;
     }
 
+    /**
+     * La « grappe » à laquelle appartient une sonde : ce qui, pour la cible, ressemble à
+     * un seul serveur.
+     *
+     * POURQUOI L'ADRESSE IP ET NON LE NOM DE DOMAINE
+     *
+     * Un hébergement mutualisé sert des dizaines de domaines depuis une seule machine et
+     * une seule adresse. Grouper par nom de domaine ne verrait donc rien : quarante sites
+     * d'un même cPanel formeraient quarante grappes d'un élément, et l'étalement ne
+     * s'appliquerait à rien. C'est précisément le cas du parc réel, où un client a
+     * plusieurs dizaines de sites sur le même compte d'hébergement.
+     *
+     * Repli sur le nom quand l'adresse n'est pas encore connue, c'est-à-dire au tout
+     * premier passage d'une sonde neuve. Un repli valait mieux qu'un groupe « inconnu »
+     * commun, qui aurait réuni toutes les sondes neuves dans une même grappe et les aurait
+     * étalées les unes par rapport aux autres alors qu'elles ne se gênent pas.
+     */
+    public static function grappeServeur(array $mon): string
+    {
+        $ip = trim((string)($mon['last_ip'] ?? ''));
+
+        return $ip !== '' ? 'ip:' . $ip : 'hote:' . strtolower(host_of((string)($mon['url'] ?? '')));
+    }
+
+    /**
+     * Quand cette sonde repassera, de façon à ce que les sondes d'une MÊME grappe se
+     * répartissent sur toute la durée de l'intervalle.
+     *
+     * LE PROBLÈME QUE ÇA RÈGLE, ET QU'UN ALÉA NE RÉGLAIT PAS
+     *
+     * La version précédente ajoutait « random_int(0, interval/8) », plafonné à 45
+     * secondes. Deux défauts, et le second est le vrai.
+     *
+     * Un aléa borné à 45 secondes ne disperse rien sur un intervalle de quinze minutes :
+     * quarante sites d'un même hébergeur mutualisé partaient dans une fenêtre de moins
+     * d'une minute, ce qui est exactement le profil qu'un pare-feu applicatif appelle une
+     * attaque. Et surtout, un aléa est SANS MÉMOIRE : deux sondes peuvent tirer la même
+     * valeur, à chaque passage, indéfiniment. Il réduit la probabilité d'une collision, il
+     * ne garantit aucun espacement.
+     *
+     * Ici, chaque sonde reçoit un RANG stable dans sa grappe et occupe le créneau
+     * correspondant. Trente sites sur un même serveur avec un intervalle de 900 secondes
+     * sont interrogés toutes les 30 secondes, l'un après l'autre, indéfiniment.
+     *
+     * POURQUOI ON S'ACCROCHE À UNE GRILLE ET NON À « MAINTENANT »
+     *
+     * « maintenant + intervalle + créneau » dérive : chaque passage ajoute le temps de la
+     * requête, si bien que les créneaux se rapprochent puis se recouvrent au bout de
+     * quelques heures. On calcule donc le début de la prochaine fenêtre absolue, et on y
+     * ajoute le créneau. Le rang d'une sonde vaut la même seconde de chaque fenêtre, quel
+     * que soit le temps qu'a pris la requête précédente.
+     */
+    public static function prochainPassage(array $mon, ?int $maintenant = null): int
+    {
+        $maintenant = $maintenant ?? time();
+        $intervalle = max(60, (int)($mon['interval_sec'] ?? 300));
+        [$rang, $taille] = self::rangDansLaGrappe($mon);
+
+        // Une grappe d'un seul élément n'a personne à éviter : elle garde un petit aléa,
+        // qui sert encore à ne pas se caler sur la seconde ronde de tout le monde.
+        $creneau = $taille > 1
+            ? (int)round($rang * $intervalle / $taille)
+            : random_int(0, min(30, intdiv($intervalle, 10)));
+
+        $debutFenetre = intdiv($maintenant, $intervalle) * $intervalle;
+        $passage = $debutFenetre + $intervalle + $creneau;
+
+        // Le créneau peut tomber avant « maintenant » quand la sonde a pris du retard :
+        // on avance d'une fenêtre plutôt que de replanifier dans le passé, ce qui la ferait
+        // repartir immédiatement et en boucle.
+        while ($passage <= $maintenant) $passage += $intervalle;
+
+        return $passage;
+    }
+
+    /**
+     * Le rang de cette sonde dans sa grappe, et la taille de la grappe.
+     *
+     * Le rang est le NOMBRE DE SONDES DE LA GRAPPE DONT L'IDENTIFIANT EST PLUS PETIT.
+     * C'est stable tant que la grappe ne change pas, ça ne demande aucune colonne
+     * supplémentaire, et l'ordre est le même pour toutes les sondes de la grappe, donc les
+     * créneaux ne se recouvrent pas.
+     *
+     * @return array{0:int,1:int}
+     */
+    private static function rangDansLaGrappe(array $mon): array
+    {
+        $grappe = self::grappeServeur($mon);
+        $id     = (int)($mon['id'] ?? 0);
+
+        // La grappe se recalcule en SQL sur la même règle que grappeServeur() : adresse
+        // connue, sinon nom. Écrire la règle deux fois est un risque de divergence, et
+        // c'est assumé ici : la faire en PHP demanderait de charger toutes les sondes à
+        // chaque planification. Le contrôle de bin/selftest.php compare les deux.
+        $prefixe = substr($grappe, 0, 3) === 'ip:' ? substr($grappe, 3) : null;
+
+        if ($prefixe !== null) {
+            $ligne = Db::one(
+                "SELECT COUNT(*) AS total,
+                        SUM(CASE WHEN id < ? THEN 1 ELSE 0 END) AS avant
+                   FROM monitors
+                  WHERE enabled = 1 AND kind <> 'heartbeat' AND last_ip = ?",
+                [$id, $prefixe]
+            );
+        } else {
+            $ligne = Db::one(
+                "SELECT COUNT(*) AS total,
+                        SUM(CASE WHEN id < ? THEN 1 ELSE 0 END) AS avant
+                   FROM monitors
+                  WHERE enabled = 1 AND kind <> 'heartbeat'
+                    AND (last_ip IS NULL OR last_ip = '')
+                    AND lower(url) LIKE ?",
+                [$id, '%' . strtolower(host_of((string)($mon['url'] ?? ''))) . '%']
+            );
+        }
+
+        $total = max(1, (int)($ligne['total'] ?? 1));
+        $avant = (int)($ligne['avant'] ?? 0);
+
+        return [$avant, $total];
+    }
+
+    /**
+     * Réordonne les sondes dues pour qu'un même serveur n'apparaisse jamais deux fois de
+     * suite, donc jamais deux fois dans le même paquet parallèle.
+     *
+     * POURQUOI L'ÉTALEMENT DANS LE TEMPS NE SUFFIT PAS
+     *
+     * prochainPassage() empêche deux sondes d'une même grappe d'être dues à la même
+     * seconde, mais pas d'être dues dans la même PASSE : une sonde en retard, une reprise
+     * après une panne du planificateur, ou simplement des sondes neuves dont le
+     * next_check_at est NULL, et la passe ramasse tout le lot d'un coup. Les sondes neuves
+     * sont le cas le plus courant : à la création d'un compte, les deux cents partent
+     * ensemble, c'est-à-dire au pire moment, celui où le client regarde.
+     *
+     * L'entrelacement en tourniquet garantit que, tant qu'il y a au moins autant de
+     * grappes que la taille d'un paquet, aucun paquet ne contient deux sondes du même
+     * serveur.
+     *
+     * @param  list<array<string,mixed>>  $mons
+     * @return list<array<string,mixed>>
+     */
+    public static function entrelacerParServeur(array $mons): array
+    {
+        if (count($mons) < 2) return $mons;
+
+        $files = [];
+        foreach ($mons as $mon) $files[self::grappeServeur($mon)][] = $mon;
+
+        // Les grosses grappes en premier : sinon une grappe de trente face à dix grappes
+        // d'une se retrouve concentrée en fin de liste, donc de nouveau groupée.
+        uasort($files, static fn (array $a, array $b): int => count($b) <=> count($a));
+
+        $sortie = [];
+        while ($files) {
+            foreach ($files as $cle => $file) {
+                $sortie[] = array_shift($files[$cle]);
+                if (!$files[$cle]) unset($files[$cle]);
+            }
+        }
+
+        return $sortie;
+    }
+
     /** Sondes dues à cet instant. */
     public static function due(int $limit = 60): array
     {
@@ -118,6 +282,11 @@ final class Runner
         $stats = ['ran' => 0, 'down' => 0, 'degraded' => 0, 'up' => 0, 'seconds' => 0.0];
         $mons  = self::due($limit);
         if (!$mons) { $stats['seconds'] = round(microtime(true) - $t0, 2); return $stats; }
+
+        // L'ordre décide de ce qui part ENSEMBLE, puisque la découpe en paquets suit la
+        // liste. Sans cet entrelacement, une passe qui ramasse trente sondes d'un même
+        // hébergeur mutualisé lui envoie dix requêtes simultanées, trois fois de suite.
+        $mons = self::entrelacerParServeur($mons);
 
         $parallel = (int)Config::get('defaults.max_parallel', 10);
 
@@ -614,10 +783,18 @@ final class Runner
         ]);
 
         // --- Mise à jour de la sonde ---------------------------------------
-        $jitter   = random_int(0, (int)max(1, min(45, ((int)$mon['interval_sec']) / 8)));
+        // Le créneau remplace l'aléa : voir prochainPassage(), qui explique pourquoi un
+        // « random_int » borné à 45 secondes ne dispersait rien sur un intervalle de
+        // quinze minutes et ne garantissait aucun espacement.
+        //
+        // La sonde est passée par ici, donc son adresse VIENT d'être écrite quelques lignes
+        // plus bas : on la pose dans le tableau transmis pour que la grappe soit calculée
+        // sur l'adresse d'aujourd'hui et non sur celle de la passe précédente. Un site qui
+        // change d'hébergeur rejoint sa nouvelle grappe au premier passage.
+        $ipDuJour = $res->ip !== '' ? $res->ip : ($mon['last_ip'] ?? null);
         $upd = [
             'last_check_at'    => $ts,
-            'next_check_at'    => date('Y-m-d H:i:s', time() + (int)$mon['interval_sec'] + $jitter),
+            'next_check_at'    => date('Y-m-d H:i:s', self::prochainPassage(['last_ip' => $ipDuJour] + $mon)),
             'last_ms'          => $res->status > 0 || $res->totalMs > 0 ? $res->totalMs : null,
             'last_status_code' => $res->status ?: null,
             'last_ip'          => $res->ip !== '' ? $res->ip : ($mon['last_ip'] ?? null),
@@ -799,7 +976,10 @@ final class Runner
         Db::update('monitors', [
             'status'        => 'paused',
             'last_check_at' => now(),
-            'next_check_at' => date('Y-m-d H:i:s', time() + max(60, (int)$mon['interval_sec'])),
+            // Même règle que le chemin nominal. Une sonde en pause qui repartait sur
+            // « maintenant + intervalle » revenait hors de son créneau, et une reprise de
+            // masse après une pause générale les faisait toutes repartir ensemble.
+            'next_check_at' => date('Y-m-d H:i:s', self::prochainPassage($mon)),
         ], 'id = :__id', ['__id' => (int)$mon['id']]);
     }
 
