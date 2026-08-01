@@ -2721,6 +2721,36 @@ check('aucune paire ne part à la même seconde', count(array_unique($creneaux))
 check('tous les créneaux tiennent dans une seule fenêtre',
     max($creneaux) - min($creneaux) < $intervalle, true);
 
+// LA PHASE PAR GRAPPE. Sans elle, le premier élément de chaque grappe reçoit le créneau 0
+// et toutes les grappes démarrent à la même seconde. Mesuré sur le parc réel avant
+// correction : 200 sondes sur 16 minutes, mais une minute en portait 30 contre 12,5 en
+// moyenne. Aucun serveur ne le subissait, chacun ne recevant qu'une requête, mais le pic
+// tombait pile au changement de fenêtre.
+$phases = [];
+foreach (['ip:203.0.113.7', 'ip:198.51.100.9', 'ip:192.0.2.4', 'hote:exemple.fr'] as $g) {
+    $phases[$g] = crc32($g) % $intervalle;
+}
+check('deux grappes ne démarrent pas à la même seconde',
+    count(array_unique($phases)), count($phases));
+check('la phase reste dans la fenêtre',
+    max($phases) < $intervalle && min($phases) >= 0, true);
+check('la phase est stable d\'un appel à l\'autre',
+    crc32('ip:203.0.113.7') % $intervalle, $phases['ip:203.0.113.7']);
+
+// Et la phase ne doit RIEN casser de l'espacement intra-grappe : on refait la mesure de
+// l'espacement minimal, phase comprise. C'est le contrôle qui aurait attrapé une phase
+// ajoutée sans modulo, qui aurait poussé les derniers créneaux hors de la fenêtre.
+$avecPhase = [];
+$ph = $phases['ip:203.0.113.7'];
+for ($rang = 0; $rang < $taille; $rang++) {
+    $avecPhase[] = ($ph + (int)round($rang * $intervalle / $taille)) % $intervalle;
+}
+sort($avecPhase);
+$ecartsPhase = [];
+for ($i = 1; $i < count($avecPhase); $i++) $ecartsPhase[] = $avecPhase[$i] - $avecPhase[$i - 1];
+check('la phase préserve l\'espacement minimal de 30 s', min($ecartsPhase), 30);
+check('la phase ne pousse aucun créneau hors de la fenêtre', max($avecPhase) < $intervalle, true);
+
 // L'ANCRAGE : c'est ce qui empêche la dérive. Deux fenêtres consécutives doivent donner
 // exactement le même créneau, décalé d'un intervalle, quelle que soit l'heure d'appel
 // DANS la fenêtre. Sans ancrage, le temps de la requête s'ajoutait à chaque passage et

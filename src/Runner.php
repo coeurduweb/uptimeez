@@ -150,13 +150,30 @@ final class Runner
     {
         $maintenant = $maintenant ?? time();
         $intervalle = max(60, (int)($mon['interval_sec'] ?? 300));
+        $grappe = self::grappeServeur($mon);
         [$rang, $taille] = self::rangDansLaGrappe($mon);
 
-        // Une grappe d'un seul élément n'a personne à éviter : elle garde un petit aléa,
-        // qui sert encore à ne pas se caler sur la seconde ronde de tout le monde.
+        // LA PHASE DE LA GRAPPE, SANS LAQUELLE TOUTES LES GRAPPES DÉMARRENT ENSEMBLE.
+        //
+        // Le rang seul donne le créneau 0 au premier élément de CHAQUE grappe. Mesuré sur
+        // le parc réel du 2026-08-01 : 200 sondes réparties sur 16 minutes, mais une
+        // minute en portait 30 contre 12,5 en moyenne, parce que les vingt grappes
+        // partaient toutes à la même seconde. Aucun serveur n'en souffrait, chacun ne
+        // recevant qu'une requête, mais notre propre charge était inégale et le pic
+        // tombait pile au changement de fenêtre.
+        //
+        // La phase est tirée du NOM de la grappe, donc stable et sans mémoire à conserver.
+        // crc32 suffit : on ne cherche pas une propriété cryptographique, seulement une
+        // répartition qui ne dépende pas de l'ordre de création.
+        //
+        // Elle remplace aussi le dernier « random_int » du calcul, celui des grappes d'un
+        // seul élément. Toute la planification est désormais déterministe, donc
+        // reproductible dans un test : c'est ce qui permet au selftest d'exiger un
+        // espacement plutôt que de constater une dispersion.
+        $phase = crc32($grappe) % $intervalle;
         $creneau = $taille > 1
-            ? (int)round($rang * $intervalle / $taille)
-            : random_int(0, min(30, intdiv($intervalle, 10)));
+            ? (int)(($phase + (int)round($rang * $intervalle / $taille)) % $intervalle)
+            : $phase;
 
         $debutFenetre = intdiv($maintenant, $intervalle) * $intervalle;
         $passage = $debutFenetre + $intervalle + $creneau;
