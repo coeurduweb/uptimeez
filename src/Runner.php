@@ -627,7 +627,27 @@ final class Runner
                                                      $res->body, $cms !== null ? (string)$cms : null);
                 }
                 if ($css['state'] === 'broken') {
-                    $note('down', 'CSS_BROKEN', 'Mise en page cassée : {detail}',
+                    // UNE MISE EN PAGE CASSÉE N'EST PAS UN SITE HORS SERVICE.
+                    //
+                    // Ce cas rendait « down », c'est-à-dire le MÊME état qu'un serveur qui
+                    // ne répond plus, qu'un 500, ou qu'une base de données morte. Or ici la
+                    // page répond, le serveur va bien, le contenu est là : c'est
+                    // l'apparence qui souffre. Confondre les deux a deux coûts.
+                    //
+                    // Pour le lecteur des alertes, « hors service » perd son sens : il finit
+                    // par ouvrir un courriel rouge en s'attendant à un problème de style, et
+                    // le jour où le serveur tombe vraiment, il ouvre avec la même
+                    // nonchalance. Pour les statistiques, une panne de style entre dans le
+                    // taux de disponibilité et le fausse : on annonce au client un site
+                    // indisponible alors qu'il servait ses pages.
+                    //
+                    // La règle est donc : DOWN veut dire que le visiteur n'obtient pas la
+                    // page (pas de réponse, code d'erreur, chaîne de preuve absente).
+                    // Tout ce qui concerne l'apparence plafonne à DEGRADED, quelle que
+                    // soit sa gravité interne. La gravité reste lisible dans le message et
+                    // dans le code de cause, qui distingue toujours CSS_BROKEN de
+                    // CSS_DEGRADED.
+                    $note('degraded', 'CSS_BROKEN', 'Mise en page cassée : {detail}',
                           ['detail' => implode(' ', array_slice($css['messages'], 0, 3))]);
                 } elseif ($css['state'] === 'warn') {
                     $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : {detail}',
@@ -648,7 +668,8 @@ final class Runner
                                     ['date' => date('d/m H:i', strtotime((string)$mon['css_checked_at']))]);
                 }
                 if ($mon['css_state'] === 'broken') {
-                    $note('down', 'CSS_BROKEN', 'Mise en page cassée : {detail}', ['detail' => $why]);
+                    // Même plafond que ci-dessus : l'apparence ne fait pas un hors service.
+                    $note('degraded', 'CSS_BROKEN', 'Mise en page cassée : {detail}', ['detail' => $why]);
                 } else {
                     $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : {detail}', ['detail' => $why]);
                 }

@@ -2934,6 +2934,35 @@ check('une référence de la version courante est bien comparée', $r2['baseline
 check('la référence produite est versionnée',
     (int)($r2['baseline']['v'] ?? 0), Uptimeez\Check\Css::VERSION_EXTRACTION);
 
+section("« Hors service » veut dire que le visiteur n'a pas la page");
+// ---------------------------------------------------------------------------
+// LA RÈGLE : DOWN est réservé à ce qui prive le visiteur de la page — pas de réponse,
+// code d'erreur, base de données morte, chaîne de preuve absente, JSON invalide. Tout ce
+// qui touche à l'APPARENCE plafonne à DEGRADED, quelle que soit sa gravité interne.
+//
+// Elle a été demandée après un relevé sans appel : treize sites étaient annoncés « hors
+// service » alors qu'ils servaient leurs pages, sur un défaut de feuille de style qui
+// était lui-même un faux positif. Le coût n'est pas seulement le bruit : une panne
+// d'apparence entrait dans le taux de disponibilité et le faussait, et le mot « hors
+// service » perdait son sens pour le jour où il compte vraiment.
+//
+// Le contrôle lit la SOURCE parce que c'est là que la faute se réintroduit : il suffit
+// d'un « note('down', 'CSS_… » ajouté sans y penser. La gravité, elle, reste lisible dans
+// le code de cause, qui distingue toujours CSS_BROKEN de CSS_DEGRADED.
+$sourceRunner = (string)file_get_contents(__DIR__ . '/../src/Runner.php');
+preg_match_all("~\\\$note\\(\\s*'down'\\s*,\\s*'([A-Z_]+)'~", $sourceRunner, $mDown);
+$causesDown = array_values(array_unique($mDown[1] ?? []));
+
+$apparence = array_values(array_filter($causesDown, static fn (string $c): bool
+    => str_starts_with($c, 'CSS_') || str_starts_with($c, 'NOINDEX') || str_starts_with($c, 'SLOW')));
+check("aucune cause d'apparence ne rend « hors service »", $apparence, []);
+
+// Et l'inverse : les causes qui privent VRAIMENT le visiteur doivent rester en « down ».
+// Sans ce second contrôle, tout ramener à « degraded » passerait le premier au vert.
+foreach (['STRING_MISSING', 'STRING_FORBIDDEN', 'JSON_INVALID', 'JSON_PATH'] as $attendue) {
+    check("« $attendue » reste un hors service", in_array($attendue, $causesDown, true), true);
+}
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.
