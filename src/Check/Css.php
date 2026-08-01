@@ -51,6 +51,29 @@ final class Css
      * donc l'état NORMAL d'un site moderne, pas une panne.
      */
     private const FORMATS_HERITES = ['eot', 'svg'];
+
+    /**
+     * Version du CONTRAT D'EXTRACTION, à incrémenter dès que ce fichier change ce qu'il
+     * compte : feuilles retenues, scripts retenus, polices retenues, base de résolution.
+     *
+     * POURQUOI CE NOMBRE EXISTE, ET CE QU'IL A COÛTÉ DE NE PAS L'AVOIR
+     *
+     * La référence enregistre « ce site charge 4 scripts et 12 feuilles », et toute baisse
+     * déclenche une alerte. C'est juste tant que la MANIÈRE DE COMPTER ne bouge pas. Le
+     * 2026-08-02, l'extracteur a cessé de ramasser les <link> et <script> écrits dans des
+     * chaînes JSON, ce qui était un correctif. Résultat immédiat : neuf sites ont annoncé
+     * « un script de moins que la référence », alors qu'aucun n'avait changé. Ils
+     * comparaient un comptage neuf à une référence ancienne.
+     *
+     * Le piège est vicieux parce que l'alerte est parfaitement crédible : elle nomme un
+     * vrai site, un vrai écart, et un vrai risque. Rien ne dit que la règle du jeu a
+     * changé entre les deux mesures.
+     *
+     * Une référence dont la version diffère est donc ÉCARTÉE et reconstruite, jamais
+     * comparée. Perdre une référence coûte un cycle de silence ; la comparer à travers un
+     * changement de contrat coûte la confiance dans toutes les alertes.
+     */
+    public const VERSION_EXTRACTION = 2;
     private const MAX_SHEET_BYTES = 1_500_000;
     private const MAX_CLASSES     = 60;
 
@@ -414,6 +437,13 @@ final class Css
                 $result['messages'][] = 'Aucune feuille de style détectée sur cette page.';
             }
         }
+        // Une référence bâtie par une autre version de l'extracteur ne se compare pas :
+        // voir VERSION_EXTRACTION. Elle sera reconstruite au prochain passage vert.
+        if ($baseline && (int)($baseline['v'] ?? 1) !== self::VERSION_EXTRACTION) {
+            $baseline = [];
+            $result['baseline_perimee'] = true;
+        }
+
         if ($baseline) {
             $delta = self::compare($metrics, $baseline, $dropPct);
             foreach ($delta['critical'] as $msg) { $critical++; $result['messages'][] = $msg; }
@@ -917,6 +947,7 @@ final class Css
             'inline_bytes' => $m['inline_bytes'],
             'classes' => array_slice(array_keys($usedClasses), 0, 30),
             'fingerprint' => $m['fingerprint'], 'built_at' => now(),
+            'v' => self::VERSION_EXTRACTION,
         ];
     }
 

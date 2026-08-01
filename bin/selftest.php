@@ -2912,6 +2912,28 @@ $f = Uptimeez\Check\Css::extractStylesheets($htmlEchappe, 'https://exemple.fr/')
 check('l\'adresse échappée n\'est pas prise pour un chemin relatif',
     $f[0]['url'] ?? '', 'https://exemple.fr/x.css');
 
+// 5. UNE RÉFÉRENCE D'UNE AUTRE VERSION D'EXTRACTEUR NE SE COMPARE PAS.
+// Constaté immédiatement après les correctifs ci-dessus : neuf sites ont annoncé « un
+// script de moins que la référence » alors qu'aucun n'avait changé. Leur référence avait
+// été bâtie quand l'extracteur comptait encore les <script> écrits dans du JSON. L'alerte
+// était parfaitement crédible — vrai site, vrai écart, vrai risque — et entièrement fausse.
+$htmlSimple = '<html><head><link rel="stylesheet" href="/a.css"></head><body><p>x</p></body></html>';
+$repPage = new Uptimeez\Response();
+$repPage->body = $htmlSimple; $repPage->contentType = 'text/html'; $repPage->status = 200;
+
+$refAncienne = ['sheets_declared' => 9, 'js_declared' => 9, 'v' => 1];
+$r1 = Uptimeez\Check\Css::audit('https://exemple.fr/', $htmlSimple, $repPage, $refAncienne, ['silhouette' => false]);
+check('une référence d\'une autre version est écartée', $r1['baseline_perimee'] ?? false, true);
+
+$refCourante = ['sheets_declared' => 9, 'js_declared' => 9, 'v' => Uptimeez\Check\Css::VERSION_EXTRACTION];
+$r2 = Uptimeez\Check\Css::audit('https://exemple.fr/', $htmlSimple, $repPage, $refCourante, ['silhouette' => false]);
+check('une référence de la version courante est bien comparée', $r2['baseline_perimee'] ?? false, false);
+
+// Et la référence produite porte la version : sans ça, la prochaine évolution du
+// détecteur retrouverait exactement le même piège.
+check('la référence produite est versionnée',
+    (int)($r2['baseline']['v'] ?? 0), Uptimeez\Check\Css::VERSION_EXTRACTION);
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.
