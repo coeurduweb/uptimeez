@@ -96,15 +96,82 @@ if ($page === 'login') {
         exit;
     }
     if ($bridge !== '') $error = t('Lien d\'accès invalide ou expiré.');
-    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+
+    // ------------------------------------------------------------------
+    // MOT DE PASSE OUBLIÉ. Possible depuis le 2026-08-02 seulement : avant que le canal
+    // de courrier de l'instance ne soit branché, « mot de passe oublié » aurait été un
+    // bouton mort, ce qui est pire que pas de bouton du tout.
+    // ------------------------------------------------------------------
+    $ecranOubli  = isset($_GET['oublie']) && Uptimeez\Compte::existe();
+    $jetonReinit = trim((string)($_GET['reinit'] ?? ''));
+
+    if ($ecranOubli && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        $demande = Uptimeez\Compte::ouvrirReinit((string)($_POST['identifiant'] ?? ''));
+
+        if ($demande !== null) {
+            $lien = rtrim((string)Config::get('app.url', ''), '/');
+            $lien = ($lien !== '' ? $lien : '') . '/index.php?p=login&reinit=' . urlencode($demande['jeton']);
+            $texte = t('Quelqu\'un a demandé à réinitialiser le mot de passe de {compte}. Le lien ci-dessous est valable une heure et ne fonctionne qu\'une fois. Si ce n\'est pas vous, ignorez ce message : rien n\'a changé.',
+                ['compte' => (string)$demande['compte']['identifiant']]);
+            Uptimeez\Notify\Mail::sendDocument(
+                [(string)$demande['compte']['courriel']],
+                t('Réinitialiser votre mot de passe'),
+                '<p>' . e($texte) . '</p><p><a href="' . e($lien) . '">' . e($lien) . '</a></p>',
+                $texte . "\n\n" . $lien);
+        }
+
+        // LA RÉPONSE EST LA MÊME DANS TOUS LES CAS, compte trouvé ou non. Distinguer les
+        // deux transformerait cet écran en moyen de tester quels comptes existent, ce qui
+        // est la moitié du travail d'une intrusion.
+        $info = t('Si ce compte existe et porte une adresse, un lien vient de partir. Vérifiez votre courrier.');
+        $ecranOubli = false;
+    }
+
+    if ($jetonReinit !== '' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        if (Uptimeez\Compte::reinitialiser($jetonReinit, (string)($_POST['password'] ?? ''))) {
+            $info = t('Mot de passe changé. Vous pouvez vous connecter.');
+            $jetonReinit = '';
+        } else {
+            // On ne dit pas LEQUEL des deux a échoué : un jeton périmé et un mot de passe
+            // trop court se répondent pareil, sinon on offre un moyen de tester des jetons.
+            $error = t('Ce lien n\'est plus valable, ou le mot de passe est trop court.');
+            $jetonReinit = '';
+        }
+    }
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$ecranOubli && $jetonReinit === '' && !isset($info)) {
         $wait = Auth::lockedFor();
         if ($wait > 0) {
             $error = t('Trop de tentatives. Réessayez dans {delay}.', ['delay' => human_duration($wait)]);
-        } elseif (Auth::attempt((string)($_POST['password'] ?? ''))) {
-            header('Location: ' . u('today'));
-            exit;
         } else {
-            $error = t('Mot de passe incorrect.');
+            // DEUX VOIES, ET LE SECOURS EST TENTÉ EN DERNIER. Tant qu'aucun compte
+            // n'existe, seule la seconde s'applique et l'écran n'a qu'un champ. Dès qu'un
+            // compte existe, on essaie d'abord l'identifiant saisi ; si ça échoue, le mot
+            // de passe d'instance reste accepté comme accès de SECOURS, parce qu'une
+            // instance dont la coque ou le courriel est en panne doit rester joignable.
+            //
+            // L'ordre compte : tenter le secours en premier ferait qu'un compte dont le
+            // mot de passe vaut celui de l'instance ouvrirait une session anonyme au lieu
+            // de la sienne, et le journal perdrait le nom de qui est entré.
+            $motDePasse = (string)($_POST['password'] ?? '');
+            $identifiant = trim((string)($_POST['identifiant'] ?? ''));
+
+            $entre = $identifiant !== '' && Auth::attemptCompte($identifiant, $motDePasse);
+
+            if (!$entre) {
+                $entre = Auth::attempt($motDePasse);
+            }
+
+            if ($entre) {
+                header('Location: ' . u('today'));
+                exit;
+            }
+
+            // LE MESSAGE NE DIT PAS LEQUEL DES DEUX EST FAUX. « Identifiant inconnu »
+            // transformerait l'écran en annuaire : on saurait quels comptes existent en
+            // essayant des noms, ce qui est la moitié du travail d'une intrusion.
+            $error = Uptimeez\Compte::existe()
+                ? t('Identifiant ou mot de passe incorrect.')
+                : t('Mot de passe incorrect.');
         }
     }
     $view = 'login';

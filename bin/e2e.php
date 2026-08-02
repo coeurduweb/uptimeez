@@ -258,6 +258,16 @@ ok('sans session, redirection vers la connexion', $r['code'] === 302 && str_cont
 $r = $req('/api.php?action=summary');
 ok('API protégée sans session', $r['code'] === 401, 'HTTP ' . $r['code']);
 
+// LA PANNE LA PLUS BÊTE POSSIBLE, ATTRAPÉE ICI LE 2026-08-02 : on ne peut plus entrer
+// parce qu'on demande s'il y a des comptes. L'écran de connexion s'affiche forcément AVANT
+// Db::migrate(), qui n'est appelée qu'une fois le visiteur authentifié ; sur une instance
+// fraîche la table « comptes » n'existe donc pas, et la question la faisait échouer.
+// Le selftest ne pouvait pas le voir : sa base est déjà migrée.
+$r = $req('/index.php?p=login');
+ok('l\'écran de connexion s\'affiche avant toute migration',
+    $r['code'] === 200 && !str_contains($r['body'], 'Fatal error') && $has($r, 'Mot de passe'),
+    'HTTP ' . $r['code']);
+
 $r = $req('/index.php?p=login', ['password' => 'mauvais mot de passe']);
 ok('mauvais mot de passe refusé', $r['code'] === 200 && $has($r, 'incorrect'));
 

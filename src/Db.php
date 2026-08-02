@@ -465,6 +465,59 @@ final class Db
             derniere_masquee_le {$ts} DEFAULT NULL
         ){$eng}";
 
+        // ------------------------------------------------------------------
+        // DES COMPTES, PARCE QU'UN SECRET PARTAGÉ N'EST PAS UN ACCÈS
+        // ------------------------------------------------------------------
+        //
+        // Une instance n'avait AUCUN compte : un seul mot de passe dans son config.php,
+        // tiré au hasard à la création et affiché une seule fois. Dès qu'un client a deux
+        // personnes, ce mot de passe circule par courriel ou par message, et il n'existe
+        // alors aucun moyen de savoir qui est entré ni de retirer l'accès à une seule
+        // personne. Le seul geste possible est de changer le secret pour tout le monde.
+        //
+        // L'IDENTIFIANT EST UNIQUE, ET C'EST LA BASE QUI LE GARANTIT. Une unicité vérifiée
+        // seulement en PHP se perd sur deux créations simultanées, et deux comptes de même
+        // identifiant rendraient la connexion non déterministe.
+        $tables['comptes'] = "CREATE TABLE IF NOT EXISTS comptes (
+            id {$pk},
+            identifiant {$str(190)} NOT NULL,
+            courriel {$str(255)} DEFAULT NULL,
+            nom {$str(190)} DEFAULT NULL,
+            mot_de_passe {$txt},
+            actif {$bool} NOT NULL DEFAULT 1,
+            cree_le {$ts} NOT NULL,
+            dernier_acces_le {$ts} DEFAULT NULL,
+            /* Réinitialisation : le jeton est stocké HACHÉ. Une base lue par un tiers ne
+               doit pas lui offrir les comptes en clair, et un jeton en clair vaut un mot
+               de passe tant qu'il n'a pas expiré. */
+            jeton_reinit {$str(64)} DEFAULT NULL,
+            jeton_expire_le {$ts} DEFAULT NULL
+        ){$eng}";
+
+        // ------------------------------------------------------------------
+        // SANS TRACE, AJOUTER DES COMPTES NE CHANGE PRESQUE RIEN
+        // ------------------------------------------------------------------
+        //
+        // Savoir QUI est entré est la moitié de l'intérêt des comptes ; l'autre moitié est
+        // de voir qui a ESSAYÉ. Les échecs sont donc consignés au même endroit que les
+        // succès, parce qu'une série d'échecs sur un identifiant valide est le seul signal
+        // qui distingue une tentative d'intrusion d'un mot de passe oublié.
+        //
+        // On enregistre l'identifiant SAISI, même inconnu, et jamais le mot de passe : une
+        // faute de frappe met parfois le mot de passe dans le champ identifiant, et ce
+        // journal deviendrait alors une liste de secrets en clair.
+        $tables['connexions'] = "CREATE TABLE IF NOT EXISTS connexions (
+            id {$pk},
+            compte_id {$int} DEFAULT NULL,
+            identifiant {$str(190)} DEFAULT NULL,
+            /* mot_de_passe | jeton_pont | secours */
+            voie {$str(20)} NOT NULL,
+            reussie {$bool} NOT NULL DEFAULT 0,
+            ip {$str(45)} DEFAULT NULL,
+            agent {$txt},
+            ts {$ts} NOT NULL
+        ){$eng}";
+
         $tables['notifications'] = "CREATE TABLE IF NOT EXISTS notifications (
             id {$pk},
             incident_id {$int} DEFAULT NULL,
@@ -516,6 +569,12 @@ final class Db
             // doit être unique et indexé.
             ['idx_clients_token',  'clients',    'token',                   true],
             ['idx_sites_client',   'sites',      'client_id',               false],
+            // L'IDENTIFIANT EST UNIQUE, ET C'EST LA BASE QUI LE GARANTIT. Vérifier
+            // l'unicité en PHP seulement la perd sur deux créations simultanées, et deux
+            // comptes de même identifiant rendraient la connexion non déterministe : on ne
+            // saurait pas lequel des deux mots de passe ouvre la session.
+            ['idx_comptes_ident',  'comptes',    'identifiant',             true],
+            ['idx_connexions_ts',  'connexions', 'ts',                      false],
         ];
         // MySQL ne connaît pas « CREATE INDEX IF NOT EXISTS » : la requête y est
         // une erreur de syntaxe, et l'attraper silencieusement revenait à ne

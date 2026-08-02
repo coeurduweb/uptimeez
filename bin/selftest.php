@@ -3993,6 +3993,123 @@ foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) $sourcesReglesExc
 check('aucune règle ne consulte les exceptions',
     str_contains($sourcesReglesExc, 'Exceptions::'), false);
 
+section('Sprint C : des comptes, et une trace de qui entre');
+// ---------------------------------------------------------------------------
+// Une instance n'avait AUCUN compte : un seul mot de passe dans son config.php, tiré au
+// hasard à la création et affiché une seule fois. Dès qu'un client a deux personnes, ce
+// secret circule par courriel, et il n'existe alors aucun moyen de savoir qui est entré ni
+// de retirer l'accès à une seule personne.
+
+check('une instance neuve n\'a aucun compte', Uptimeez\Compte::existe(), false);
+
+$refuseCompte = static function (callable $f): bool {
+    try { $f(); return false; } catch (\InvalidArgumentException) { return true; }
+};
+check('un identifiant vide est refusé',
+    $refuseCompte(fn() => Uptimeez\Compte::creer('   ', 'motdepassesolide')), true);
+check('un mot de passe trop court est refusé',
+    $refuseCompte(fn() => Uptimeez\Compte::creer('paul', 'court')), true);
+
+$idCompte = Uptimeez\Compte::creer('Laurent', 'motdepassesolide', 'laurent@example.test', 'Laurent');
+check('un compte est créé', $idCompte > 0, true);
+check('et l\'instance sait désormais qu\'elle en a un', Uptimeez\Compte::existe(), true);
+
+// « Laurent » et « laurent » ne doivent pas être deux comptes : le second serait créé par
+// erreur par quelqu'un qui croit se connecter au premier.
+check('l\'identifiant est insensible à la casse',
+    $refuseCompte(fn() => Uptimeez\Compte::creer('LAURENT', 'motdepassesolide')), true);
+check('et se retrouve quelle que soit la casse saisie',
+    (int)(Uptimeez\Compte::parIdentifiant('  LaUrEnT ')['id'] ?? 0), $idCompte);
+
+check('le bon mot de passe ouvre',
+    (int)(Uptimeez\Compte::verifier('laurent', 'motdepassesolide')['id'] ?? 0), $idCompte);
+check('le mauvais ne l\'ouvre pas',
+    Uptimeez\Compte::verifier('laurent', 'motdepasseFAUX'), null);
+check('un identifiant inconnu non plus',
+    Uptimeez\Compte::verifier('inconnu', 'motdepassesolide'), null);
+
+// LE MOT DE PASSE N'EST PAS STOCKÉ EN CLAIR. Évident, et c'est pour ça qu'on le vérifie :
+// les évidences sont ce qu'on oublie de tester.
+check('le mot de passe est haché en base',
+    str_contains((string)Uptimeez\Db::val('SELECT mot_de_passe FROM comptes WHERE id = ?', [$idCompte]),
+        'motdepassesolide'), false);
+
+// ---- La réinitialisation ------------------------------------------------
+$demande = Uptimeez\Compte::ouvrirReinit('laurent');
+check('une réinitialisation s\'ouvre', is_array($demande) && ($demande['jeton'] ?? '') !== '', true);
+
+// LE JETON EST STOCKÉ HACHÉ : tant qu'il n'a pas expiré il vaut un mot de passe, et une
+// base lue par un tiers ne doit pas offrir les comptes. C'est exactement le traitement
+// qu'on réserve au mot de passe lui-même.
+check('et il n\'est pas stocké en clair',
+    (string)Uptimeez\Db::val('SELECT jeton_reinit FROM comptes WHERE id = ?', [$idCompte]),
+    hash('sha256', (string)$demande['jeton']));
+
+// UN COMPTE SANS ADRESSE NE PEUT PAS ÊTRE RÉINITIALISÉ, et un compte inconnu non plus. Les
+// deux rendent la même chose : l'appelant doit répondre pareil dans les trois cas, sinon
+// l'écran « mot de passe oublié » devient un moyen de tester quels comptes existent.
+Uptimeez\Compte::creer('sansadresse', 'motdepassesolide');
+check('un compte sans adresse ne déclenche pas d\'envoi',
+    Uptimeez\Compte::ouvrirReinit('sansadresse'), null);
+check('un compte inconnu non plus', Uptimeez\Compte::ouvrirReinit('personne'), null);
+
+check('un jeton inventé ne réinitialise rien',
+    Uptimeez\Compte::reinitialiser('jetoninvente', 'nouveaumotdepasse'), false);
+// LE JETON EST EFFACÉ MÊME QUAND LE MOT DE PASSE EST REFUSÉ : sans ça, un jeton capturé
+// resterait utilisable une heure après qu'on l'a vu échouer une fois.
+check('un mot de passe trop court échoue',
+    Uptimeez\Compte::reinitialiser((string)$demande['jeton'], 'court'), false);
+check('et brûle quand même le jeton',
+    Uptimeez\Compte::reinitialiser((string)$demande['jeton'], 'unautremotdepasse'), false);
+
+$demande2 = Uptimeez\Compte::ouvrirReinit('laurent');
+check('un nouveau jeton fonctionne',
+    Uptimeez\Compte::reinitialiser((string)$demande2['jeton'], 'unautremotdepasse'), true);
+check('et le nouveau mot de passe ouvre',
+    (int)(Uptimeez\Compte::verifier('laurent', 'unautremotdepasse')['id'] ?? 0), $idCompte);
+check('tandis que l\'ancien ne fonctionne plus',
+    Uptimeez\Compte::verifier('laurent', 'motdepassesolide'), null);
+check('et le jeton ne sert pas deux fois',
+    Uptimeez\Compte::reinitialiser((string)$demande2['jeton'], 'encoreunautremdp'), false);
+
+// ---- Le journal ---------------------------------------------------------
+// SANS TRACE, AJOUTER DES COMPTES NE CHANGE PRESQUE RIEN. Et les échecs comptent autant
+// que les succès : une série d'échecs sur un identifiant valide est le seul signal qui
+// distingue une intrusion d'un mot de passe oublié.
+Uptimeez\Compte::consigner('mot_de_passe', true, $idCompte, 'laurent');
+Uptimeez\Compte::consigner('mot_de_passe', false, null, 'laurent');
+Uptimeez\Compte::consigner('secours', true, null, 'exploitant');
+Uptimeez\Compte::consigner('jeton_pont', true);
+
+check('les succès sont consignés',
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM connexions WHERE reussie = 1') >= 3, true);
+check('les échecs aussi',
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM connexions WHERE reussie = 0') >= 1, true);
+check('le secours est distingué du mot de passe ordinaire',
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM connexions WHERE voie = ?', ['secours']), 1);
+check('et le pont aussi',
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM connexions WHERE voie = ?', ['jeton_pont']), 1);
+
+// ON N'ENREGISTRE JAMAIS DE MOT DE PASSE, MÊME PAR ACCIDENT. Une faute de frappe met
+// parfois le secret dans le champ du dessus, et ce journal deviendrait alors une liste de
+// mots de passe en clair. Le contrôle lit la source : il n'y a aucune colonne où le mettre.
+// Le contrôle porte sur la TABLE et non sur le code : une colonne absente ne peut pas être
+// remplie par distraction, alors qu'un code sans mot de passe aujourd'hui peut en gagner un
+// demain. On vérifie donc qu'il n'existe aucun endroit où le mettre.
+$colonnesJournal = array_keys(Uptimeez\Db::all('SELECT * FROM connexions LIMIT 1')[0] ?? []);
+check('le journal des connexions a bien été rempli par les contrôles ci-dessus',
+    $colonnesJournal !== [], true);
+check('et il n\'a aucune colonne où loger un mot de passe',
+    array_values(array_filter($colonnesJournal,
+        static fn (string $c): bool => str_contains($c, 'passe') || str_contains($c, 'password'))), []);
+
+// LE PONT CONTINUE DE FONCTIONNER SANS COMPTE, et c'est une exigence : le client a déjà
+// prouvé qui il est côté coque, lui redemander un identifiant serait le lui demander deux
+// fois. Le contrôle lit la source, faute de pouvoir fabriquer une session ici.
+$sourceAuth = (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Auth.php');
+check('attemptToken n\'exige aucun compte',
+    (bool) preg_match('~attemptToken.*?Compte::verifier~s', $sourceAuth), false);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

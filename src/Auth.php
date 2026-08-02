@@ -38,6 +38,51 @@ final class Auth
         return true;
     }
 
+    /**
+     * Connexion par identifiant et mot de passe.
+     *
+     * L'écran à deux champs n'apparaît que s'il existe au moins un compte : une
+     * installation qui n'en a pas encore garde son écran d'origine, sans quoi la mise à
+     * jour du moteur enfermerait dehors tous ceux qui n'ont jamais créé de compte.
+     */
+    public static function attemptCompte(string $identifiant, string $motDePasse): bool
+    {
+        self::start();
+        usleep(random_int(150000, 350000));
+
+        $compte = Compte::verifier($identifiant, $motDePasse);
+
+        if ($compte === null) {
+            Compte::consigner('mot_de_passe', false, null, $identifiant);
+            self::note(false);
+            return false;
+        }
+
+        self::ouvrirSession();
+        $_SESSION['uptimeez_compte'] = (int) $compte['id'];
+        $_SESSION['uptimeez_compte_nom'] = (string) ($compte['nom'] ?: $compte['identifiant']);
+
+        Compte::marquerAcces((int) $compte['id']);
+        Compte::consigner('mot_de_passe', true, (int) $compte['id'], $identifiant);
+        self::note(true);
+
+        return true;
+    }
+
+    /**
+     * Connexion par le mot de passe unique de l'instance.
+     *
+     * L'ARBITRAGE DU 2026-08-02 : IL SURVIT, MAIS IL EST NOMMÉ. Le supprimer une fois le
+     * premier compte créé aurait été plus propre, et aurait rendu l'instance inaccessible
+     * AU MOMENT PRÉCIS où on en a besoin : coque indisponible, serveur de courrier en
+     * panne. La réinitialisation par courriel ne secourt personne quand c'est le courriel
+     * qui est tombé.
+     *
+     * Il reste donc, et dès qu'un compte existe il devient un ACCÈS DE SECOURS : la
+     * connexion est consignée sous la voie « secours », et la session porte un nom
+     * d'exploitant plutôt que rien. Un accès de secours dont on ne sait pas qu'il a servi
+     * n'est pas un secours, c'est une porte dérobée.
+     */
     public static function attempt(string $password): bool
     {
         self::start();
@@ -46,21 +91,57 @@ final class Auth
         usleep(random_int(150000, 350000));
         if ($hash === '' || !password_verify($password, $hash)) {
             self::note(false);
+            self::consignerSecours(false);
             return false;
         }
-        // Renouvellement de l'identifiant de session à l'élévation de privilège :
-        // sans cela, un identifiant imposé à la victime avant sa connexion
-        // resterait valide après (fixation de session, OWASP A07).
+        self::ouvrirSession();
+        self::note(true);
+        self::consignerSecours(true);
+        return true;
+    }
+
+    /**
+     * L'ouverture de session, une seule fois, pour les trois voies d'entrée.
+     *
+     * Elle était recopiée dans attempt() et dans attemptToken(). Deux copies d'un geste de
+     * sécurité, c'est une copie qu'on oubliera de corriger : le renouvellement de
+     * l'identifiant de session, notamment, doit avoir lieu à CHAQUE élévation de privilège,
+     * sans quoi un identifiant imposé à la victime avant sa connexion resterait valide
+     * après (fixation de session, OWASP A07). En ajoutant une troisième voie aujourd'hui,
+     * on aurait fait une troisième copie.
+     */
+    private static function ouvrirSession(): void
+    {
         if (session_status() === PHP_SESSION_ACTIVE) {
             $keep = $_SESSION;
             session_regenerate_id(true);
             $_SESSION = $keep;
         }
+
         $_SESSION['uptimeez_auth'] = true;
         $_SESSION['uptimeez_auth_at'] = time();
         $_SESSION['uptimeez_csrf'] = bin2hex(random_bytes(16));
-        self::note(true);
-        return true;
+    }
+
+    /**
+     * Consigne l'usage du mot de passe d'instance, et seulement s'il est devenu un secours.
+     *
+     * Tant qu'aucun compte n'existe, ce mot de passe EST le mode normal d'accès : le
+     * consigner comme « secours » ferait un journal où chaque connexion ordinaire ressemble
+     * à un incident. Dès qu'un compte existe, il change de nature, et c'est cette
+     * bascule-là qu'on veut voir.
+     */
+    private static function consignerSecours(bool $reussie): void
+    {
+        try {
+            if (Compte::existe()) {
+                Compte::consigner('secours', $reussie, null, 'exploitant');
+            }
+        } catch (\Throwable) {
+            // Un journal ne doit jamais empêcher d'entrer. Une base absente au moment de
+            // l'installation, ou une table pas encore migrée, ne peut pas être une raison
+            // de refuser une connexion par ailleurs valide.
+        }
     }
 
     /**
@@ -120,19 +201,25 @@ final class Auth
         if ($exp - $iat > self::BRIDGE_MAX_TTL) { self::note(false); return false; }
         if (!self::consumeNonce($nonce, $exp)) { self::note(false); return false; }
 
-        // Même élévation de privilège que par mot de passe : on renouvelle
-        // l'identifiant de session (fixation de session, OWASP A07).
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            $keep = $_SESSION;
-            session_regenerate_id(true);
-            $_SESSION = $keep;
-        }
-        $_SESSION['uptimeez_auth']    = true;
-        $_SESSION['uptimeez_auth_at'] = $now;
-        $_SESSION['uptimeez_csrf']    = bin2hex(random_bytes(16));
+        // Même élévation de privilège que par mot de passe, et le même code : voir
+        // ouvrirSession(), qui existe pour que ce geste ne soit pas recopié.
+        self::ouvrirSession();
         // Tracé : une ouverture par jeton n'est pas une ouverture par mot de passe,
         // et l'exploitant doit pouvoir faire la différence dans son journal.
         $_SESSION['uptimeez_via']     = 'bridge';
+
+        // LE PONT CONTINUE DE FONCTIONNER SANS COMPTE, et c'est une exigence et non un
+        // oubli : le client a déjà prouvé qui il est côté coque, lui redemander un
+        // identifiant ici serait lui demander deux fois la même chose. La session n'est
+        // donc rattachée à aucun compte, mais elle est CONSIGNÉE comme telle : sans ça, le
+        // journal des connexions montrerait des trous inexpliqués aux heures où les gens
+        // passent réellement par le tableau de bord.
+        try {
+            Compte::consigner('jeton_pont', true);
+        } catch (\Throwable) {
+            // Un journal ne fait jamais échouer une connexion par ailleurs valide.
+        }
+
         self::note(true);
         return true;
     }
