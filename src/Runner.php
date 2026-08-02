@@ -546,24 +546,12 @@ final class Runner
         }
 
         // ---- 5. API JSON ---------------------------------------------------
-        if ($mon['kind'] === 'api') {
-            $json = json_decode($res->body, true);
-            if ($res->body !== '' && $json === null && json_last_error() !== JSON_ERROR_NONE) {
-                $note('down', 'JSON_INVALID', 'Réponse non JSON valide : {error}',
-                      ['error' => json_last_error_msg()]);
-            } elseif (!empty($mon['json_path'])) {
-                $val = self::jsonPath($json, (string)$mon['json_path']);
-                $exp = (string)($mon['json_expect'] ?? '');
-                if ($val === null) {
-                    $note('down', 'JSON_PATH', 'Champ « {field} » absent de la réponse',
-                          ['field' => (string)$mon['json_path']]);
-                } elseif ($exp !== '' && (string)$val !== $exp) {
-                    $note('down', 'JSON_VALUE',
-                        'Champ « {field} » vaut « {value} », attendu « {expected} »',
-                        ['field' => (string)$mon['json_path'], 'value' => str_cut((string)$val, 40),
-                         'expected' => $exp]);
-                }
-            }
+        // TROISIÈME EXTRACTION, LE 2026-08-02 : src/Regle/ReponseJson.php. Elle emporte
+        // TROIS verdicts d'un coup (JSON_INVALID, JSON_PATH, JSON_VALUE) parce qu'ils
+        // forment une seule chaîne de décision : sans décodage il n'y a pas de champ à
+        // chercher, sans champ il n'y a pas de valeur à comparer.
+        if ($v = (new \Uptimeez\Regle\ReponseJson())->evaluer($contexte)) {
+            $findings[] = $v->enTableau();
         }
 
         // ---- 6. Certificat SSL --------------------------------------------

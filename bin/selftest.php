@@ -2987,9 +2987,24 @@ check("aucune cause d'apparence ne rend « hors service »", $apparence, []);
 //
 // Ce qui reste ici garde les causes ENCORE dans evaluate(). Quand la liste sera vide,
 // tout ce bloc disparaîtra, et ce sera la fin du Sprint A.
-$encoreDansEvaluate = ['JSON_INVALID', 'JSON_PATH'];
-foreach ($encoreDansEvaluate as $attendue) {
-    check("« $attendue » reste un hors service", in_array($attendue, $causesDown, true), true);
+// LA LISTE EST DÉRIVÉE, PLUS ÉCRITE À LA MAIN.
+//
+// Elle énumérait les causes attendues en « down » dans evaluate(). Chaque extraction en
+// retirait une, donc chaque extraction cassait ce contrôle et demandait de le corriger à
+// la main. Trois fois de suite, ce qui est le signe qu'on entretient une liste au lieu de
+// vérifier une règle.
+//
+// Ce qui compte n'est pas QUELLES causes restent, mais qu'il en reste : tant qu'evaluate()
+// produit encore des verdicts, il doit produire des verdicts de disponibilité en « down ».
+// Le jour où il n'en produit plus aucun, l'extraction est terminée et ce bloc doit
+// disparaître avec elle. Le contrôle le dit lui-même plutôt que de me le laisser deviner.
+if ($causesDown !== []) {
+    check('les causes encore dans evaluate() sont des causes de disponibilité',
+        array_values(array_filter($causesDown, static fn (string $c): bool
+            => Uptimeez\Regle\Verdict::estUneApparence($c))), []);
+} else {
+    check('SPRINT A TERMINÉ : evaluate() ne produit plus aucun verdict, ce bloc peut partir',
+        true, true);
 }
 
 // ET LE GARDE-FOU DU GARDE-FOU : une cause retirée de cette liste doit l'être parce
@@ -3239,6 +3254,53 @@ check('la troncature ne relativise pas une PRÉSENCE', $coupeeMaisVue?->etat, 'd
 check('une seule des chaînes interdites suffit',
     $interdite->evaluer($contexteAvec(['forbid_string' => 'Under construction|Fatal error'],
         $reponseAvec('<p>Under construction</p>')))?->cause, 'STRING_FORBIDDEN');
+
+section('Règle extraite : la réponse JSON');
+// ---------------------------------------------------------------------------
+// Troisième extraction, et elle emporte trois verdicts : ils forment une seule chaîne
+// de décision, et en faire trois classes obligerait chacune à redécoder le corps.
+
+$json = new Uptimeez\Regle\ReponseJson();
+$sondeApi = static fn (array $extra = []): array => ['kind' => 'api'] + $extra;
+
+check('une sonde qui n\'est pas une API est ignorée',
+    $json->evaluer($contexteAvec(['kind' => 'http'], $reponseAvec('pas du json'))), null);
+
+$casse = $json->evaluer($contexteAvec($sondeApi(), $reponseAvec('<html>Connexion requise</html>')));
+check('du HTML servi par une API : hors service', $casse?->etat, 'down');
+check('et la cause dit que ce n\'est pas du JSON', $casse?->cause, 'JSON_INVALID');
+
+// UN CORPS VIDE N'EST PAS UN JSON INVALIDE : c'est le réseau ou le code de statut qui
+// le traitent. Deux verdicts pour une panne, et le plus bavard masque le plus juste.
+check('un corps vide ne produit pas de verdict JSON',
+    $json->evaluer($contexteAvec($sondeApi(), $reponseAvec(''))), null);
+
+check('un JSON valide sans chemin attendu : rien à dire',
+    $json->evaluer($contexteAvec($sondeApi(), $reponseAvec('{"ok":true}'))), null);
+
+$absent = $json->evaluer($contexteAvec($sondeApi(['json_path' => 'data.id']),
+    $reponseAvec('{"data":{"nom":"x"}}')));
+check('champ attendu absent : hors service', $absent?->cause, 'JSON_PATH');
+
+check('champ attendu présent : rien à dire',
+    $json->evaluer($contexteAvec($sondeApi(['json_path' => 'data.id']),
+        $reponseAvec('{"data":{"id":42}}'))), null);
+
+$mauvaise = $json->evaluer($contexteAvec($sondeApi(['json_path' => 'statut', 'json_expect' => 'ok']),
+    $reponseAvec('{"statut":"maintenance"}')));
+check('valeur inattendue : hors service', $mauvaise?->cause, 'JSON_VALUE');
+check('et le message porte la valeur trouvée', $mauvaise?->variables['value'] ?? '', 'maintenance');
+
+check('valeur conforme : rien à dire',
+    $json->evaluer($contexteAvec($sondeApi(['json_path' => 'statut', 'json_expect' => 'ok']),
+        $reponseAvec('{"statut":"ok"}'))), null);
+
+// LE CAS RÉEL DU PARC : /wp-json/wp/v2/pages rend un TABLEAU, et le chemin « 0.id »
+// traverse son premier élément. C'est la sonde qui prouve qu'un WordPress sert sa base
+// et non une page mise en cache.
+check('un chemin traverse un tableau par son indice',
+    $json->evaluer($contexteAvec($sondeApi(['json_path' => '0.id']),
+        $reponseAvec('[{"id":12}]'))), null);
 
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
