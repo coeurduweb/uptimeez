@@ -3889,6 +3889,110 @@ foreach (['UPDATE ', 'Db::update', 'Db::insert', 'Db::delete'] as $interdit) {
     check("l'écran des retours ne fait pas « $interdit »", str_contains($sourceVue, $interdit), false);
 }
 
+section('Sprint B3 : les exceptions, souveraines mais jamais sur une panne');
+// ---------------------------------------------------------------------------
+// Sur deux cents sites il y a toujours quelques cas particuliers légitimes : un
+// « noindex » délibéré sur une recette, une police d'icônes absente qu'on assume. Sans
+// moyen de les taire, l'exploitant apprend à ignorer l'écran entier, et c'est alors la
+// vraie panne qui passe inaperçue. L'exception garde le signal lisible.
+
+// ON PEUT TAIRE UNE POLICE MANQUANTE, JAMAIS UN 503. La liste des causes excusables est
+// DÉRIVÉE du Verdict et non recopiée : deux listes finiraient par diverger, ce qui est
+// exactement la faute réparée deux fois aujourd'hui dans ce moteur.
+foreach (['NOINDEX', 'SLOW', 'CSS_BROKEN', 'CSS_DEGRADED'] as $excusable) {
+    check("« $excusable » peut être excusée", Uptimeez\Exceptions::estExcusable($excusable), true);
+}
+foreach (['HTTP_5XX', 'DB_DOWN', 'SSL_EXPIRED', 'STRING_MISSING', 'TIMEOUT', 'DNS'] as $intouchable) {
+    check("« $intouchable » ne peut pas être excusée",
+        Uptimeez\Exceptions::estExcusable($intouchable), false);
+}
+check('et une cause vide non plus', Uptimeez\Exceptions::estExcusable(''), false);
+
+$refuseExc = static function (callable $f): bool {
+    try { $f(); return false; } catch (\InvalidArgumentException) { return true; }
+};
+check('poser une exception sur une panne est refusé',
+    $refuseExc(fn() => Uptimeez\Exceptions::poser(1, 'HTTP_5XX', 'parce que')), true);
+// LA RAISON EST OBLIGATOIRE : dans six mois, à la revue, « pourquoi » sera la seule
+// question qui compte, et personne ne s'en souviendra. Une exception sans raison serait
+// reconduite par défaut, faute de pouvoir juger.
+check('une exception sans raison est refusée',
+    $refuseExc(fn() => Uptimeez\Exceptions::poser(1, 'NOINDEX', '   ')), true);
+
+$idExc = Uptimeez\Exceptions::poser(1, 'NOINDEX', 'recette interne, noindex volontaire');
+check('une exception légitime est posée', $idExc > 0, true);
+
+// UNE DATE DE REVUE OBLIGATOIRE, parce qu'une exception posée pendant une migration
+// survit à la migration.
+$exc = Uptimeez\Db::one('SELECT * FROM exceptions WHERE id = ?', [$idExc]);
+check('elle porte une date de revue', ($exc['revoir_le'] ?? '') !== '', true);
+$moisDeRevue = (int) round((strtotime((string)$exc['revoir_le']) - time()) / 2629800);
+check('fixée à six mois par défaut', $moisDeRevue, Uptimeez\Exceptions::REVUE_MOIS);
+
+// ---- L'application, qui est là que tout se joue -------------------------
+$verdictNoindex  = ['state' => 'degraded', 'reason' => 'NOINDEX', 'message' => 'Page en noindex : {detail}',
+                    'vars' => ['detail' => 'balise robots']];
+$verdictLenteur  = ['state' => 'degraded', 'reason' => 'SLOW', 'message' => 'lent', 'vars' => []];
+$verdictPanne    = ['state' => 'down', 'reason' => 'HTTP_5XX', 'message' => 'Erreur serveur', 'vars' => []];
+
+$restants = Uptimeez\Exceptions::filtrer(1, [$verdictNoindex, $verdictLenteur, $verdictPanne]);
+check('le verdict couvert par l\'exception disparaît',
+    in_array('NOINDEX', array_column($restants, 'reason'), true), false);
+check('les autres verdicts restent', count($restants), 2);
+
+// LA GARANTIE QUI NE PEUT PAS SE PÉRIMER. On refuse de masquer autre chose qu'un
+// « dégradé », quoi qu'en dise la liste au moment de la création. Si une cause d'apparence
+// se mettait un jour à produire un « hors service », la liste laisserait passer l'exception
+// et ce contrôle-ci l'arrêterait quand même. C'est le contrôle le plus important du sprint.
+$noindexEnPanne = ['state' => 'down', 'reason' => 'NOINDEX', 'message' => 'x', 'vars' => []];
+check('une exception ne masque JAMAIS un hors service, même sur sa propre cause',
+    count(Uptimeez\Exceptions::filtrer(1, [$noindexEnPanne])), 1);
+
+// UNE SONDE NE PORTE PAS LES EXCEPTIONS D'UNE AUTRE.
+check('l\'exception ne vaut que pour sa sonde',
+    count(Uptimeez\Exceptions::filtrer(2, [$verdictNoindex])), 1);
+
+// CE QUI EST TU EST COMPTÉ. Une exception silencieuse et éternelle serait pire que le faux
+// positif qu'elle supprime, parce qu'un faux positif, au moins, se voit.
+$excApres = Uptimeez\Db::one('SELECT * FROM exceptions WHERE id = ?', [$idExc]);
+check('l\'alerte tue est comptée', (int)($excApres['masquees_total'] ?? 0), 1);
+check('et rattachée au mois courant', (string)($excApres['masquees_mois'] ?? ''), date('Y-m'));
+Uptimeez\Exceptions::filtrer(1, [$verdictNoindex]);
+check('le compteur mensuel s\'incrémente',
+    (int)Uptimeez\Db::val('SELECT masquees_ce_mois FROM exceptions WHERE id = ?', [$idExc]), 2);
+
+$bilan = Uptimeez\Exceptions::bilan();
+check('le bilan sait ce qui a été tu ce mois-ci', $bilan['ce_mois'], 2);
+check('et combien d\'exceptions sont actives', $bilan['actives'] >= 1, true);
+
+// UN MOTIF DE SIGNAL RESSERRE LA PORTÉE : taire « police d'icônes absente » ne doit pas
+// taire « feuille de style introuvable », qui est la même cause et un tout autre problème.
+$idFin = Uptimeez\Exceptions::poser(3, 'CSS_DEGRADED', 'police d\'icônes assumée', 'police');
+$policeManquante = ['state' => 'degraded', 'reason' => 'CSS_DEGRADED',
+                    'message' => 'CSS dégradé : {detail}', 'vars' => ['detail' => 'police absente']];
+$feuillePerdue   = ['state' => 'degraded', 'reason' => 'CSS_DEGRADED',
+                    'message' => 'CSS dégradé : {detail}', 'vars' => ['detail' => 'feuille introuvable']];
+check('le motif de signal tait ce qu\'il vise',
+    count(Uptimeez\Exceptions::filtrer(3, [$policeManquante])), 0);
+check('et laisse passer le reste de la même cause',
+    count(Uptimeez\Exceptions::filtrer(3, [$feuillePerdue])), 1);
+
+// UNE EXCEPTION SE RÉVOQUE, ELLE NE SE SUPPRIME PAS : la trace de ce qu'on a tu compte.
+Uptimeez\Exceptions::revoquer($idFin);
+check('une exception révoquée cesse de masquer',
+    count(Uptimeez\Exceptions::filtrer(3, [$policeManquante])), 1);
+check('mais elle reste en base avec son compte',
+    (int)Uptimeez\Db::val('SELECT COUNT(*) FROM exceptions WHERE id = ?', [$idFin]), 1);
+
+// LES EXCEPTIONS S'APPLIQUENT APRÈS LES RÈGLES, JAMAIS DEDANS. Une règle qui les
+// consulterait rendrait un verdict dépendant de la configuration du client : elle ne serait
+// plus testable sans base, et deux installations pourraient diverger sans qu'on sache
+// laquelle a raison.
+$sourcesReglesExc = '';
+foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) $sourcesReglesExc .= (string) file_get_contents($f);
+check('aucune règle ne consulte les exceptions',
+    str_contains($sourcesReglesExc, 'Exceptions::'), false);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

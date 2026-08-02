@@ -429,6 +429,42 @@ final class Db
             ts {$ts} NOT NULL
         ){$eng}";
 
+        // ------------------------------------------------------------------
+        // « CE SIGNAL, SUR CETTE SONDE, NE COMPTE PAS » — ET ON LE COMPTE QUAND MÊME
+        // ------------------------------------------------------------------
+        //
+        // Une exception éteint un signal là où l'exploitant sait qu'il n'a pas de sens : un
+        // « noindex » délibéré sur une recette, une police d'icônes absente qu'on assume.
+        // C'est le geste souverain qui rend le produit utilisable sur un vrai parc, où il y
+        // a toujours quelques cas particuliers légitimes.
+        //
+        // TROIS COLONNES EXISTENT PARCE QU'UNE EXCEPTION OUBLIÉE EST UNE PANNE QU'ON NE
+        // VERRA PAS. « revoir_le » force une date de revue ; « masquees_total » et le
+        // couple mois/compteur permettent de dire « 12 alertes masquées par vos exceptions
+        // ce mois-ci ». Une exception muette et éternelle serait pire que le faux positif
+        // qu'elle supprime : le faux positif, au moins, se voit.
+        //
+        // Le compteur mensuel tient en deux colonnes plutôt qu'en une table d'historique :
+        // on veut répondre à « combien ce mois-ci », pas reconstituer une chronologie. Une
+        // table de plus se paierait à chaque passe pour une question qu'on ne pose pas.
+        $tables['exceptions'] = "CREATE TABLE IF NOT EXISTS exceptions (
+            id {$pk},
+            monitor_id {$int} NOT NULL,
+            reason_code {$str(40)} NOT NULL,
+            /* Facultatif : ne taire que les signaux dont le détail contient ce texte.
+               Vide veut dire « toute la cause », ce qui est plus large et plus risqué. */
+            motif_signal {$txt},
+            /* Pourquoi, en clair. Obligatoire à la relecture, six mois plus tard. */
+            raison {$txt},
+            cree_le {$ts} NOT NULL,
+            revoir_le {$ts} NOT NULL,
+            actif {$bool} NOT NULL DEFAULT 1,
+            masquees_total {$int} NOT NULL DEFAULT 0,
+            masquees_mois {$str(7)} DEFAULT NULL,
+            masquees_ce_mois {$int} NOT NULL DEFAULT 0,
+            derniere_masquee_le {$ts} DEFAULT NULL
+        ){$eng}";
+
         $tables['notifications'] = "CREATE TABLE IF NOT EXISTS notifications (
             id {$pk},
             incident_id {$int} DEFAULT NULL,

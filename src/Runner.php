@@ -650,6 +650,22 @@ final class Runner
             }
         }
 
+        // ---- Les exceptions posées par l'exploitant -------------------------
+        //
+        // ELLES S'APPLIQUENT ICI, APRÈS LES RÈGLES, ET JAMAIS DEDANS. Une règle qui
+        // consulterait les exceptions rendrait un verdict différent selon la configuration
+        // du client : elle ne serait plus testable sans base, et deux installations
+        // pourraient diverger sans qu'on sache laquelle a raison. Les règles disent ce
+        // qu'elles voient ; l'exploitant décide ensuite de ce qu'il veut en entendre.
+        //
+        // Ce qui est tu est COMPTÉ, pour qu'on puisse dire « 12 alertes masquées par vos
+        // exceptions ce mois-ci ». Une exception silencieuse et éternelle serait pire que le
+        // faux positif qu'elle supprime, parce qu'un faux positif, au moins, se voit.
+        //
+        // Et rien de ce qui prive le visiteur de la page ne peut être tu : le filtre refuse
+        // tout verdict qui n'est pas « dégradé », quelle que soit la configuration.
+        $findings = Exceptions::filtrer((int)($mon['id'] ?? 0), $findings);
+
         // ---- 10. Mot surveillé (mise à jour de page) ----------------------
         $watch = trim((string)($mon['watch_string'] ?? ''));
         if ($watch !== '' && $res->body !== '' && $complete) {
