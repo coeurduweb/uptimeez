@@ -212,7 +212,7 @@ svg { flex: 0 0 auto; }
 .pulse .pl-down { fill: var(--bad); }
 .pulse .pl-none { fill: var(--border-strong); }
 .band-pulse-scale {
-  display: flex; margin-top: 5px; font-size: 11px; color: var(--muted);
+  display: flex; margin-top: 5px; font-size: 12px; color: var(--muted);
   letter-spacing: .02em;
 }
 /* Le bandeau résume, il ne crie pas : c'est la carte du dessous qui doit
@@ -248,7 +248,7 @@ svg { flex: 0 0 auto; }
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
   padding: var(--s3) var(--s4); box-shadow: var(--shadow-sm);
 }
-.stat-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 650; }
+.stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 650; }
 .stat-value { font-size: 26px; font-weight: 700; letter-spacing: -.03em; margin-top: 2px; line-height: 1.15; }
 .stat-hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .v-ok { color: var(--ok-ink); } .v-warn { color: var(--warn-ink); } .v-bad { color: var(--bad-ink); }
@@ -263,7 +263,7 @@ svg { flex: 0 0 auto; }
 .search .ico-l { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); }
 .search kbd {
   position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
-  font: 11px var(--mono); color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px;
+  font: 12px var(--mono); color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px;
 }
 .segmented { display: inline-flex; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; }
 .segmented a, .segmented button {
@@ -274,7 +274,7 @@ svg { flex: 0 0 auto; }
 .segmented > :last-child { border-right: 0; }
 .segmented a:hover, .segmented button:hover { background: var(--surface-2); text-decoration: none; color: var(--text); }
 .segmented [aria-selected="true"], .segmented .on { background: var(--accent); color: var(--on-accent); }
-.segmented .n { opacity: .75; font-size: 11.5px; }
+.segmented .n { opacity: .75; font-size: 12px; }
 select, .select {
   min-height: 36px; padding: 7px 10px; border-radius: var(--r-sm); border: 1px solid var(--border-strong);
   background: var(--surface); color: var(--text); font: inherit; font-size: 14px;
@@ -304,7 +304,7 @@ select, .select {
 .card.s-degraded .card-msg { color: var(--warn-ink); }
 .card-foot { display: flex; gap: var(--s3); align-items: center; margin-top: 8px; }
 .card-num { font-weight: 650; font-size: 13.5px; }
-.card-num small { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.card-num small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .card-actions { display: flex; gap: 2px; margin-left: auto; opacity: .62; transition: opacity .15s; }
 .card:hover .card-actions, .card-actions:focus-within { opacity: 1; }
 
@@ -318,7 +318,7 @@ select, .select {
 
 .badge {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 6px;
-  font-size: 11.5px; font-weight: 620; white-space: nowrap;
+  font-size: 12px; font-weight: 620; white-space: nowrap;
   background: var(--surface-3); color: var(--text-soft); border: 1px solid transparent;
 }
 .badge-ok   { background: var(--ok-soft);   color: var(--ok-ink);   border-color: color-mix(in srgb, var(--ok) 26%, transparent); }
@@ -335,7 +335,7 @@ select, .select {
 .spark rect.b-none { fill: var(--border); }
 .chart { width: 100%; height: 240px; display: block; }
 .chart .grid { stroke: var(--border); stroke-width: 1; }
-.chart .axis { fill: var(--muted); font-size: 10px; font-family: var(--mono); }
+.chart .axis { fill: var(--muted); font-size: 12px; font-family: var(--mono); }
 .chart .area { fill: color-mix(in srgb, var(--accent) 13%, transparent); }
 .chart .line { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
 .chart .pt { fill: var(--accent); }
@@ -364,7 +364,7 @@ select, .select {
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s3); }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--s3) var(--s4); }
 .section-title {
-  font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+  font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
   font-weight: 700; margin: var(--s5) 0 var(--s2);
 }
 
@@ -414,7 +414,7 @@ select, .select {
 /* ================================ Tableaux ================================ */
 table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.tbl th {
-  text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em;
+  text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
   color: var(--muted); font-weight: 650; padding: 9px var(--s4); border-bottom: 1px solid var(--border);
   background: var(--surface-2); white-space: nowrap;
 }
@@ -464,7 +464,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 
 fieldset { border: 0; padding: 0; margin: 0 0 var(--s5); }
 fieldset > legend {
-  font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+  font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
   font-weight: 700; padding: 0; margin-bottom: var(--s3);
 }
 .form-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 var(--s6); }
@@ -630,7 +630,7 @@ html[data-theme="light"] .console { background: #131a26; }
 /* Le remède se distingue du diagnostic par une étiquette, pas par une colonne. */
 .hero-fix { display: flex; gap: var(--s2); align-items: baseline; margin: var(--s4) 0 0;
             font-size: 14.5px; max-width: 68ch; line-height: 1.5; }
-.hero-fix-tag { flex: 0 0 auto; font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+.hero-fix-tag { flex: 0 0 auto; font-size: 12px; font-weight: 700; letter-spacing: .08em;
                 text-transform: uppercase; color: var(--accent);
                 background: var(--accent-soft); border-radius: 999px; padding: 3px 8px;
                 position: relative; top: -1px; }
@@ -642,7 +642,7 @@ html[data-theme="light"] .console { background: #131a26; }
 
 /* La preuve : une image vaut la lecture, mais elle ne prend pas la parole. */
 .hero-proof { margin: 0; min-width: 0; }
-.hero-proof figcaption { margin-top: 6px; font-size: 11.5px; color: var(--text-soft);
+.hero-proof figcaption { margin-top: 6px; font-size: 12px; color: var(--text-soft);
                          text-transform: uppercase; letter-spacing: .04em; font-weight: 650; }
 .hero-proof figcaption .muted { text-transform: none; letter-spacing: 0; font-weight: 400; }
 .hero-proof-view { border: 1px solid var(--border-strong); border-radius: var(--r-sm);
@@ -762,7 +762,7 @@ html[data-theme="dark"] .hero-proof-view { background: #dde3ec; }
 .pal-empty { padding: var(--s5); text-align: center; color: var(--muted); font-size: 14px; }
 .pal-foot { padding: 8px var(--s4); border-top: 1px solid var(--border); background: var(--surface-2);
   font-size: 12px; color: var(--muted); display: flex; gap: var(--s4); flex-wrap: wrap; }
-kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bottom-width: 2px;
+kbd { font: 12px var(--mono); border: 1px solid var(--border-strong); border-bottom-width: 2px;
   border-radius: 4px; padding: 1px 5px; color: var(--text-soft); background: var(--surface); }
 
 /* Bandeau d'annulation */
@@ -807,7 +807,7 @@ kbd { font: 11px var(--mono); border: 1px solid var(--border-strong); border-bot
 .hint { z-index: 40; }
 .hint-b { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border);
           text-transform: none; letter-spacing: normal;
-          background: var(--surface-2); color: var(--text-soft); font-size: .68rem; font-weight: 700;
+          background: var(--surface-2); color: var(--text-soft); font-size: 12px; font-weight: 700;
           line-height: 1; cursor: help; padding: 0; display: inline-flex; align-items: center;
           justify-content: center; }
 .hint-b:hover, .hint-b:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
@@ -973,7 +973,7 @@ fieldset.fs legend { padding: 0 6px; font-size: 12.5px; font-weight: 650;
 .vit-f .vit-why { font-size: 12.5px; color: var(--text-soft); line-height: 1.45; }
 .vit-f .vit-fix { font-size: 12.5px; display: flex; gap: .35rem; align-items: baseline; color: var(--text); }
 .vit-f .vit-fix svg { flex: 0 0 auto; color: var(--accent); position: relative; top: 2px; }
-.vit-f .vit-ev { font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.vit-f .vit-ev { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .vit-high { border-inline-start-color: var(--bad); }
 .vit-medium { border-inline-start-color: var(--warn); }
 .vit-low { border-inline-start-color: var(--border-strong); }
@@ -1019,3 +1019,21 @@ details.retour[open] > summary { opacity: .7; }
 .retour-form label { display: grid; gap: .2rem; }
 .retour-form select,
 .retour-form input[type=text] { width: 100%; }
+
+/* ------------------------------------------------------------------
+   MINIMUM TEXT SIZE: 12px.
+
+   Measured with a real browser on a live 200-monitor instance on 2026-08-02:
+   badges and table headers rendered at 11.5px, keyboard hints at 11px, the
+   button hint at 10.88px and the fix tag at 10.5px.
+
+   Contrast, by the way, came out CLEAN on all five screens once the measuring
+   script stopped mis-parsing `color(srgb 1 1 1 / .9)` as near-black. The small
+   sizes are the only real finding of that audit.
+
+   Why 12px and not smaller: this interface is read by people scanning two
+   hundred rows for the one that is red. Below 12px an uppercase, letter-spaced
+   label stops being scanned and starts being decoded, which is slower and
+   tiring -- and these labels are exactly the ones telling you WHICH column you
+   are looking at. The gain in density was never worth that.
+   ------------------------------------------------------------------ */
