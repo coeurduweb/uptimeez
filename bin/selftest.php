@@ -3490,6 +3490,57 @@ check('une réponse qui n\'est pas du HTML n\'est pas analysée',
 check('une redirection n\'est pas analysée',
     $index->evaluer($contexteAvec(['check_noindex' => 1], $page($interdite, 301))), null);
 
+section('Règle extraite : le code HTTP');
+// ---------------------------------------------------------------------------
+// Septième extraction, huit causes. Huit et non une seule « mauvais code HTTP » : un 404,
+// un 403 et un 500 ne se corrigent ni par la même personne ni au même endroit, et le
+// rapport mensuel compte les pannes par nature.
+
+$codeHttp = static function (int $statut, string $attendu = '', string $urlFinale = '')
+    use ($contexteAvec): ?Uptimeez\Regle\Verdict {
+    $r = new Uptimeez\Response();
+    $r->status = $statut;
+    $r->finalUrl = $urlFinale;
+    return (new Uptimeez\Regle\CodeHttp())->evaluer($contexteAvec(['expect_status' => $attendu], $r));
+};
+
+check('un 200 attendu ne dit rien', $codeHttp(200), null);
+check('un 204 est dans la plage par défaut', $codeHttp(204), null);
+
+// CHAQUE FAMILLE A SA CAUSE, parce que chacune désigne un interlocuteur différent.
+foreach ([[500, 'HTTP_5XX'], [503, 'HTTP_5XX'], [404, 'HTTP_404'], [403, 'HTTP_403'],
+          [401, 'HTTP_401'], [429, 'HTTP_429'], [418, 'HTTP_4XX'], [302, 'HTTP_3XX']] as [$code, $cause]) {
+    check("un $code est classé $cause", $codeHttp($code)?->cause, $cause);
+}
+
+// LE 429 NE DIT RIEN DU SITE, IL DIT QUELQUE CHOSE DE NOUS : un quota atteint met souvent
+// notre propre cadence en cause. Le confondre avec une erreur client enverrait le client
+// chercher une panne chez lui. Ce cas s'est présenté : des dizaines de feuilles de style
+// déclarées cassées étaient des 429 provoqués par ma machine non autorisée.
+check('le 429 ne se confond pas avec les autres erreurs client',
+    $codeHttp(429)?->cause === $codeHttp(418)?->cause, false);
+
+// UNE REDIRECTION INATTENDUE DIT VERS OÙ : c'est la signature d'un domaine détourné ou
+// d'un parking d'hébergeur. Sans la destination, l'alerte ne donne pas l'élément qui
+// permet de reconnaître le problème.
+check('une redirection inattendue nomme sa destination',
+    $codeHttp(302, '', 'https://parking.hebergeur.example/')?->variables['target'] ?? '',
+    'https://parking.hebergeur.example/');
+
+// LA PLAGE EST UN RÉGLAGE : une sonde peut légitimement attendre un 301 ou un 404.
+check('un 301 attendu ne déclenche rien', $codeHttp(301, '301'), null);
+check('un 404 attendu ne déclenche rien', $codeHttp(404, '404'), null);
+check('et un 200 devient alors une anomalie', $codeHttp(200, '404')?->cause, 'HTTP_UNEXPECTED');
+check('dont le message rappelle ce qu\'on attendait',
+    $codeHttp(200, '404')?->variables['expected'] ?? '', '404');
+// Une plage vide n'est pas une plage qui accepte tout : c'est l'absence de réglage, donc
+// le défaut. Sans quoi vider le champ éteindrait silencieusement la sonde.
+check('une plage vide retombe sur le défaut, elle n\'accepte pas tout',
+    $codeHttp(500, '')?->cause, 'HTTP_5XX');
+
+// Tous ces verdicts sont des indisponibilités réelles, jamais plafonnées en apparence.
+check('un code HTTP fautif est un hors service', $codeHttp(500)?->etat, 'down');
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

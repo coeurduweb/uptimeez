@@ -488,32 +488,12 @@ final class Runner
         }
 
         // ---- 2. Code HTTP -------------------------------------------------
-        $expect = (string)($mon['expect_status'] ?: '200-299');
-        if (!self::statusMatches($res->status, $expect)) {
-            $c = $res->status;
-            $reason = match (true) {
-                $c >= 500 => 'HTTP_5XX',
-                $c === 429 => 'HTTP_429',
-                $c === 404 => 'HTTP_404',
-                $c === 403 => 'HTTP_403',
-                $c === 401 => 'HTTP_401',
-                $c >= 400 => 'HTTP_4XX',
-                $c >= 300 => 'HTTP_3XX',
-                default   => 'HTTP_UNEXPECTED',
-            };
-            [$label, $vars] = match ($reason) {
-                'HTTP_5XX' => ['Erreur serveur {code} : le site ne répond plus correctement', ['code' => $c]],
-                'HTTP_404' => ['Page introuvable (404)', []],
-                'HTTP_403' => ['Accès interdit (403)', []],
-                'HTTP_401' => ['Authentification requise (401)', []],
-                'HTTP_429' => ['Trop de requêtes (429) : quota serveur atteint', []],
-                'HTTP_4XX' => ['Erreur client {code}', ['code' => $c]],
-                'HTTP_3XX' => ['Redirection inattendue ({code}) vers {target}',
-                               ['code' => $c, 'target' => str_cut($res->finalUrl, 80)]],
-                default    => ['Code HTTP inattendu : {code}, attendu {expected}',
-                               ['code' => $c, 'expected' => $expect]],
-            };
-            $note('down', $reason, $label, $vars);
+        // SEPTIÈME EXTRACTION, LE 2026-08-02 : src/Regle/CodeHttp.php, huit causes.
+        // Huit et non une seule, parce qu'un 404, un 403 et un 500 ne se corrigent ni par
+        // la même personne ni au même endroit, et parce que le rapport mensuel compte les
+        // pannes par nature.
+        if ($v = (new \Uptimeez\Regle\CodeHttp())->evaluer($contexte)) {
+            $findings[] = $v->enTableau();
         }
 
         // ---- 3. Base de données (signatures + chaîne de preuve) -----------
