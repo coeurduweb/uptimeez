@@ -2626,11 +2626,28 @@ foreach (['/../README.md', '/../README.fr.md', '/../docs/en/coverage.md',
     $chemin = __DIR__ . $f;
     if (is_file($chemin)) $textes[$f] = (string)file_get_contents($chemin);
 }
+// LE CHIFFRE N'EST PAS TOUJOURS COLLÉ AU MOT, ET C'EST PAR LÀ QUE « 45 » EST REVENU.
+//
+// Le commentaire ci-dessus raconte que « ≈45 signatures » avait survécu à un balayage
+// parce que README.fr.md n'était pas lu. Le fichier a été ajouté, et le 2026-08-02 le même
+// nombre a été retrouvé dans README.md, deux fois, toujours faux. Le motif exigeait le
+// chiffre immédiatement suivi du mot, or le texte écrivait :
+//
+//     « ≈45 database-failure signatures »
+//     « ~45 database-failure signatures »
+//
+// Deux mots entre le nombre et le nom, et le garde-fou ne voyait rien. Il avait été
+// corrigé UNE FOIS pour ce nombre exact, et la correction ne couvrait pas le cas.
+//
+// La fenêtre autorise donc jusqu'à trois mots qualificatifs. Elle reste bornée pour ne pas
+// ramasser un nombre d'une phrase voisine : au-delà de trois mots, le chiffre ne qualifie
+// plus le nom, il en est simplement voisin.
+$qualificatifs = '(?:[a-zA-Zà-ÿ-]+[ \t]+){0,3}';
 $annonces = [
-    'signatures' => ['/(\d+) signatures?/', $sigs],
-    'causes'     => ['/(\d+) causes?/', $branches],
-    'signaux'    => ['/(\d+) (?:signals?|signaux)/', $signaux],
-    'langues'    => ['/(\d+) (?:languages?|langues)/', $langues],
+    'signatures' => ['/(\d+)[ \t]+' . $qualificatifs . 'signatures?\b/i', $sigs],
+    'causes'     => ['/(\d+)[ \t]+' . $qualificatifs . 'causes?\b/i', $branches],
+    'signaux'    => ['/(\d+)[ \t]+' . $qualificatifs . '(?:signals?|signaux)\b/i', $signaux],
+    'langues'    => ['/(\d+)[ \t]+' . $qualificatifs . '(?:languages?|langues)\b/i', $langues],
 ];
 foreach ($annonces as $quoi => [$motif, $mesure]) {
     $faux = [];
