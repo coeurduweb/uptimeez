@@ -440,6 +440,43 @@ ok('incidents ouverts à la confirmation', $openInc >= 2, $openInc . ' ouvert(s)
 $incId = (int)$val('SELECT id FROM incidents WHERE ended_at IS NULL ORDER BY id ASC LIMIT 1');
 $r = $req('/index.php?p=incidents', ['csrf' => $tok, 'action' => 'ack_incident', 'id' => $incId]);
 ok('incident pris en compte', $has($r, 'pris en compte') || $val('SELECT ack_at FROM incidents WHERE id = ?', [$incId]) !== null);
+// ---- Le retour d'exploitation, et la garantie qu'il ne change rien -------
+//
+// L'ACCEPTATION DU SPRINT B1 SE JOUE ICI, PAS DANS LE SELFTEST. Le contrôle unitaire
+// prouve que la classe n'écrit pas dans « monitors » ; celui-ci prouve que le PARCOURS
+// entier, formulaire compris, ne modifie ni l'état de la sonde ni celui de l'incident.
+// C'est la dérive que tout le sprint cherche à éviter : un bouton qui, de correction en
+// correction, finirait par faire taire l'alerte qu'il devait seulement commenter.
+$avantEtat = $val('SELECT status FROM monitors WHERE id = ?',
+    [(int)$val('SELECT monitor_id FROM incidents WHERE id = ?', [$incId])]);
+$avantFin  = $val('SELECT ended_at FROM incidents WHERE id = ?', [$incId]);
+
+$r = $req('/api.php?action=retour', ['csrf' => $tok, 'action' => 'retour',
+    'incident_id' => $incId, 'motif' => 'controle_errone', 'portee' => 'sonde',
+    'commentaire' => 'la police manque mais la page est correcte']);
+$j = json_decode($r['body'], true);
+
+ok('un retour d\'exploitation est accepté', ($j['ok'] ?? false) === true, str_cut(trim($r['body']), 70));
+ok('et il est enregistré au corpus',
+    (int)$val('SELECT COUNT(*) FROM retours WHERE incident_id = ?', [$incId]) === 1);
+ok('la cause vient de l\'incident, pas du formulaire',
+    $val('SELECT reason_code FROM retours WHERE incident_id = ?', [$incId])
+        === $val('SELECT reason_code FROM incidents WHERE id = ?', [$incId]));
+// LA GARANTIE, DITE AU CLIENT ET VÉRIFIÉE DANS LA BASE.
+ok('la réponse annonce qu\'aucun verdict n\'a changé', ($j['verdict_modifie'] ?? true) === false);
+ok('l\'incident n\'a pas été clos par le retour',
+    $val('SELECT ended_at FROM incidents WHERE id = ?', [$incId]) === $avantFin);
+ok('et la sonde a gardé son état',
+    $val('SELECT status FROM monitors WHERE id = ?',
+        [(int)$val('SELECT monitor_id FROM incidents WHERE id = ?', [$incId])]) === $avantEtat);
+
+// Un motif inventé est refusé, et le message d'erreur ne fuit pas l'exception interne.
+$r = $req('/api.php?action=retour', ['csrf' => $tok, 'action' => 'retour',
+    'incident_id' => $incId, 'motif' => 'peu importe', 'portee' => 'sonde']);
+ok('un motif hors liste est refusé', $r['code'] === 422, 'HTTP ' . $r['code']);
+ok('et le message interne ne fuit pas',
+    !str_contains($r['body'], 'Motif inconnu'), str_cut(trim($r['body']), 60));
+
 $r = $req('/index.php?p=incidents', ['csrf' => $tok, 'action' => 'close_incident', 'id' => $incId]);
 ok('incident clos manuellement', $val('SELECT ended_at FROM incidents WHERE id = ?', [$incId]) !== null);
 

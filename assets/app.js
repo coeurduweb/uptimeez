@@ -42,6 +42,38 @@
     });
   }
 
+  // ---------- Retour d'exploitation sur un incident ----------
+  //
+  // CE FORMULAIRE NE FAIT RIEN TAIRE. Un bouton « fausse alerte » qui masque l'incident
+  // transformerait un défaut visible en défaut invisible, et le jour où la règle se
+  // tromperait vraiment plus personne ne le saurait. On enregistre ce que l'exploitant
+  // constate, l'alerte reste affichée, et le message de confirmation le dit.
+  document.addEventListener('submit', function (ev) {
+    var f = ev.target;
+    if (!f.classList || !f.classList.contains('retour-form')) return;
+    ev.preventDefault();
+
+    var bouton = f.querySelector('button');
+    if (bouton) { bouton.disabled = true; }
+
+    post('retour', {
+      incident_id: f.dataset.incident || '',
+      motif: (f.querySelector('[name=motif]') || {}).value || '',
+      portee: (f.querySelector('[name=portee]') || {}).value || '',
+      commentaire: (f.querySelector('[name=commentaire]') || {}).value || ''
+    }).then(function (j) {
+      if (bouton) { bouton.disabled = false; }
+      toast(j.message || '', j.ok ? 'ok' : 'bad');
+      if (j.ok) {
+        var d = f.closest('details');
+        if (d) { d.open = false; }
+        f.reset();
+      }
+    }).catch(function () {
+      if (bouton) { bouton.disabled = false; }
+    });
+  });
+
   // ---------- Thème ----------
   var toggle = $('#theme-toggle');
   if (toggle) {

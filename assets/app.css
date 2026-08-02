@@ -986,3 +986,36 @@ fieldset.fs legend { padding: 0 6px; font-size: 12.5px; font-weight: 650;
 .imp-skip ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
 .imp-skip li { display: flex; gap: var(--s3); flex-wrap: wrap; font-size: 12.5px; }
 .imp-skip-name { font-weight: 600; min-width: 12ch; }
+
+/* ------------------------------------------------------------------
+   Retour d'exploitation sur un incident.
+
+   Le panneau est REPLIÉ par défaut, et c'est une décision et non un
+   choix d'encombrement : déplié, il proposerait quatre motifs à chaque
+   ligne du tableau et ferait de l'avis un geste attendu. Or on veut
+   l'avis de qui a vraiment regardé, pas de qui veut faire disparaître
+   une ligne rouge.
+
+   Le bouton n'est pas rouge non plus. Un « Ignorer » écarlate serait
+   cliqué pour ce qu'il a l'air de faire, et il ne le fait pas.
+   ------------------------------------------------------------------ */
+details.retour { display: inline-block; text-align: left; }
+details.retour > summary { list-style: none; cursor: pointer; }
+details.retour > summary::-webkit-details-marker { display: none; }
+details.retour[open] > summary { opacity: .7; }
+
+.retour-form {
+  display: grid;
+  gap: .5rem;
+  margin-top: .5rem;
+  padding: .75rem;
+  min-width: 15rem;
+  max-width: 22rem;
+  border: 1px solid var(--border, #d8dee6);
+  border-radius: .5rem;
+  background: var(--panel, #fff);
+  white-space: normal;
+}
+.retour-form label { display: grid; gap: .2rem; }
+.retour-form select,
+.retour-form input[type=text] { width: 100%; }

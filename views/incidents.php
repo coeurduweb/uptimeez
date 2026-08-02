@@ -94,6 +94,42 @@ foreach ($rows as $r) {
               <?php elseif ((int)$r['notify_count'] > 0): ?>
                 <span class="tiny muted"><?= (int)$r['notify_count'] ?> <?= te('alerte(s)') ?></span>
               <?php endif; ?>
+
+              <?php
+              // CE FORMULAIRE NE FAIT RIEN TAIRE, et le dire est la moitié du travail.
+              // Un bouton « fausse alerte » qui masque l'incident transforme un défaut
+              // visible en défaut invisible. Il est donc nommé « Donner mon avis » et non
+              // « Ignorer », et la réponse rappelle que l'alerte reste affichée.
+              //
+              // LA PORTÉE EST DEMANDÉE PARCE QU'ELLE CHANGE TOUT : « normal ici » et
+              // « normal partout » appellent deux gestes opposés. La laisser deviner
+              // reviendrait à laisser un exploitant dégrader la détection des autres.
+              ?>
+              <details class="retour">
+                <summary class="btn btn-sm btn-ghost"><?= te('Donner mon avis') ?></summary>
+                <form class="retour-form" data-incident="<?= (int)$r['id'] ?>">
+                  <p class="tiny muted"><?= te('Ceci ne masque pas l\'alerte : cela nous dit où le contrôle se trompe.') ?></p>
+                  <label class="tiny"><?= te('Ce qui s\'est passé') ?>
+                    <select name="motif">
+                      <option value="controle_errone"><?= te('Le contrôle s\'est trompé') ?></option>
+                      <option value="sans_effet"><?= te('Réel, mais sans effet visible') ?></option>
+                      <option value="normal_ici"><?= te('Normal sur ce site') ?></option>
+                      <option value="vrai_et_corrige"><?= te('C\'était vrai, c\'est corrigé') ?></option>
+                    </select>
+                  </label>
+                  <label class="tiny"><?= te('Portée de ce constat') ?>
+                    <select name="portee">
+                      <option value="sonde"><?= te('Cette page seulement') ?></option>
+                      <option value="serveur"><?= te('Tout ce serveur') ?></option>
+                      <option value="parc"><?= te('Tous mes sites') ?></option>
+                    </select>
+                  </label>
+                  <label class="tiny"><?= te('Précision (facultatif)') ?>
+                    <input type="text" name="commentaire" maxlength="500">
+                  </label>
+                  <button class="btn btn-sm"><?= te('Envoyer') ?></button>
+                </form>
+              </details>
             </td>
           </tr>
         <?php endforeach; ?>
