@@ -2967,49 +2967,51 @@ section("« Hors service » veut dire que le visiteur n'a pas la page");
 // d'apparence entrait dans le taux de disponibilité et le faussait, et le mot « hors
 // service » perdait son sens pour le jour où il compte vraiment.
 //
-// Le contrôle lit la SOURCE parce que c'est là que la faute se réintroduit : il suffit
-// d'un « note('down', 'CSS_… » ajouté sans y penser. La gravité, elle, reste lisible dans
-// le code de cause, qui distingue toujours CSS_BROKEN de CSS_DEGRADED.
+// ------------------------------------------------------------------------------
+// LE SPRINT A EST TERMINÉ, ET CE BLOC A CHANGÉ DE NATURE LE 2026-08-02.
+// ------------------------------------------------------------------------------
+//
+// Il lisait la SOURCE d'evaluate() à la recherche de « note('down', 'CSS_… », parce que
+// c'était là que la faute pouvait se réintroduire. evaluate() ne produit plus aucun
+// verdict : les vingt-quatre sont sortis dans src/Regle/, et il n'y a plus de texte à
+// inspecter. Le contrôle précédent l'a annoncé lui-même plutôt que de me le laisser
+// deviner, ce qui était son dernier travail.
+//
+// CE QUI PORTE LA RÈGLE MAINTENANT EST STRUCTUREL, ET C'EST MIEUX. Le constructeur du
+// Verdict est PRIVÉ : Verdict::pour() est le seul chemin pour en fabriquer un, et c'est
+// lui qui applique le plafond. Une règle ne peut donc pas rendre « hors service » sur une
+// cause d'apparence, même en le demandant explicitement — ce n'est plus une convention
+// qu'on surveille, c'est une porte qui n'existe pas.
+//
+// Le contrôle ci-dessous garde cette porte fermée. Le jour où quelqu'un rendra le
+// constructeur public pour se dépanner, la garantie s'évaporerait en silence, et les
+// tests unitaires des règles resteraient verts puisque aucune d'elles ne l'utiliserait
+// encore. C'est exactement le genre de régression qu'on ne voit pas venir.
+$refVerdict = new ReflectionClass(Uptimeez\Regle\Verdict::class);
+check('le constructeur du Verdict reste privé, donc le plafond reste incontournable',
+    $refVerdict->getConstructor()?->isPrivate(), true);
+
+// Et personne ne contourne pour() par une autre fabrique publique : une seule porte.
+//
+// ATTENTION AU PIÈGE, IL M'A EU. Les filtres de getMethods() se combinent par OU et non
+// par ET : « IS_PUBLIC | IS_STATIC » rend toutes les méthodes publiques ET toutes les
+// méthodes statiques, donc ici la liste entière. Le contrôle tombait en annonçant des
+// méthodes d'instance parfaitement légitimes.
+$fabriques = array_values(array_filter(
+    array_map(static fn (ReflectionMethod $m): string => $m->getName(),
+        $refVerdict->getMethods(ReflectionMethod::IS_PUBLIC)),
+    static fn (string $nom): bool => $nom !== 'estUneApparence'
+        && $refVerdict->getMethod($nom)->isStatic()));
+check('une seule fabrique publique de Verdict', $fabriques, ['pour']);
+
+// L'ACQUIS DU SPRINT, GARDÉ POUR DE BON : evaluate() ne fabrique plus de verdict lui-même.
+// Sans ce contrôle, rien n'empêcherait d'ajouter demain un vingt-cinquième cas directement
+// dans le collecteur, où il échapperait au plafond comme aux tests unitaires.
 $sourceRunner = (string)file_get_contents(__DIR__ . '/../src/Runner.php');
-preg_match_all("~\\\$note\\(\\s*'down'\\s*,\\s*'([A-Z_]+)'~", $sourceRunner, $mDown);
-$causesDown = array_values(array_unique($mDown[1] ?? []));
-
-$apparence = array_values(array_filter($causesDown, static fn (string $c): bool
-    => str_starts_with($c, 'CSS_') || str_starts_with($c, 'NOINDEX') || str_starts_with($c, 'SLOW')));
-check("aucune cause d'apparence ne rend « hors service »", $apparence, []);
-
-// Et l'inverse : les causes qui privent VRAIMENT le visiteur doivent rester en « down ».
-// Sans ce second contrôle, tout ramener à « degraded » passerait le premier au vert.
-//
-// LA LISTE SE VIDE AU FUR ET À MESURE DE L'EXTRACTION, ET C'EST VOULU. Chaque cause qui
-// sort d'evaluate() vers src/Regle/ disparaît de la source lue ici, et son contrôle
-// déménage dans le test unitaire de sa règle, où il est meilleur : il éprouve le
-// comportement au lieu d'inspecter du texte.
-//
-// STRING_MISSING est partie la première, le 2026-08-02. Son verdict « down » est
-// désormais vérifié dans la section « Règle extraite : la chaîne de preuve ».
-//
-// Ce qui reste ici garde les causes ENCORE dans evaluate(). Quand la liste sera vide,
-// tout ce bloc disparaîtra, et ce sera la fin du Sprint A.
-// LA LISTE EST DÉRIVÉE, PLUS ÉCRITE À LA MAIN.
-//
-// Elle énumérait les causes attendues en « down » dans evaluate(). Chaque extraction en
-// retirait une, donc chaque extraction cassait ce contrôle et demandait de le corriger à
-// la main. Trois fois de suite, ce qui est le signe qu'on entretient une liste au lieu de
-// vérifier une règle.
-//
-// Ce qui compte n'est pas QUELLES causes restent, mais qu'il en reste : tant qu'evaluate()
-// produit encore des verdicts, il doit produire des verdicts de disponibilité en « down ».
-// Le jour où il n'en produit plus aucun, l'extraction est terminée et ce bloc doit
-// disparaître avec elle. Le contrôle le dit lui-même plutôt que de me le laisser deviner.
-if ($causesDown !== []) {
-    check('les causes encore dans evaluate() sont des causes de disponibilité',
-        array_values(array_filter($causesDown, static fn (string $c): bool
-            => Uptimeez\Regle\Verdict::estUneApparence($c))), []);
-} else {
-    check('SPRINT A TERMINÉ : evaluate() ne produit plus aucun verdict, ce bloc peut partir',
-        true, true);
-}
+check('evaluate() ne fabrique plus aucun verdict directement',
+    preg_match("~\\\$note\\(~", $sourceRunner), 0);
+check('et n\'appelle pas non plus Verdict::pour() en direct',
+    substr_count($sourceRunner, 'Verdict::pour('), 0);
 
 // ET LE GARDE-FOU DU GARDE-FOU : une cause retirée de cette liste doit l'être parce
 // qu'elle a été EXTRAITE, pas parce qu'elle a disparu. On vérifie donc que chaque cause

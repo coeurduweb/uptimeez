@@ -435,13 +435,6 @@ final class Runner
         // en fausse panne. Le drapeau existait et personne ne le lisait.
         $complete = !$res->truncated;
 
-        // Le message est une phrase source avec ses variables : la traduction a
-        // lieu à l'affichage, pas ici. Le collecteur ne connaît pas la langue de
-        // celui qui lira le verdict.
-        $note = function (string $state, ?string $reason, string $message, array $vars = []) use (&$findings) {
-            $findings[] = ['state' => $state, 'reason' => $reason, 'message' => $message, 'vars' => $vars];
-        };
-
         // Le contexte que reçoivent les règles extraites. Il est bâti une fois, ici, parce
         // que c'est le collecteur qui a le droit d'aller chercher ce qu'elles n'ont pas le
         // droit de demander : la base, l'horloge, le réseau.
@@ -464,25 +457,36 @@ final class Runner
                 $ssl = Ssl::inspect(host_of($mon['url']), self::portOf($mon['url']), (int)$mon['timeout_sec']);
                 $details['ssl'] = $ssl;
                 if ($ssl['checked'] && $ssl['error']) {
-                    $sslDiag = ['code' => $ssl['code'] ?: 'SSL_INVALID', 'msg' => $ssl['error']];
+                    // L'échéance voyage AVEC le diagnostic. Elle était relue depuis
+                    // $details deux blocs plus bas, ce qui liait le message d'alerte au
+                    // contenu d'un tableau de débogage : n'importe quelle réorganisation
+                    // de $details aurait fait disparaître la date sans rien casser.
+                    $sslDiag = [
+                        'code'       => $ssl['code'] ?: 'SSL_INVALID',
+                        'message'    => $ssl['error'],
+                        'expires_at' => $ssl['expires_at'] ?? null,
+                    ];
                 }
             }
 
-            if ($sslDiag) {
-                $due = isset($details['ssl']['expires_at']) && $details['ssl']['expires_at']
-                    ? date('d/m/Y', strtotime((string)$details['ssl']['expires_at'])) : '';
-                if ($due !== '') {
-                    $note('down', $sslDiag['code'], '{reason} (échéance {date})',
-                          ['reason' => $sslDiag['msg'], 'date' => $due]);
-                } else {
-                    $note('down', $sslDiag['code'], $sslDiag['msg']);
-                }
-            } else {
-                // Le message reste en français ; la trace curl brute part dans les
-                // détails techniques, consultables sur la fiche.
-                $note('down', $code, Http::errorLabel($code));
-                if ($res->error) $details['net_error'] = str_cut((string)$res->error, 200);
+            // La trace curl brute part dans les détails techniques, consultables sur la
+            // fiche : le message d'alerte reste lisible, la preuve reste disponible.
+            if (!$sslDiag && $res->error) {
+                $details['net_error'] = str_cut((string)$res->error, 200);
             }
+
+            // DIXIÈME ET DERNIÈRE EXTRACTION, LE 2026-08-02 : src/Regle/CoucheReseau.php.
+            // C'est la seule règle qui arrête tout le reste : sans réponse, il n'y a rien
+            // à analyser, et un détecteur mal écrit pourrait conclure quelque chose d'une
+            // réponse vide. Le collecteur rend donc son verdict immédiatement.
+            $v = (new \Uptimeez\Regle\CoucheReseau())->evaluer(
+                $contexte->avecDetecteur(\Uptimeez\Regle\CoucheReseau::DETECTEUR, $sslDiag)
+            );
+
+            if ($v) {
+                $findings[] = $v->enTableau();
+            }
+
             return self::verdict($findings, $details, $events, $res);
         }
 
