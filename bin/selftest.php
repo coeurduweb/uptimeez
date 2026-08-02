@@ -3075,6 +3075,66 @@ foreach (array_merge(glob(UPTIMEEZ_ROOT . '/src/Check/*.php') ?: [],
 }
 check('les messages des détecteurs passent tous par t()', $brutes, []);
 
+section('Le contrat de règle, et le plafond de gravité qu\'il porte');
+// ---------------------------------------------------------------------------
+// Sprint A1. Le plafond de gravité vivait dans deux appels écrits à la main dans
+// evaluate(), et rien n'empêchait un troisième d'apparaître le lendemain : c'est
+// exactement ainsi que treize sites se sont retrouvés annoncés hors service pour un
+// défaut de feuille de style. Il vit désormais DANS le Verdict, donc une seule fois,
+// donc sans exception possible.
+
+use Uptimeez\Regle\Verdict;
+
+check('une cause de disponibilité sort bien en « down »',
+    Verdict::pour('down', 'STRING_MISSING', 'x')->etat, 'down');
+check('une cause d\'apparence est plafonnée à « dégradé »',
+    Verdict::pour('down', 'CSS_BROKEN', 'x')->etat, 'degraded');
+check('le plafonnement se sait lui-même',
+    Verdict::pour('down', 'CSS_BROKEN', 'x')->aEtePlafonne(), true);
+check('la gravité constatée reste lisible pour le diagnostic',
+    Verdict::pour('down', 'CSS_BROKEN', 'x')->etatConstate, 'down');
+check('un « dégradé » d\'apparence n\'est pas touché',
+    Verdict::pour('degraded', 'CSS_DEGRADED', 'x')->etat, 'degraded');
+check('noindex et lenteur sont aussi de l\'apparence',
+    [Verdict::pour('down', 'NOINDEX', 'x')->etat, Verdict::pour('down', 'SLOW', 'x')->etat],
+    ['degraded', 'degraded']);
+check('une cause inconnue n\'est PAS traitée comme de l\'apparence',
+    Verdict::pour('down', 'CAUSE_INVENTEE', 'x')->etat, 'down');
+check('une cause absente non plus', Verdict::pour('down', null, 'x')->etat, 'down');
+
+// Un état inventé doit ÉCHOUER bruyamment plutôt que d'être accepté en silence : une
+// faute de frappe dans un état produirait sinon une sonde dans un état inexistant, que
+// la comparaison de gravité traiterait ensuite comme absente.
+$refuse = false;
+try { Verdict::pour('casse', null, 'x'); } catch (\InvalidArgumentException) { $refuse = true; }
+check('un état inconnu est refusé', $refuse, true);
+
+// LE PONT VERS L'ANCIEN FORMAT doit rendre exactement ce que persist() attend, sinon
+// l'extraction ne peut pas se faire une règle à la fois.
+check('le pont rend la forme attendue par le collecteur',
+    array_keys(Verdict::pour('down', 'X', 'msg', ['a' => 1])->enTableau()),
+    ['state', 'reason', 'message', 'vars']);
+check('et le pont rend l\'état PLAFONNÉ, pas le constaté',
+    Verdict::pour('down', 'CSS_BROKEN', 'm')->enTableau()['state'], 'degraded');
+
+// La comparaison de gravité, qui décide des aggravations.
+check('la comparaison suit le seul ordre du produit',
+    Verdict::pour('down', 'X', 'a')->plusGraveQue(Verdict::pour('degraded', 'Y', 'b')), true);
+check('un verdict est plus grave que rien du tout',
+    Verdict::pour('degraded', 'X', 'a')->plusGraveQue(null), true);
+
+// Le contrat lui-même : une seule méthode, et rien d'autre. Un contrat qui grossit est
+// un contrat que chaque règle devra implémenter en double.
+$r = new ReflectionClass(Uptimeez\Regle\Regle::class);
+check('le contrat de règle n\'a qu\'une méthode', count($r->getMethods()), 1);
+check('et elle s\'appelle evaluer', $r->getMethods()[0]->getName(), 'evaluer');
+
+// Le Contexte ne doit donner AUCUN accès à la base : c'est ce qui rend une règle
+// testable en trois lignes, sans base, sans réseau et sans horloge.
+$src = (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Regle/Contexte.php');
+check('le Contexte n\'ouvre aucune porte vers Db',
+    preg_match('~\bDb::~', $src), 0);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les
