@@ -416,15 +416,21 @@ request; the table lives in this file.
 | Runs on plain shared hosting | ✅ PHP only | SaaS | SaaS | SaaS | ❌ Node/Docker | ❌ server | SaaS |
 | Dependencies to install | **none** | n/a | Node + browsers | n/a | Node or Docker | server + DB + agent | agent |
 | Your data stays on your server | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Free tier at 40 sites | **yes, no limit** | yes, 50 monitors / 5 min | no, 10 monitors | yes, 50 resources | yes, no limit | yes, no limit | data allowance only |
+| Free tier at 40 sites | **yes, no limit** | yes, 50 monitors / 5 min | no, 10 monitors | no, 5 monitors | yes, no limit | yes, no limit | data allowance only |
 
-**Two corrections we owe the competition,** found while re-checking this table on 2 August 2026 and
-recorded here rather than quietly fixed. The cost row used to read "paid tier" for UptimeRobot and Site24x7 at
-forty sites. Both are wrong: UptimeRobot's free plan carries 50 monitors at a 5-minute interval, and
-Site24x7's free-forever plan covers 50 resources. The row now states the free-tier limits instead of a verdict.
+**A correction we owe UptimeRobot,** found while re-checking this table on 2 August 2026 and recorded here
+rather than quietly fixed. The cost row read "paid tier" for UptimeRobot at forty sites. That is wrong: its
+free plan carries 50 monitors at a 5-minute interval, so forty sites fit. The row now states each free tier's
+actual limit instead of a verdict, which is checkable and does not need re-litigating every quarter.
 And UptimeRobot's **status pages** support 11 languages even though its operator dashboard is English-only, so
-that row now says whose screens it is talking about. A monitoring tool that overstates what it detects
-disqualifies itself; the same goes for understating what a competitor gives away.
+that row now says whose screens it is counting. A monitoring tool that overstates what it detects disqualifies
+itself; the same goes for understating what a competitor gives away.
+
+*Site24x7 was corrected twice in the same afternoon, and the second correction undid the first.* A pricing
+page mentioning "up to 50 resources" led to marking its free tier as sufficient. It is not: the free-forever
+plan carries **5 monitors**, and the 50 apply only after a 30-day full-feature trial. The figure on
+uptimeez.com had been right all along, read from the vendor's own free-plan page — which is why the two now
+have a check keeping them in step.
 
 **Where the others are genuinely better.** Checkly for scripted end-to-end journeys in CI; Zabbix for
 infrastructure metrics on servers you own; New Relic for application tracing inside your code; Site24x7 for

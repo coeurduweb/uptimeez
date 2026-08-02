@@ -427,16 +427,22 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Tourne sur un mutualisé | ✅ PHP seul | SaaS | SaaS | SaaS | ❌ Node/Docker | ❌ serveur | SaaS |
 | Dépendances à installer | **aucune** | n/a | Node + navigateurs | n/a | Node ou Docker | serveur + base + agent | agent |
 | Vos données restent chez vous | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Offre gratuite à 40 sites | **oui, sans limite** | oui, 50 sondes / 5 min | non, 10 sondes | oui, 50 ressources | oui, sans limite | oui, sans limite | quota de données seulement |
+| Offre gratuite à 40 sites | **oui, sans limite** | oui, 50 sondes / 5 min | non, 10 sondes | non, 5 sondes | oui, sans limite | oui, sans limite | quota de données seulement |
 
-**Deux corrections que nous devons aux concurrents,** trouvées en revérifiant ce tableau le 2026-08-02 et
-consignées ici plutôt que corrigées en silence. La ligne des coûts annonçait « formule payante » pour
-UptimeRobot et Site24x7 à quarante sites. Les deux sont faux : l'offre gratuite d'UptimeRobot porte 50 sondes
-à cinq minutes, et celle de Site24x7 couvre 50 ressources. La ligne donne désormais les limites de l'offre
-gratuite au lieu d'un verdict. Et les **pages de statut** d'UptimeRobot gèrent 11 langues, même si son tableau
-de bord d'exploitation est anglophone : la ligne dit maintenant de quels écrans elle parle. Un outil de
-supervision qui exagère ce qu'il détecte se disqualifie tout seul ; sous-estimer ce qu'un concurrent donne
-gratuitement revient au même.
+**Une correction que nous devons à UptimeRobot,** trouvée en revérifiant ce tableau le 2026-08-02 et
+consignée ici plutôt que corrigée en silence. La ligne des coûts annonçait « formule payante » pour
+UptimeRobot à quarante sites. C'est faux : son offre gratuite porte 50 sondes à cinq minutes, donc quarante
+sites y tiennent. La ligne donne désormais la limite réelle de chaque offre gratuite au lieu d'un verdict, ce
+qui se vérifie et n'a pas besoin d'être rejugé chaque trimestre. Et les **pages de statut** d'UptimeRobot
+gèrent 11 langues, même si son tableau de bord d'exploitation est anglophone : la ligne dit maintenant de
+quels écrans elle parle. Un outil de supervision qui exagère ce qu'il détecte se disqualifie tout seul ;
+sous-estimer ce qu'un concurrent donne gratuitement revient au même.
+
+*Site24x7 a été corrigé deux fois le même après-midi, et la seconde correction a annulé la première.* Une page
+tarifaire mentionnant « jusqu'à 50 ressources » m'a fait marquer son offre gratuite comme suffisante. Elle ne
+l'est pas : la formule gratuite à vie porte **5 sondes**, les 50 ne valant qu'après un essai complet de trente
+jours. Le chiffre d'uptimeez.com était juste depuis le début, lu sur la page d'offre gratuite de l'éditeur —
+raison pour laquelle les deux ont maintenant un contrôle qui les tient en phase.
 
 **Là où les autres sont réellement meilleurs.** Checkly pour les parcours utilisateurs scriptés en intégration
 continue ; Zabbix pour les métriques d'infrastructure sur vos propres serveurs ; New Relic pour le traçage

@@ -2672,8 +2672,16 @@ $parleDunConcurrent = static function (string $ligne) use ($concurrents): bool {
 foreach ($annonces as $quoi => [$motif, $mesure]) {
     $faux = [];
     foreach ($textes as $f => $t) {
-        foreach (explode("\n", $t) as $ligne) {
-            if ($parleDunConcurrent($ligne)) continue;
+        // LA PROSE EST ENVELOPPÉE, ET LE NOM PEUT TOMBER SUR LA LIGNE D'AVANT. Constaté le
+        // 2026-08-02 : « …les pages de statut d'UptimeRobot / gèrent 11 langues… » coupait
+        // entre le nom et le nombre, et le contrôle accusait une phrase parfaitement juste.
+        // Reformuler pour plaire au garde-fou aurait été le contournement habituel ; on
+        // regarde donc la ligne ET celle qui la précède, ce qui suit la façon dont un
+        // paragraphe se coupe sans élargir la portée à tout le fichier.
+        $lignes = explode("\n", $t);
+        foreach ($lignes as $rang => $ligne) {
+            $precedente = $rang > 0 ? $lignes[$rang - 1] : '';
+            if ($parleDunConcurrent($ligne) || $parleDunConcurrent($precedente)) continue;
             if (preg_match_all($motif, $ligne, $m)) {
                 foreach ($m[1] as $n) {
                     if ((int)$n !== $mesure) $faux[] = basename($f) . ":$n";
