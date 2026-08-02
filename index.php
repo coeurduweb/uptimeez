@@ -142,7 +142,7 @@ if ($page === 'incidents' && ($_GET['export'] ?? '') === 'csv') {
 
 // --- Rendu ---------------------------------------------------------------
 $allowed = ['today', 'dashboard', 'monitor', 'monitors', 'incidents', 'import', 'settings', 'events',
-            'report', 'clients'];
+            'report', 'clients', 'retours'];
 $view = in_array($page, $allowed, true) ? $page : 'today';
 require __DIR__ . '/views/layout.php';
 

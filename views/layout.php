@@ -24,6 +24,7 @@ $titles = [
     'login'    => t('Connexion'),         'status'    => t('État des services'),
     'report'   => t('Rapport client'),
     'clients'  => t('Clients'),
+    'retours'  => t('Retours sur la détection'),
 ];
 $pageTitle = $isClient && ($client['name'] ?? '') !== ''
     ? (string)$client['name']
@@ -44,6 +45,10 @@ $nav = [
     'incidents' => [t('Incidents'),    'history', true],
     'report'    => [t('Rapport'),      'file',    false],
     'clients'   => [t('Clients'),      'users',   false],
+    // Pas dans la barre du quotidien : on lit le corpus quand on cherche à comprendre
+    // pourquoi un contrôle se trompe, pas tous les matins. Accessible par le pied de
+    // page et la palette, comme le mur et le rapport.
+    'retours'   => [t('Retours'),      'history', false],
     'settings'  => [t('Réglages'),     'sliders', true],
 ];
 // L'onglet Clients n'a de sens que si l'agence en a créé au moins un : sinon

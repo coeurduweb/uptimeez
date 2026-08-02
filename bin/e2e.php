@@ -477,6 +477,20 @@ ok('un motif hors liste est refusé', $r['code'] === 422, 'HTTP ' . $r['code']);
 ok('et le message interne ne fuit pas',
     !str_contains($r['body'], 'Motif inconnu'), str_cut(trim($r['body']), 60));
 
+// L'écran qui lit le corpus. Le selftest prouve que les requêtes disent le vrai ; celui-ci
+// prouve que la page s'affiche, ce qui n'est pas la même chose : une vue peut être juste
+// et tomber sur une colonne absente ou un appel manquant.
+$r = $req('/index.php?p=retours');
+ok('l\'écran des retours répond', $r['code'] === 200 && !str_contains($r['body'], 'Fatal error'),
+    'HTTP ' . $r['code']);
+ok('et il montre les contradictions en premier',
+    strpos($r['body'], 'contredisent') !== false
+        && strpos($r['body'], 'contredisent') < (strpos($r['body'], 'derniers retours') ?: PHP_INT_MAX));
+ok('et le retour déposé plus haut y figure', $has($r, 'la police manque'));
+// LA PAGE DIT ELLE-MÊME QU'ELLE NE DÉCIDE RIEN. Sans cette phrase, un écran listant des
+// « contrôles jugés faux » se lit comme une file de corrections déjà appliquées.
+ok('et elle rappelle qu\'aucun verdict n\'a changé', $has($r, 'ils décrivent'));
+
 $r = $req('/index.php?p=incidents', ['csrf' => $tok, 'action' => 'close_incident', 'id' => $incId]);
 ok('incident clos manuellement', $val('SELECT ended_at FROM incidents WHERE id = ?', [$incId]) !== null);
 

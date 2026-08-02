@@ -3824,6 +3824,71 @@ check('le signal vu sur le plus de serveurs arrive en tête, pas le plus volumin
     $premier['reason_code'] ?? '', 'SLOW');
 check('et le compte de serveurs distincts est rendu', (int)($premier['serveurs'] ?? 0), 3);
 
+section('Sprint B2 : lire le corpus sans se tromper de renseignement');
+// ---------------------------------------------------------------------------
+// Ces contrôles tournent sur les retours écrits par la section B1 ci-dessus, plus ceux
+// qu'ils ajoutent. Ils portent sur ce que le corpus LAISSE VOIR, ce qui est une question
+// différente de « qu'a-t-on enregistré ».
+
+// LE SILENCE N'EST PAS UNE CONFIRMATION, ET C'EST LE PIÈGE DE CETTE LECTURE. On serait
+// tenté de compter comme « confirmé » tout contrôle qui se déclenche ailleurs sans que
+// personne ne proteste. Ce serait mesurer la propension à se plaindre, pas la justesse de
+// la règle, et le résultat donnerait systématiquement raison au silence.
+//
+// SLOW n'a reçu que des contestations plus haut : il ne doit donc PAS être une divergence,
+// même si le signal se déclenche ailleurs sans plainte.
+$avantDiv = array_column(Uptimeez\Retour::divergences(), 'reason_code');
+check('un contrôle seulement contesté n\'est pas une divergence',
+    in_array('SLOW', $avantDiv, true), false);
+
+// Il faut DEUX AVIS EXPLICITES ET OPPOSÉS. On confirme SLOW depuis un autre serveur.
+Uptimeez\Retour::enregistrer(1, 'vrai_et_corrige', 'sonde', causeCode: 'SLOW', hote: 'd.example');
+$apresDiv = Uptimeez\Retour::divergences();
+$slow = null;
+foreach ($apresDiv as $d) { if ($d['reason_code'] === 'SLOW') { $slow = $d; break; } }
+
+check('deux avis opposés font une divergence', $slow !== null, true);
+check('et les contestations sont comptées', (int)($slow['contestes'] ?? 0), 3);
+check('et les confirmations aussi', (int)($slow['confirmes'] ?? 0), 1);
+check('et les serveurs distincts sont rendus', (int)($slow['serveurs'] ?? 0), 4);
+
+// UN CONTRÔLE UNANIMEMENT CONFIRMÉ N'EST PAS UNE DIVERGENCE NON PLUS : sans contestation
+// il n'y a rien à comprendre, la règle fait son travail.
+Uptimeez\Retour::enregistrer(1, 'vrai_et_corrige', 'sonde', causeCode: 'HTTP_5XX', hote: 'e.example');
+Uptimeez\Retour::enregistrer(1, 'vrai_et_corrige', 'sonde', causeCode: 'HTTP_5XX', hote: 'f.example');
+check('un contrôle seulement confirmé n\'est pas une divergence',
+    in_array('HTTP_5XX', array_column(Uptimeez\Retour::divergences(), 'reason_code'), true), false);
+
+// LES DEUX COLONNES SONT MONTRÉES ENSEMBLE, délibérément : un contrôle contesté douze fois
+// n'a pas le même sens selon qu'il a été confirmé zéro fois ou quarante. N'afficher que
+// les contestations ferait condamner la seconde règle sur le même relevé que la première.
+$parCause = Uptimeez\Retour::parCause();
+$colonnes = array_keys($parCause[0] ?? []);
+foreach (['reason_code', 'contestes', 'confirmes', 'sondes', 'serveurs'] as $attendue) {
+    check("la lecture par contrôle rend « $attendue »", in_array($attendue, $colonnes, true), true);
+}
+
+// « Normal ici » est rangé du côté des contestations : du point de vue du corpus, la règle
+// a produit une alerte jugée non pertinente. Ce qui le sépare de « contrôle erroné » est le
+// GESTE qui suivra — poser une exception plutôt que corriger la règle.
+check('« normal ici » compte comme une contestation',
+    in_array('normal_ici', Uptimeez\Retour::MOTIFS_CONTESTATION, true), true);
+check('et « vrai et corrigé » n\'en est pas une',
+    in_array('vrai_et_corrige', Uptimeez\Retour::MOTIFS_CONTESTATION, true), false);
+check('les motifs de contestation sont un sous-ensemble strict des motifs',
+    array_values(array_diff(Uptimeez\Retour::MOTIFS_CONTESTATION, Uptimeez\Retour::MOTIFS)), []);
+// Tout motif est classé d'un côté ou de l'autre : un motif oublié disparaîtrait des deux
+// colonnes, et le tableau annoncerait moins de retours qu'il n'y en a.
+check('aucun motif n\'échappe au classement',
+    count(Uptimeez\Retour::MOTIFS_CONTESTATION) + 1, count(Uptimeez\Retour::MOTIFS));
+
+// L'ÉCRAN NE DÉCIDE RIEN NON PLUS. Même garde-fou que sur la classe : la lecture du corpus
+// ne doit pas devenir l'endroit d'où l'on éteint un contrôle.
+$sourceVue = (string) file_get_contents(UPTIMEEZ_ROOT . '/views/retours.php');
+foreach (['UPDATE ', 'Db::update', 'Db::insert', 'Db::delete'] as $interdit) {
+    check("l'écran des retours ne fait pas « $interdit »", str_contains($sourceVue, $interdit), false);
+}
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

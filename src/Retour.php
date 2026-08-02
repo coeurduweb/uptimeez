@@ -135,6 +135,93 @@ final class Retour
     }
 
     /**
+     * Les motifs qui METTENT LA DÉTECTION EN CAUSE, par opposition à celui qui la confirme.
+     *
+     * « Normal ici » n'accuse pas la règle : il dit qu'elle a raison dans l'absolu et tort
+     * dans ce contexte. Il est pourtant rangé du côté des contestations, parce que du point
+     * de vue du corpus la question est la même — la règle a produit une alerte que
+     * quelqu'un a jugée non pertinente. Ce qui les sépare est le GESTE qui suivra :
+     * corriger la règle pour « contrôle erroné », poser une exception pour « normal ici ».
+     */
+    public const MOTIFS_CONTESTATION = ['sans_effet', 'controle_errone', 'normal_ici'];
+
+    /**
+     * Les signaux sur lesquels deux exploitants ne sont pas d'accord.
+     *
+     * ------------------------------------------------------------------------------
+     * CE N'EST PAS DU BRUIT À TRANCHER, C'EST LE RENSEIGNEMENT LE PLUS UTILE DU CORPUS
+     * ------------------------------------------------------------------------------
+     *
+     * Un signal contesté ici et confirmé ailleurs dit que la règle dépend d'un contexte
+     * qu'on n'a pas nommé. Trancher en faveur de la majorité ferait disparaître
+     * l'information : ce qu'il faut trouver n'est pas qui a raison, mais QUOI diffère entre
+     * les deux installations.
+     *
+     * ------------------------------------------------------------------------------
+     * LE SILENCE N'EST PAS UNE CONFIRMATION, ET C'EST LE PIÈGE DE CETTE REQUÊTE
+     * ------------------------------------------------------------------------------
+     *
+     * On serait tenté de compter comme « confirmé » tout signal qui se déclenche ailleurs
+     * sans que personne ne proteste. Ce serait faux : la quasi-totalité des gens ne
+     * cliquent jamais sur rien. On mesurerait alors la propension à se plaindre, pas la
+     * justesse de la règle, et le résultat donnerait systématiquement raison au silence.
+     *
+     * Une divergence exige donc DEUX AVIS EXPLICITES et opposés : quelqu'un a contesté, et
+     * quelqu'un d'autre a confirmé que c'était vrai. C'est plus rare, et c'est le prix
+     * d'une information qui veut dire quelque chose.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public static function divergences(): array
+    {
+        $contestations = implode(',', array_map(
+            static fn (string $m): string => "'" . $m . "'", self::MOTIFS_CONTESTATION));
+
+        return Db::all(
+            "SELECT reason_code,
+                    SUM(CASE WHEN motif IN ($contestations) THEN 1 ELSE 0 END) AS contestes,
+                    SUM(CASE WHEN motif = 'vrai_et_corrige' THEN 1 ELSE 0 END) AS confirmes,
+                    COUNT(DISTINCT monitor_id) AS sondes,
+                    COUNT(DISTINCT hote) AS serveurs
+             FROM retours
+             WHERE reason_code IS NOT NULL AND reason_code <> ''
+             GROUP BY reason_code
+             HAVING contestes > 0 AND confirmes > 0
+             ORDER BY serveurs DESC, (contestes + confirmes) DESC"
+        );
+    }
+
+    /**
+     * Ce que le corpus dit de chaque cause, contestations et confirmations côte à côte.
+     *
+     * LES DEUX COLONNES SONT MONTRÉES ENSEMBLE, DÉLIBÉRÉMENT. Un signal contesté douze fois
+     * n'a pas le même sens selon qu'il a été confirmé zéro fois ou quarante : dans le
+     * premier cas la règle est probablement mauvaise, dans le second elle sert, et douze
+     * installations ont une particularité. N'afficher que les contestations ferait
+     * condamner la seconde règle sur le même relevé que la première.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public static function parCause(int $limite = 50): array
+    {
+        $contestations = implode(',', array_map(
+            static fn (string $m): string => "'" . $m . "'", self::MOTIFS_CONTESTATION));
+
+        return Db::all(
+            "SELECT reason_code,
+                    COUNT(*) AS retours,
+                    SUM(CASE WHEN motif IN ($contestations) THEN 1 ELSE 0 END) AS contestes,
+                    SUM(CASE WHEN motif = 'vrai_et_corrige' THEN 1 ELSE 0 END) AS confirmes,
+                    COUNT(DISTINCT monitor_id) AS sondes,
+                    COUNT(DISTINCT hote) AS serveurs
+             FROM retours
+             GROUP BY reason_code
+             ORDER BY serveurs DESC, contestes DESC
+             LIMIT " . max(1, $limite)
+        );
+    }
+
+    /**
      * Ce que le corpus dit d'un signal, sans rien en conclure.
      *
      * LES SERVEURS DISTINCTS SONT LA COLONNE QUI TRANCHE. Trente retours venus d'un seul
