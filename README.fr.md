@@ -684,7 +684,7 @@ MIT. Utilisez-le, vendez des services autour, forkez-le.
 <br><br>
 
 [uptimeez.com](https://uptimeez.com/) — site officiel, offres hébergées, démonstration en ligne<br>
-Conçu et maintenu par [Cœur du Web](https://coeurduweb.com/), agence web à Fréjus,
+Conçu et maintenu par [Cœur du Web](https://coeurduweb.com/), agence web à Paris,
 qui l'utilise sur ses propres sites clients.
 
 </div>

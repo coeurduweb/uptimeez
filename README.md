@@ -665,7 +665,7 @@ MIT. Use it, sell services around it, fork it.
 <br><br>
 
 [uptimeez.com](https://uptimeez.com/) — official site, hosted plans, live demo<br>
-Built and maintained by [Cœur du Web](https://coeurduweb.com/), a web agency in Fréjus, France,
+Built and maintained by [Cœur du Web](https://coeurduweb.com/), a web agency in Paris, France,
 which runs it on its own client sites.
 
 </div>
