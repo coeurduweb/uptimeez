@@ -9,7 +9,6 @@ use Uptimeez\Check\DomainExpiry;
 use Uptimeez\Check\Silhouette;
 use Uptimeez\Check\Ssl;
 use Uptimeez\Check\Vitals;
-use Uptimeez\Detect\Discovery;
 use Uptimeez\Notify\Notifier;
 use Uptimeez\Vuln;
 
@@ -497,16 +496,21 @@ final class Runner
         }
 
         // ---- 3. Base de données (signatures + chaîne de preuve) -----------
+        // HUITIÈME EXTRACTION, LE 2026-08-02 : src/Regle/BaseDeDonnees.php. L'audit reste
+        // ici : il lit la sonde entière, y compris des réglages que la règle n'a pas à
+        // connaître. La règle reçoit son résultat et décide, comme pour le certificat.
         if ((int)$mon['check_db'] === 1 && $res->body !== '') {
-            $db = Database::audit($res, $mon);
-            if ($db['state'] !== 'ok') {
-                $details['db'] = $db;
-                if ($db['evidence']) {
-                    $note('down', $db['reason'], '{reason} : « {evidence} »',
-                          ['reason' => $db['message'], 'evidence' => $db['evidence']]);
-                } else {
-                    $note('down', $db['reason'], $db['message']);
-                }
+            $auditBase = Database::audit($res, $mon);
+
+            if ($auditBase['state'] !== 'ok') {
+                $details['db'] = $auditBase;
+            }
+
+            $v = (new \Uptimeez\Regle\BaseDeDonnees())
+                ->evaluer($contexte->avecDetecteur(\Uptimeez\Regle\BaseDeDonnees::DETECTEUR, $auditBase));
+
+            if ($v) {
+                $findings[] = $v->enTableau();
             }
         }
 

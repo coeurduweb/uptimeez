@@ -3541,6 +3541,63 @@ check('une plage vide retombe sur le défaut, elle n\'accepte pas tout',
 // Tous ces verdicts sont des indisponibilités réelles, jamais plafonnées en apparence.
 check('un code HTTP fautif est un hors service', $codeHttp(500)?->etat, 'down');
 
+section('Règle extraite : la base de données');
+// ---------------------------------------------------------------------------
+// Huitième extraction. LA PANNE QUE LE CODE DE STATUT NE VOIT JAMAIS :
+// « Error establishing a database connection » sort en HTTP 200. Le serveur web va très
+// bien, il sert consciencieusement une page qui annonce que plus rien ne fonctionne.
+
+$base = new Uptimeez\Regle\BaseDeDonnees();
+$avecAudit = static fn (array $audit, string $corps = '<html>x</html>', int $actif = 1)
+    : Uptimeez\Regle\Contexte
+    => $contexteAvec(['check_db' => $actif], $reponseAvec($corps))
+        ->avecDetecteur(Uptimeez\Regle\BaseDeDonnees::DETECTEUR, $audit);
+
+$panne = ['state' => 'down', 'reason' => 'DB_DOWN',
+          'message' => 'Base de données injoignable',
+          'evidence' => 'Error establishing a database connection'];
+
+check('contrôle désactivé : la règle se tait', $base->evaluer($avecAudit($panne, '<html>x</html>', 0)), null);
+check('audit sain : rien à dire',
+    $base->evaluer($avecAudit(['state' => 'ok', 'reason' => null, 'message' => '', 'evidence' => ''])), null);
+check('sans détecteur, la règle se tait',
+    $base->evaluer($contexteAvec(['check_db' => 1], $reponseAvec('<html>x</html>'))), null);
+
+// LE CORPS VIDE EST TRAITÉ AILLEURS : sans corps il n'y a pas de signature à chercher, et
+// la panne est déjà dite par le réseau ou le code de statut. Deux verdicts pour une seule
+// panne, et le plus bavard masquerait le plus juste.
+check('un corps vide ne produit pas de verdict de base', $base->evaluer($avecAudit($panne, '')), null);
+
+$v = $base->evaluer($avecAudit($panne));
+check('panne de base détectée sur une page qui répond 200', $v?->cause, 'DB_DOWN');
+check('et c\'est un hors service', $v?->etat, 'down');
+// LA PREUVE EST CITÉE, ET CE N'EST PAS DE L'ORNEMENT. Une signature est une
+// reconnaissance de texte, donc faillible : un article de blog qui parle des erreurs
+// MySQL en contient les mots. L'extrait permet de trancher sans ouvrir le site, et une
+// alerte qu'on ne peut pas vérifier finit ignorée.
+check('et la preuve trouvée est citée',
+    $v?->variables['evidence'] ?? '', 'Error establishing a database connection');
+
+// SANS EXTRAIT, PAS DE GUILLEMETS VIDES : le message doit se suffire à lui-même.
+$sansPreuve = $base->evaluer($avecAudit(['state' => 'down', 'reason' => 'APP_ERROR',
+    'message' => 'Erreur applicative', 'evidence' => '']));
+check('sans extrait, la cause reste rendue', $sansPreuve?->cause, 'APP_ERROR');
+check('et le message ne fabrique pas de guillemets vides',
+    str_contains((string) $sansPreuve?->message, '«'), false);
+
+// Les trois causes du domaine passent par le même chemin.
+foreach (['DB_DOWN', 'APP_ERROR', 'DB_ERROR_VISIBLE'] as $cause) {
+    check("la cause $cause traverse la règle",
+        $base->evaluer($avecAudit(['state' => 'down', 'reason' => $cause,
+            'message' => 'x', 'evidence' => 'y']))?->cause, $cause);
+}
+
+// UN AUDIT EN PANNE SANS CAUSE NOMMÉE NE DOIT PAS RENDRE UN VERDICT SANS CAUSE : une
+// alerte dont la cause est vide n'est classable ni par le rapport ni par le triage.
+check('un audit sans cause nommée retombe sur DB_DOWN',
+    $base->evaluer($avecAudit(['state' => 'down', 'reason' => '',
+        'message' => 'quelque chose ne va pas', 'evidence' => '']))?->cause, 'DB_DOWN');
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les
