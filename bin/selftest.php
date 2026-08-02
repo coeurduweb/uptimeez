@@ -2680,8 +2680,12 @@ foreach ($annonces as $quoi => [$motif, $mesure]) {
 // Les autres chiffres du tableau sont pris pour argent comptant. Le seul moyen de les
 // vérifier est de lancer les suites, ce qui demande un réseau, un Chromium et un
 // MariaDB, c'est-à-dire précisément ce que ce fichier promet de ne pas exiger.
-foreach (['/../README.md' => ['/\*\*([\d,]+) checks, all green\*\*/', '/(\d+) checks   /'],
-          '/../README.fr.md' => ['/\*\*([\d\x{202f}\x{00a0} ]+) contrôles, tous verts\*\*/u', '/(\d+) contrôles   /']] as $f => [$motifTotal, $motifLigne]) {
+// LE MÊME SÉPARATEUR DE MILLIERS QUE PLUS BAS, ET LA MÊME LEÇON. Le motif du TOTAL
+// l'acceptait déjà ; celui des LIGNES exigeait des chiffres collés. Tant qu'aucune suite
+// ne dépassait le millier, les deux se valaient. La première qui l'a franchi a fait lire
+// « 1 » là où le tableau annonçait « 1 006 », et l'addition est tombée de mille.
+foreach (['/../README.md' => ['/\*\*([\d,]+) checks, all green\*\*/', '/([\d,\x{202f}\x{00a0} ]+) checks   /u'],
+          '/../README.fr.md' => ['/\*\*([\d\x{202f}\x{00a0} ]+) contrôles, tous verts\*\*/u', '/([\d,\x{202f}\x{00a0} ]+) contrôles   /u']] as $f => [$motifTotal, $motifLigne]) {
     $chemin = __DIR__ . $f;
     if (!is_file($chemin)) continue;
     $texte = (string)file_get_contents($chemin);
@@ -2692,7 +2696,7 @@ foreach (['/../README.md' => ['/\*\*([\d,]+) checks, all green\*\*/', '/(\d+) ch
     $annonce = (int)preg_replace('/\D/', '', $m[1] ?? '0');
 
     preg_match_all($motifLigne, $texte, $lignes);
-    $somme = array_sum(array_map('intval', $lignes[1] ?? []));
+    $somme = array_sum(array_map(static fn ($n): int => (int) preg_replace('/\D/', '', (string) $n), $lignes[1] ?? []));
 
     check(basename($f) . ' : le total est la somme de son tableau', $annonce, $somme);
 }
@@ -3598,6 +3602,78 @@ check('un audit sans cause nommée retombe sur DB_DOWN',
     $base->evaluer($avecAudit(['state' => 'down', 'reason' => '',
         'message' => 'quelque chose ne va pas', 'evidence' => '']))?->cause, 'DB_DOWN');
 
+section('Règle extraite : les feuilles de style');
+// ---------------------------------------------------------------------------
+// Neuvième extraction, et le CSS répétait exactement le défaut du certificat : deux
+// provenances (analyse fraîche / dernier verdict connu), chacune avec sa copie des
+// verdicts, et elles avaient déjà divergé.
+
+$style = new Uptimeez\Regle\FeuillesDeStyle();
+$avecCss = static fn (array $css, int $actif = 1): Uptimeez\Regle\Contexte
+    => $contexteAvec(['check_css' => $actif], $reponseAvec('<html>x</html>'))
+        ->avecDetecteur(Uptimeez\Regle\FeuillesDeStyle::DETECTEUR, $css);
+
+check('contrôle désactivé : la règle se tait',
+    $style->evaluer($avecCss(['state' => 'broken', 'messages' => ['a']], 0)), null);
+check('état sain : rien à dire', $style->evaluer($avecCss(['state' => 'ok', 'messages' => []])), null);
+check('sans détecteur, la règle se tait',
+    $style->evaluer($contexteAvec(['check_css' => 1], $reponseAvec('<html>x</html>'))), null);
+
+$casse = $style->evaluer($avecCss(['state' => 'broken', 'messages' => ['un', 'deux', 'trois', 'quatre']]));
+check('mise en page cassée : cause nommée', $casse?->cause, 'CSS_BROKEN');
+// UNE MISE EN PAGE CASSÉE N'EST PAS UN SITE HORS SERVICE. La page répond, le serveur va
+// bien, le contenu est là. Confondre les deux vide « hors service » de son sens, et fait
+// entrer une panne de style dans le taux de disponibilité vendu au client.
+check('mais c\'est dégradé, jamais hors service', $casse?->etat, 'degraded');
+
+$abime = $style->evaluer($avecCss(['state' => 'warn', 'messages' => ['un', 'deux', 'trois']]));
+check('CSS abîmé : cause distincte', $abime?->cause, 'CSS_DEGRADED');
+check('et dégradé également', $abime?->etat, 'degraded');
+
+// LE NOMBRE DE MESSAGES CITÉS DÉPEND DE LA GRAVITÉ, ce qui est la seule raison
+// défendable d'en montrer plus ou moins : une casse a plusieurs causes qu'il faut voir
+// ensemble, un avertissement se résume. Avant, il dépendait de la PROVENANCE.
+check('une casse cite trois messages', $casse?->variables['detail'] ?? '', 'un deux trois');
+check('un avertissement en cite deux', $abime?->variables['detail'] ?? '', 'un deux');
+
+// CE QUE LA BRANCHE FRAÎCHE NE SAVAIT PAS FAIRE : sans message à citer, elle rendait
+// « Mise en page cassée : » et la phrase s'arrêtait net. Un verdict sans détail envoie
+// chercher un défaut sans dire lequel.
+$muet = $style->evaluer($avecCss(['state' => 'broken', 'messages' => []]));
+check('sans message à citer, le détail ne reste pas vide',
+    trim((string) ($muet?->variables['detail'] ?? '')) !== '', true);
+
+// LA DATE N'APPARAÎT QUE SUR UN VERDICT REPORTÉ, et elle change ce qu'on lit : sans elle,
+// un défaut constaté il y a six heures se lit comme un défaut constaté à l'instant.
+$reporte = $style->evaluer($avecCss(['state' => 'broken', 'messages' => ['souci'],
+    'analyse_le' => '2026-08-02 09:30:00']));
+check('un verdict reporté rappelle la date de son analyse',
+    str_contains((string) ($reporte?->variables['detail'] ?? ''), '02/08 09:30'), true);
+check('une analyse fraîche ne rappelle aucune date',
+    str_contains((string) ($casse?->variables['detail'] ?? ''), '(') , false);
+// Une date illisible ne doit pas produire « (analyse du 01/01 01:00) », qui serait faux.
+check('une date illisible est ignorée plutôt qu\'inventée',
+    str_contains((string) ($style->evaluer($avecCss(['state' => 'warn', 'messages' => ['x'],
+        'analyse_le' => 'pas une date']))?->variables['detail'] ?? ''), '(analyse'), false);
+
+// LA DIVERGENCE QUE LA FUSION SUPPRIME : à gravité égale et messages égaux, les deux
+// provenances ne doivent différer QUE par la date. C'était faux, elles tronquaient
+// différemment, donc deux lecteurs recevaient deux alertes pour le même défaut.
+$msg = ['un', 'deux', 'trois'];
+$frais = $style->evaluer($avecCss(['state' => 'broken', 'messages' => $msg]));
+$vieux = $style->evaluer($avecCss(['state' => 'broken', 'messages' => $msg, 'analyse_le' => null]));
+check('à provenance près, le même défaut donne le même verdict',
+    [$frais?->cause, $frais?->variables['detail']], [$vieux?->cause, $vieux?->variables['detail']]);
+
+// La condition d'entrée est celle du contexte, partagée avec l'indexabilité.
+$pasHtml = new Uptimeez\Response();
+$pasHtml->status = 500;
+$pasHtml->body = '<html>x</html>';
+check('une réponse en erreur n\'est pas analysée',
+    $style->evaluer($contexteAvec(['check_css' => 1], $pasHtml)
+        ->avecDetecteur(Uptimeez\Regle\FeuillesDeStyle::DETECTEUR,
+            ['state' => 'broken', 'messages' => ['x']])), null);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les
@@ -3643,12 +3719,18 @@ check('une panne réelle est confirmée en une demi-minute, pas au prochain cré
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.
 $lus = [];
-foreach (['/../README.md' => '/(\d+) checks   detection logic/',
-          '/../README.fr.md' => '/(\d+) contrôles   logique de détection/'] as $f => $motif) {
+// LE SÉPARATEUR DE MILLIERS EST ACCEPTÉ, PARCE QU'ON A FRANCHI LE MILLIER. Le motif
+// exigeait des chiffres collés : écrire « 1 006 contrôles », ce que demande la
+// typographie française et ce que fait déjà la ligne du total juste en dessous, faisait
+// lire « 1 » au contrôle. Il tombait donc, mais en annonçant un écart absurde plutôt que
+// la vraie cause, et la correction évidente était d'abîmer le README pour satisfaire son
+// analyseur. C'est l'analyseur qui doit s'adapter au texte, jamais l'inverse.
+foreach (['/../README.md' => '/([\d,\x{202F}\x{00A0} ]+) checks   detection logic/u',
+          '/../README.fr.md' => '/([\d,\x{202F}\x{00A0} ]+) contrôles   logique de détection/u'] as $f => $motif) {
     $chemin = __DIR__ . $f;
     if (!is_file($chemin)) continue;
     preg_match($motif, (string)file_get_contents($chemin), $m);
-    $lus[basename($f)] = (int)($m[1] ?? 0);
+    $lus[basename($f)] = (int) preg_replace('/[^\d]/', '', (string)($m[1] ?? '0'));
 }
 // On compte AVANT d'ajouter : ces contrôles-ci font partie du total qu'ils vérifient,
 // et les additionner après laissait un décalage de deux qu'on aurait cherché longtemps.

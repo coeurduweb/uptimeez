@@ -614,53 +614,39 @@ final class Runner
                     $details['stack'] = Vuln::record((int)$mon['id'], (int)$mon['site_id'],
                                                      $res->body, $cms !== null ? (string)$cms : null);
                 }
-                if ($css['state'] === 'broken') {
-                    // UNE MISE EN PAGE CASSÉE N'EST PAS UN SITE HORS SERVICE.
-                    //
-                    // Ce cas rendait « down », c'est-à-dire le MÊME état qu'un serveur qui
-                    // ne répond plus, qu'un 500, ou qu'une base de données morte. Or ici la
-                    // page répond, le serveur va bien, le contenu est là : c'est
-                    // l'apparence qui souffre. Confondre les deux a deux coûts.
-                    //
-                    // Pour le lecteur des alertes, « hors service » perd son sens : il finit
-                    // par ouvrir un courriel rouge en s'attendant à un problème de style, et
-                    // le jour où le serveur tombe vraiment, il ouvre avec la même
-                    // nonchalance. Pour les statistiques, une panne de style entre dans le
-                    // taux de disponibilité et le fausse : on annonce au client un site
-                    // indisponible alors qu'il servait ses pages.
-                    //
-                    // La règle est donc : DOWN veut dire que le visiteur n'obtient pas la
-                    // page (pas de réponse, code d'erreur, chaîne de preuve absente).
-                    // Tout ce qui concerne l'apparence plafonne à DEGRADED, quelle que
-                    // soit sa gravité interne. La gravité reste lisible dans le message et
-                    // dans le code de cause, qui distingue toujours CSS_BROKEN de
-                    // CSS_DEGRADED.
-                    $note('degraded', 'CSS_BROKEN', 'Mise en page cassée : {detail}',
-                          ['detail' => implode(' ', array_slice($css['messages'], 0, 3))]);
-                } elseif ($css['state'] === 'warn') {
-                    $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : {detail}',
-                          ['detail' => implode(' ', array_slice($css['messages'], 0, 2))]);
-                }
+                // L'analyse fraîche : les messages sortent de l'audit qu'on vient de
+                // faire, et il n'y a donc pas de date à rappeler, c'est maintenant.
+                $etatCss = [
+                    'state'     => $css['state'],
+                    'messages'  => $css['messages'] ?? [],
+                    'analyse_le' => null,
+                ];
+
                 if ($css['changed']) {
                     $events[] = ['kind' => 'css_changed', 'message' => t('Les fichiers CSS ont changé, sans doute un déploiement.')];
                 }
-            } elseif (in_array($mon['css_state'] ?? '', ['broken', 'warn'], true)) {
-                // Entre deux analyses, le dernier verdict CSS reste valable :
-                // sans cela une mise en page cassée « guérirait » toute seule
-                // à la vérification suivante alors que rien n'a été corrigé.
-                $prev = jdec($mon['css_detail'] ?? null);
-                $why = implode(' ', array_slice($prev['messages'] ?? [], 0, 2))
-                     ?: t('anomalie détectée à la dernière analyse');
-                if (!empty($mon['css_checked_at'])) {
-                    $why .= ' ' . t('(analyse du {date})',
-                                    ['date' => date('d/m H:i', strtotime((string)$mon['css_checked_at']))]);
-                }
-                if ($mon['css_state'] === 'broken') {
-                    // Même plafond que ci-dessus : l'apparence ne fait pas un hors service.
-                    $note('degraded', 'CSS_BROKEN', 'Mise en page cassée : {detail}', ['detail' => $why]);
-                } else {
-                    $note('degraded', 'CSS_DEGRADED', 'CSS dégradé : {detail}', ['detail' => $why]);
-                }
+            } else {
+                // ENTRE DEUX ANALYSES, LE DERNIER VERDICT RESTE VALABLE. Sans cela une
+                // mise en page cassée « guérirait » toute seule à la vérification
+                // suivante alors que rien n'a été corrigé. La date est rappelée, parce
+                // qu'un défaut constaté il y a six heures ne se lit pas comme un défaut
+                // constaté à l'instant.
+                $etatCss = [
+                    'state'      => (string) ($mon['css_state'] ?? 'ok'),
+                    'messages'   => jdec($mon['css_detail'] ?? null)['messages'] ?? [],
+                    'analyse_le' => $mon['css_checked_at'] ?? null,
+                ];
+            }
+
+            // NEUVIÈME EXTRACTION, LE 2026-08-02 : src/Regle/FeuillesDeStyle.php. Les deux
+            // provenances portaient chacune leur copie des verdicts, comme le certificat,
+            // et comme lui elles avaient divergé : deux messages cités d'un côté, trois de
+            // l'autre, et un texte de repli d'un seul côté. Elles traversent la même règle.
+            $v = (new \Uptimeez\Regle\FeuillesDeStyle())
+                ->evaluer($contexte->avecDetecteur(\Uptimeez\Regle\FeuillesDeStyle::DETECTEUR, $etatCss));
+
+            if ($v) {
+                $findings[] = $v->enTableau();
             }
         }
 
