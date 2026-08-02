@@ -10,6 +10,8 @@ jobs, then hands you a to-do list with the fix one click away.
 
 Zero dependencies · No Docker · Runs on plain shared hosting · SQLite or MySQL · 10 languages
 
+**[uptimeez.com](https://uptimeez.com/)** — official site, hosted plans, and the live demo
+
 [Why UptimeEZ](#why-another-uptime-monitor) ·
 [Screenshots](#see-it) ·
 [What it detects](#what-it-actually-detects) ·
@@ -481,7 +483,7 @@ A monitoring tool that lies to you is worse than no monitoring tool. So the dete
 real failures, and the interface is tested in a real browser.
 
 ```
-php bin/selftest.php      1,121 checks   detection logic, offline, no network needed
+php bin/selftest.php      1,131 checks   detection logic, offline, no network needed
 php bin/bench.php          73 checks   real failures reproduced end to end (incl. badssl.com)
 php bin/e2e.php           291 checks   full user journey over real HTTP, isolated instance
 node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
@@ -494,7 +496,7 @@ php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, 
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**1,855 checks, all green**, plus zero dead code and a complete default catalogue.
+**1,865 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Four suites deserve a word.
 
@@ -600,8 +602,9 @@ MIT. Use it, sell services around it, fork it.
 <br>
 <b>UptimeEZ</b>. Because "the site is up" was never the question.
 <br><br>
-<sub>uptime monitoring · website monitoring · self-hosted monitoring · PHP monitoring tool · shared hosting
-monitoring · broken CSS detection · database down detection · SSL certificate monitoring · cron job monitoring
-· dead man's switch · status page · UptimeRobot alternative · Uptime Kuma alternative · agency website
-monitoring</sub>
+
+[uptimeez.com](https://uptimeez.com/) — official site, hosted plans, live demo<br>
+Built and maintained by [Cœur du Web](https://coeurduweb.com/), a web agency in Fréjus, France,
+which runs it on its own client sites.
+
 </div>

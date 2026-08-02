@@ -4110,6 +4110,60 @@ $sourceAuth = (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Auth.php');
 check('attemptToken n\'exige aucun compte',
     (bool) preg_match('~attemptToken.*?Compte::verifier~s', $sourceAuth), false);
 
+section('README : les liens tiennent, dans les deux langues');
+// ---------------------------------------------------------------------------
+// LE README EST LA PREMIÈRE PAGE DU PRODUIT, et la seule que beaucoup liront. Une ancre
+// morte y coûte plus cher qu'ailleurs : elle ne casse rien, elle ne déclenche rien, elle
+// fait juste passer le lecteur pour quelqu'un qui a mal cliqué.
+//
+// Les liens EXTERNES ne sont pas vérifiés ici : ce fichier promet de tourner sans réseau.
+// Ils sont contrôlés au déploiement, où le réseau existe.
+$slug = static function (string $titre): string {
+    $t = mb_strtolower(trim($titre));
+    $t = preg_replace('~[`*_]~u', '', $t);
+    $t = preg_replace('~[^\\p{L}\\p{N}\\s-]~u', '', $t);
+    return preg_replace('~\\s+~u', '-', $t);
+};
+
+foreach (['README.md', 'README.fr.md'] as $fichier) {
+    $chemin = UPTIMEEZ_ROOT . '/' . $fichier;
+    if (!is_file($chemin)) { check("$fichier existe", false, true); continue; }
+    $texte = (string) file_get_contents($chemin);
+
+    preg_match_all('~^(#{1,6})\\s+(.+)$~mu', $texte, $mT);
+    $titres = array_map($slug, $mT[2] ?? []);
+
+    preg_match_all('~\\]\\(#([^)]+)\\)~u', $texte, $mA);
+    $ancresCassees = array_values(array_diff(array_unique($mA[1] ?? []), $titres));
+    check("$fichier : aucune ancre interne cassée", $ancresCassees, []);
+
+    preg_match_all('~\\]\\(([^)#][^)]*)\\)~u', $texte, $mL);
+    $absents = [];
+    foreach (array_unique($mL[1] ?? []) as $lien) {
+        if (preg_match('~^(https?:|mailto:)~i', $lien)) continue;
+        $cible = explode('#', $lien)[0];
+        if ($cible !== '' && !file_exists(UPTIMEEZ_ROOT . '/' . $cible)) $absents[] = $cible;
+    }
+    check("$fichier : aucun fichier lié manquant", $absents, []);
+
+    // LE SITE OFFICIEL ET L'ÉDITEUR SONT NOMMÉS. Un dépôt public sans lien vers son site
+    // laisse le lecteur chercher, et beaucoup ne cherchent pas.
+    check("$fichier : le site officiel est lié", str_contains($texte, 'https://uptimeez.com/'), true);
+    check("$fichier : l'éditeur est lié", str_contains($texte, 'https://coeurduweb.com/'), true);
+}
+
+// PAS DE BOURRAGE DE MOTS-CLÉS EN PIED DE PAGE. Les deux README en portaient une liste de
+// treize expressions séparées par des points médians. Ça ne sert à rien sur GitHub, dont
+// les README ne sont pas classés là-dessus, et ça signale exactement le contraire de ce
+// que le produit revendique auprès d'un lectorat de développeurs.
+foreach (['README.md', 'README.fr.md'] as $fichier) {
+    $texte = (string) @file_get_contents(UPTIMEEZ_ROOT . '/' . $fichier);
+    preg_match_all('~<sub>(.+?)</sub>~su', $texte, $mS);
+    $bourrages = array_values(array_filter($mS[1] ?? [],
+        static fn (string $bloc): bool => substr_count($bloc, '·') >= 5));
+    check("$fichier : pas de liste de mots-clés en pied de page", $bourrages, []);
+}
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

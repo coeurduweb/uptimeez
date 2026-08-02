@@ -11,6 +11,8 @@ clic.
 
 Aucune dépendance · Pas de Docker · Tourne sur un mutualisé · SQLite ou MySQL · 10 langues
 
+**[uptimeez.com](https://uptimeez.com/)** — site officiel, offres hébergées et démonstration en ligne
+
 [Pourquoi UptimeEZ](#pourquoi-un-outil-duptime-de-plus-) ·
 [Captures](#à-quoi-ça-ressemble) ·
 [Ce qu'il détecte](#ce-quil-détecte-vraiment) ·
@@ -492,7 +494,7 @@ Un outil de surveillance qui vous ment est pire que pas d'outil du tout. La logi
 testée contre de vraies pannes, et l'interface est testée dans un vrai navigateur.
 
 ```
-php bin/selftest.php      1 121 contrôles   logique de détection, hors ligne, sans réseau
+php bin/selftest.php      1 131 contrôles   logique de détection, hors ligne, sans réseau
 php bin/bench.php          73 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
 php bin/e2e.php           291 contrôles   parcours complet en HTTP réel, instance isolée
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
@@ -505,7 +507,7 @@ php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, ms
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**1 855 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**1 865 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
 Quatre suites méritent un mot.
 
@@ -617,8 +619,9 @@ MIT. Utilisez-le, vendez des services autour, forkez-le.
 <br>
 <b>UptimeEZ</b>. Parce que « le site répond » n'a jamais été la question.
 <br><br>
-<sub>surveillance de sites web · monitoring auto-hébergé · outil de monitoring PHP · monitoring sur mutualisé ·
-détection de CSS cassé · détection de base de données HS · surveillance de certificat SSL · surveillance de
-tâches cron · dead man switch · page d'état · alternative à UptimeRobot · alternative à Uptime Kuma ·
-monitoring pour agence web</sub>
+
+[uptimeez.com](https://uptimeez.com/) — site officiel, offres hébergées, démonstration en ligne<br>
+Conçu et maintenu par [Cœur du Web](https://coeurduweb.com/), agence web à Fréjus,
+qui l'utilise sur ses propres sites clients.
+
 </div>
