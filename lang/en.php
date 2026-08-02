@@ -1531,4 +1531,9 @@ return [
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => 'ESCALATED: the site is now fully down',
     '({n} sources, aucune ne répond)' => '({n} sources, none answers)',
+    'Tous' => 'All',
+    'Clos' => 'Closed',
+    'BDD' => 'DB',
+    'Base' => 'Database',
+    'Utilisateur' => 'User',
 ];

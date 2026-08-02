@@ -9,7 +9,7 @@ $events = Db::all('SELECT e.*, m.name FROM events e LEFT JOIN monitors m ON m.id
 $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m ON m.id = n.monitor_id
                    ORDER BY n.ts DESC LIMIT 120');
 ?>
-<div class="row-between mt"><h1>Journal</h1></div>
+<div class="row-between mt"><h1><?= te('Journal') ?></h1></div>
 
 <div class="panel">
   <div class="panel-head"><h2><?= te('Évènements de contenu') ?></h2>

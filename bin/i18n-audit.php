@@ -251,20 +251,46 @@ function bare_strings(array $files, array $known = []): array
             // balisage autour d'un texte traduit, pas du texte en dur.
             $wrapped = static fn(string $txt): bool => str_contains($txt, '?=')
                 || preg_match('~\b(?:te|t|tn|tne|hint)\s*\(~', $txt) === 1;
-            // Texte HTML nu.
+            // TEXTE ÉCRIT DANS LE BALISAGE : IL SORT TOUJOURS TEL QUEL, DONC L'EXEMPTION
+            // DES msgid CONNUS NE S'Y APPLIQUE PAS.
+            //
+            // C'est par là que « <h1>Journal</h1> » a survécu dans views/events.php. Le
+            // détecteur le VOYAIT, et l'écartait ensuite parce que « Journal » est un msgid
+            // du catalogue, sur la règle « un littéral qui EST un msgid est traduit quelque
+            // part ». Cette règle vaut pour un littéral PHP, dont la valeur peut être
+            // traduite plus loin, à l'affichage, après un passage en base. Elle ne vaut
+            // PAS pour du texte dans le balisage : celui-là est écrit dans la page, point.
+            //
+            // Le mot était doublement piégeux : « Journal » existe aussi en anglais, donc
+            // looks_french() ne le signalait pas non plus. L'écran affichait « Journal »
+            // sous un onglet intitulé « Log », et personne ne l'avait vu.
+            //
+            // Les hits du balisage sont donc collectés à part, et rendus sans filtre.
+            $enDur = [];
+
             if (preg_match_all('~>([^<>?]{3,}?)<~', $line, $m)) {
                 foreach ($m[1] as $txt) {
-                    if (looks_french($txt) && !$wrapped($txt)) $hits[] = trim($txt);
+                    $t = trim($txt);
+                    if ($t === '' || $wrapped($t)) continue;
+                    // Un texte de balisage est suspect s'il ressemble à du français OU s'il
+                    // est un msgid : dans les deux cas il devait passer par t().
+                    if (looks_french($t) || isset($known[$t])) $enDur[] = $t;
                 }
             }
-            // Attributs visibles restés en clair.
+            // Attributs visibles restés en clair, même règle.
             if (preg_match_all('~\b(?:title|placeholder|aria-label|alt)="([^"<>]{3,})"~', $line, $m)) {
                 foreach ($m[1] as $txt) {
-                    if (looks_french($txt) && !$wrapped($txt)) $hits[] = trim($txt);
+                    $t = trim($txt);
+                    if ($t === '' || $wrapped($t)) continue;
+                    if (looks_french($t) || isset($known[$t])) $enDur[] = $t;
                 }
             }
+
             foreach (array_unique($hits) as $h) {
                 if (isset($known[trim($h)])) continue;
+                $out[] = [basename($f), $i + 1, $h];
+            }
+            foreach (array_unique($enDur) as $h) {
                 $out[] = [basename($f), $i + 1, $h];
             }
         }

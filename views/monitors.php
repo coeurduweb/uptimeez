@@ -110,7 +110,7 @@ $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
               if ((int)$m['check_css'] === 1) {
                   $flags[] = 'CSS' . ($m['css_state'] === 'broken' ? ' ✗' : ($m['css_state'] === 'warn' ? ' !' : ''));
               }
-              if ((int)$m['check_db'] === 1)  $flags[] = 'BDD';
+              if ((int)$m['check_db'] === 1)  $flags[] = t('BDD');
               if ((int)$m['check_ssl'] === 1) $flags[] = 'SSL' . ($m['ssl_days_left'] !== null ? ' ' . (int)$m['ssl_days_left'] . 'j' : '');
               if ($m['expect_string']) $flags[] = 'preuve';
               if ($m['watch_string'])  $flags[] = t('mot-clé');

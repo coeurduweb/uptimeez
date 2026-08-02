@@ -211,4 +211,10 @@ return [
     '{n} To' => '{n} ТБ',
     'AGGRAVÉ : la panne est maintenant totale' => 'УХУДШЕНИЕ: сайт полностью недоступен',
     '({n} sources, aucune ne répond)' => '({n} источников, ни один не отвечает)',
+    'Tous' => 'Все',
+    'Clos' => 'Закрытые',
+    'BDD' => 'БД',
+    'Port' => 'Порт',
+    'Base' => 'База данных',
+    'Utilisateur' => 'Пользователь',
 ];

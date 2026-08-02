@@ -211,4 +211,10 @@ return [
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => 'بگاڑ: سائٹ اب مکمل طور پر بند ہے',
     '({n} sources, aucune ne répond)' => '({n} ذرائع، کوئی جواب نہیں دیتا)',
+    'Tous' => 'تمام',
+    'Clos' => 'بند',
+    'BDD' => 'ڈی بی',
+    'Port' => 'پورٹ',
+    'Base' => 'ڈیٹابیس',
+    'Utilisateur' => 'صارف',
 ];

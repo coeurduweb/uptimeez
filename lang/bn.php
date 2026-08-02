@@ -211,4 +211,10 @@ return [
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => 'অবনতি: সাইটটি এখন সম্পূর্ণ বন্ধ',
     '({n} sources, aucune ne répond)' => '({n}টি উৎস, কোনোটিই সাড়া দেয় না)',
+    'Tous' => 'সব',
+    'Clos' => 'বন্ধ',
+    'BDD' => 'ডিবি',
+    'Port' => 'পোর্ট',
+    'Base' => 'ডেটাবেস',
+    'Utilisateur' => 'ব্যবহারকারী',
 ];

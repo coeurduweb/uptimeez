@@ -211,4 +211,10 @@ return [
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => '恶化：站点现已完全无法访问',
     '({n} sources, aucune ne répond)' => '（{n} 个来源，均无响应）',
+    'Tous' => '全部',
+    'Clos' => '已关闭',
+    'BDD' => '数据库',
+    'Port' => '端口',
+    'Base' => '数据库',
+    'Utilisateur' => '用户',
 ];

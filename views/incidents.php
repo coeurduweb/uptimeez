@@ -31,7 +31,7 @@ foreach ($rows as $r) {
   <h1><?= te('Incidents') ?></h1>
   <div class="row">
     <div class="segmented">
-      <?php foreach (['all' => 'Tous', 'open' => 'En cours', 'closed' => 'Clos'] as $k => $l): ?>
+      <?php foreach (['all' => t('Tous'), 'open' => t('En cours'), 'closed' => t('Clos')] as $k => $l): ?>
         <a href="<?= e(u('incidents', ['s' => $k, 'range' => $range, 'id' => $onlyId ?: null])) ?>" class="<?= $state === $k ? 'on' : '' ?>"><?= e($l) ?></a>
       <?php endforeach; ?>
     </div>

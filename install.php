@@ -156,7 +156,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
                     . ($_SERVER['HTTP_HOST'] ?? '') . rtrim(dirname((string)($_SERVER['SCRIPT_NAME'] ?? '')), '/')) ?>">
         <span class="hint"><?= te('Pour que les alertes contiennent un lien direct vers la fiche concernée.') ?></span></label>
 
-      <label class="f" style="max-width:280px"><span>Fuseau horaire</span>
+      <label class="f" style="max-width:280px"><span><?= te('Fuseau horaire') ?></span>
         <input type="text" name="timezone" value="Europe/Paris"></label>
 
       <fieldset>
@@ -168,10 +168,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$blocking) {
           <span>MySQL / MariaDB<span class="hint"><?= te('Pour un gros parc ou un historique très long.') ?></span></span></label>
         <div id="mysql" hidden class="grid-3 mt">
           <label class="f"><span><?= te('Hôte') ?></span><input type="text" name="db_host" value="localhost"></label>
-          <label class="f"><span>Port</span><input type="number" name="db_port" value="3306"></label>
-          <label class="f"><span>Base</span><input type="text" name="db_name" placeholder="user_uptimeez"></label>
-          <label class="f"><span>Utilisateur</span><input type="text" name="db_user"></label>
-          <label class="f"><span>Mot de passe</span><input type="password" name="db_pass" autocomplete="new-password"></label>
+          <label class="f"><span><?= te('Port') ?></span><input type="number" name="db_port" value="3306"></label>
+          <label class="f"><span><?= te('Base') ?></span><input type="text" name="db_name" placeholder="user_uptimeez"></label>
+          <label class="f"><span><?= te('Utilisateur') ?></span><input type="text" name="db_user"></label>
+          <label class="f"><span><?= te('Mot de passe') ?></span><input type="password" name="db_pass" autocomplete="new-password"></label>
         </div>
       </fieldset>
 

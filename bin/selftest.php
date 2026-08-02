@@ -2980,6 +2980,74 @@ foreach (['STRING_MISSING', 'STRING_FORBIDDEN', 'JSON_INVALID', 'JSON_PATH'] as 
     check("« $attendue » reste un hors service", in_array($attendue, $causesDown, true), true);
 }
 
+section("Aucun texte d'interface écrit en dur dans le balisage");
+// ---------------------------------------------------------------------------
+// LE DÉFAUT : l'interface anglaise affichait du français. « Journal » en titre d'écran
+// sous un onglet nommé « Log », « Tous / En cours / Clos » sur les filtres d'incidents,
+// « BDD » sur la liste des sondes, et cinq étiquettes de l'installateur. Sept endroits,
+// relevés le 2026-08-02 en lisant les écrans d'une instance réelle avec un navigateur.
+//
+// CE QUI L'A RENDU INVISIBLE, et c'est la partie qui se répète. bin/i18n-audit.php
+// VOYAIT « <h1>Journal</h1> », puis l'écartait : sa règle exempte tout texte qui est par
+// ailleurs un msgid connu, au motif qu'« un littéral qui EST un msgid est traduit quelque
+// part ». La règle vaut pour un littéral PHP, dont la valeur peut être traduite plus loin.
+// Elle ne vaut pas pour du texte écrit dans le balisage, qui sort tel quel, toujours.
+//
+// Ce contrôle-ci ne dépend pas de l'audit : il relit les gabarits et refuse qu'un msgid
+// français apparaisse comme texte brut entre deux balises. Deux garde-fous indépendants
+// pour la même règle, parce que celui d'origine s'est déjà trompé une fois.
+$gabarits = array_merge(
+    glob(UPTIMEEZ_ROOT . '/views/*.php') ?: [],
+    glob(UPTIMEEZ_ROOT . '/views/partials/*.php') ?: [],
+    [UPTIMEEZ_ROOT . '/install.php']
+);
+check('des gabarits sont bien analysés', count($gabarits) > 10, true);
+
+// Les msgid du catalogue français : ce sont exactement les phrases qui DOIVENT passer par
+// t(). En trouver une en texte brut, c'est trouver une traduction contournée.
+$msgidsFr = array_keys(require UPTIMEEZ_ROOT . '/lang/en.php');
+$index = array_flip(array_map('trim', $msgidsFr));
+
+$enDur = [];
+foreach ($gabarits as $g) {
+    foreach (file($g, FILE_IGNORE_NEW_LINES) ?: [] as $n => $ligne) {
+        $t = ltrim($ligne);
+        if ($t === '' || str_starts_with($t, '*') || str_starts_with($t, '//') || str_starts_with($t, '/*')) continue;
+        if (!preg_match_all('~>([^<>?]{2,60}?)<~', $ligne, $m)) continue;
+        foreach ($m[1] as $txt) {
+            $txt = trim($txt);
+            // Un morceau qui porte déjà un appel de traduction est du balisage autour
+            // d'un texte traduit, pas du texte en dur.
+            if ($txt === '' || str_contains($txt, '?=') || preg_match('~\b(?:te|t|tn|tne|hint)\s*\(~', $txt)) continue;
+            if (isset($index[$txt])) $enDur[] = basename($g) . ':' . ($n + 1) . ' « ' . $txt . ' »';
+        }
+    }
+}
+check("aucun msgid n'est écrit en dur dans un gabarit", $enDur, []);
+
+// L'AUTRE SENS : le catalogue anglais doit vraiment TRADUIRE, et pas recopier le français.
+// Un msgid rendu à l'identique est soit un mot commun aux deux langues (« Port », « Notes »),
+// soit une traduction oubliée. On borne la liste des identiques attendus : au-delà, c'est
+// qu'on a rempli le catalogue en copiant.
+$en = require UPTIMEEZ_ROOT . '/lang/en.php';
+//
+// LE CRITÈRE A DÛ ÊTRE RESSERRÉ, ET LA PREMIÈRE VERSION EST INSTRUCTIVE. Elle signalait
+// tout msgid rendu à l'identique de plus de quatorze signes, et remontait quinze entrées
+// parfaitement légitimes : des noms de produits (« LiteSpeed Cache »), des exemples
+// d'adresses et de commandes, et des chaînes réduites à un jeton (« {n} sites »). Un
+// contrôle qui crie sur du normal se fait désactiver, ce qui est pire que son absence.
+//
+// « Recopier le français » a une signature : la phrase rendue porte encore des marqueurs
+// FRANÇAIS. On exige donc les deux, identité ET marqueur, ce qui laisse passer un nom de
+// marque et attrape une traduction oubliée.
+$marqueurFr = '~(?:[àâçéèêëîïôùûü]|\b(?:le|la|les|des|une|aux|pour|avec|sans|dans|est|sont|cette|leur|vers)\b)~ui';
+$identiques = [];
+foreach ($en as $fr => $anglais) {
+    if (!is_string($anglais) || $fr !== $anglais) continue;
+    if (preg_match($marqueurFr, $fr)) $identiques[] = $fr;
+}
+check('le catalogue anglais ne recopie pas le français', $identiques, []);
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.

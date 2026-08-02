@@ -211,4 +211,10 @@ return [
     '{n} To' => '{n} TB',
     'AGGRAVÉ : la panne est maintenant totale' => 'تفاقم: الموقع متوقف تمامًا الآن',
     '({n} sources, aucune ne répond)' => '({n} مصادر، لا يستجيب أي منها)',
+    'Tous' => 'الكل',
+    'Clos' => 'مغلقة',
+    'BDD' => 'قاعدة البيانات',
+    'Port' => 'المنفذ',
+    'Base' => 'قاعدة البيانات',
+    'Utilisateur' => 'المستخدم',
 ];
