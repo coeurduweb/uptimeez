@@ -2976,9 +2976,32 @@ check("aucune cause d'apparence ne rend « hors service »", $apparence, []);
 
 // Et l'inverse : les causes qui privent VRAIMENT le visiteur doivent rester en « down ».
 // Sans ce second contrôle, tout ramener à « degraded » passerait le premier au vert.
-foreach (['STRING_MISSING', 'STRING_FORBIDDEN', 'JSON_INVALID', 'JSON_PATH'] as $attendue) {
+//
+// LA LISTE SE VIDE AU FUR ET À MESURE DE L'EXTRACTION, ET C'EST VOULU. Chaque cause qui
+// sort d'evaluate() vers src/Regle/ disparaît de la source lue ici, et son contrôle
+// déménage dans le test unitaire de sa règle, où il est meilleur : il éprouve le
+// comportement au lieu d'inspecter du texte.
+//
+// STRING_MISSING est partie la première, le 2026-08-02. Son verdict « down » est
+// désormais vérifié dans la section « Règle extraite : la chaîne de preuve ».
+//
+// Ce qui reste ici garde les causes ENCORE dans evaluate(). Quand la liste sera vide,
+// tout ce bloc disparaîtra, et ce sera la fin du Sprint A.
+$encoreDansEvaluate = ['STRING_FORBIDDEN', 'JSON_INVALID', 'JSON_PATH'];
+foreach ($encoreDansEvaluate as $attendue) {
     check("« $attendue » reste un hors service", in_array($attendue, $causesDown, true), true);
 }
+
+// ET LE GARDE-FOU DU GARDE-FOU : une cause retirée de cette liste doit l'être parce
+// qu'elle a été EXTRAITE, pas parce qu'elle a disparu. On vérifie donc que chaque cause
+// absente d'evaluate() se retrouve dans une règle.
+$sourcesRegles = '';
+foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) $sourcesRegles .= (string) file_get_contents($f);
+$perdues = [];
+foreach (['STRING_MISSING', 'BODY_TRUNCATED'] as $extraite) {
+    if (!str_contains($sourcesRegles, "'" . $extraite . "'")) $perdues[] = $extraite;
+}
+check('aucune cause extraite ne s\'est perdue en route', $perdues, []);
 
 section("Aucun texte d'interface écrit en dur dans le balisage");
 // ---------------------------------------------------------------------------
@@ -3135,6 +3158,56 @@ $src = (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Regle/Contexte.php');
 check('le Contexte n\'ouvre aucune porte vers Db',
     preg_match('~\bDb::~', $src), 0);
 
+section('Règle extraite : la chaîne de preuve');
+// ---------------------------------------------------------------------------
+// Première des vingt-quatre règles sorties de Runner::evaluate(). Ce bloc est le
+// MODÈLE des vingt-trois suivants : une règle se teste sans base, sans réseau et sans
+// horloge, en trois lignes, ce qui est tout l'objet de l'extraction.
+
+$reponseAvec = static function (string $corps, bool $tronque = false): Uptimeez\Response {
+    $r = new Uptimeez\Response();
+    $r->body = $corps;
+    $r->truncated = $tronque;
+    $r->status = 200;
+
+    return $r;
+};
+$contexteAvec = static fn (array $sonde, Uptimeez\Response $r): Uptimeez\Regle\Contexte
+    => new Uptimeez\Regle\Contexte(sonde: $sonde, reponse: $r);
+
+$regle = new Uptimeez\Regle\ChaineDePreuve();
+
+check('sans chaîne configurée, la règle se tait',
+    $regle->evaluer($contexteAvec(['expect_string' => ''], $reponseAvec('quoi que ce soit'))), null);
+
+check('chaîne présente : rien à signaler',
+    $regle->evaluer($contexteAvec(['expect_string' => 'Coeur du Web'],
+        $reponseAvec('<footer>© 2026 Coeur du Web</footer>'))), null);
+
+$absente = $regle->evaluer($contexteAvec(['expect_string' => 'Coeur du Web'],
+    $reponseAvec('<h1>Error establishing a database connection</h1>')));
+check('chaîne absente d\'une page COMPLÈTE : hors service', $absente?->etat, 'down');
+check('et la cause est nommée', $absente?->cause, 'STRING_MISSING');
+
+// LE PIÈGE QUI A FABRIQUÉ DE FAUSSES PANNES : une page coupée ne prouve rien. La chaîne
+// est peut-être juste au-delà de la limite de lecture. Dire « je n'ai pas pu vérifier »
+// plutôt qu'inventer une panne est la seule réponse honnête.
+$coupee = $regle->evaluer($contexteAvec(['expect_string' => 'Coeur du Web'],
+    $reponseAvec(str_repeat('x', 5000), true)));
+check('chaîne absente d\'une page COUPÉE : dégradé, pas hors service', $coupee?->etat, 'degraded');
+check('et la cause dit qu\'on n\'a pas pu vérifier', $coupee?->cause, 'BODY_TRUNCATED');
+
+// La recherche tolère les variantes d'écriture, sinon une apostrophe typographique
+// suffirait à déclarer une panne.
+check('l\'apostrophe typographique ne casse pas la recherche',
+    $regle->evaluer($contexteAvec(['expect_string' => 'L' . "'" . 'atelier'],
+        $reponseAvec('<p>L’atelier est ouvert</p>'))), null);
+
+// Et la règle ne touche à RIEN d'autre : aucun accès base, aucune écriture.
+$srcRegle = (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Regle/ChaineDePreuve.php');
+check('la règle n\'écrit pas et n\'interroge pas la base',
+    preg_match('~\bDb::|\bNotifier::~', $srcRegle), 0);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les
@@ -3147,16 +3220,23 @@ section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // immobiliseraient un ouvrier cinquante secondes, soit le budget entier d'une passe : une
 // sonde instable mangerait la passe et retarderait les douze autres sondes de la minute.
 // On paierait une fausse alerte par un vrai retard de détection sur tout le reste.
-$decision = static function (bool $incidentOuvert, int $echecsConsecutifs): string {
-    if (!$incidentOuvert && $echecsConsecutifs < 1) return 'replanifie';
+// LA CONDITION PORTE SUR L'ÉTAT PRÉCÉDENT, ET LA PREMIÈRE VERSION S'EST TROMPÉE ICI.
+// Elle testait « consecutive_fail < 1 ». Ce compteur n'est incrémenté que sur « down » :
+// une sonde DÉGRADÉE le laissait à zéro pour toujours, et son incident ne se serait
+// jamais ouvert. Le selftest était vert, c'est le parcours de bout en bout qui l'a
+// attrapé. Un compteur juste, une condition juste, et une combinaison qui rend le produit
+// muet sur une famille entière de cas.
+$decision = static function (bool $incidentOuvert, string $etatPrecedent): string {
+    if (!$incidentOuvert && $etatPrecedent === 'up') return 'replanifie';
     if (!$incidentOuvert) return 'ouvre';
 
     return 'poursuit';
 };
 
-check('premier échec : on replanifie, on n\'alerte pas', $decision(false, 0), 'replanifie');
-check('second échec consécutif : on ouvre',              $decision(false, 1), 'ouvre');
-check('incident déjà ouvert : on poursuit sans attendre', $decision(true, 0), 'poursuit');
+check('premier échec : on replanifie, on n\'alerte pas',   $decision(false, 'up'), 'replanifie');
+check('seconde observation en panne : on ouvre',           $decision(false, 'down'), 'ouvre');
+check('et la règle vaut aussi pour un DÉGRADÉ',            $decision(false, 'degraded'), 'ouvre');
+check('incident déjà ouvert : on poursuit sans attendre',  $decision(true, 'up'), 'poursuit');
 
 // Le délai doit rester court devant l'intervalle, sinon la confirmation devient un retard.
 check('la confirmation est courte devant un intervalle de 15 min',

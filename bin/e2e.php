@@ -311,7 +311,16 @@ $brokenId = (int)$val("SELECT id FROM monitors WHERE url LIKE '%casse.html' LIMI
 $dbId     = (int)$val("SELECT id FROM monitors WHERE url LIKE '%dberror.php' LIMIT 1");
 $okId     = (int)$val("SELECT id FROM monitors WHERE url = ? LIMIT 1", ["$SITE/"]);
 
-foreach ([[$brokenId, 'down', 'CSS_BROKEN', 'mise en page'], [$dbId, 'down', 'DB_DOWN', 'base de données'],
+// UNE MISE EN PAGE CASSÉE REND « DÉGRADÉ », PLUS « HORS SERVICE ». Changement de contrat
+// du 2026-08-02 : « hors service » est réservé à ce qui prive le visiteur de la page. La
+// page casse.html RÉPOND, son contenu est là, c'est son apparence qui souffre. La cause
+// reste CSS_BROKEN, qui dit la gravité ; l'état dit ce que le visiteur obtient.
+//
+// Le contrat a changé le matin et cette suite ne l'a su qu'en fin de journée, faute d'avoir
+// été relancée entre les deux : elle est restée rouge plusieurs heures. C'est la raison
+// pour laquelle l'extraction des règles impose selftest ET e2e entre CHAQUE règle, et non
+// à la fin.
+foreach ([[$brokenId, 'degraded', 'CSS_BROKEN', 'mise en page'], [$dbId, 'down', 'DB_DOWN', 'base de données'],
           [$okId, 'up', null, null]] as [$mid, $wantState, $wantReason, $wantText]) {
     $rr = $req('/api.php?action=check', ['csrf' => $tok, 'id' => $mid]);
     $j  = json_decode($rr['body'], true);
@@ -411,8 +420,22 @@ ok('reprise', ($j['enabled'] ?? false) === true);
 title('Incidents, journal et export');
 $r = $req('/index.php?p=incidents');
 ok('page incidents', $r['code'] === 200 && $noPhpError($r) && $has($r, 'Incidents'));
+// UN PREMIER ÉCHEC N'OUVRE PLUS D'INCIDENT. Changement de contrat du 2026-08-02 : le
+// premier échec replanifie la sonde à +30 s et compte, l'incident n'est ouvert qu'au
+// SECOND échec consécutif. C'est ce qui supprime les alertes pour une panne déjà finie
+// quand le client ouvre son courriel.
+//
+// Le parcours ne vérifie donc plus « au moins deux incidents ouverts » après une seule
+// passe, ce qui reviendrait à exiger le comportement qu'on vient de retirer. Il vérifie ce
+// qui compte maintenant : la panne est CONNUE de la sonde, et l'incident arrive à la
+// confirmation.
+$enPanne = (int)$val("SELECT COUNT(*) FROM monitors WHERE status IN ('down', 'degraded')");
+ok('les pannes sont constatées sur les sondes', $enPanne >= 2, $enPanne . ' sonde(s)');
+
+// La confirmation : on refait passer les sondes en panne, et l'incident doit s'ouvrir.
+foreach ([$brokenId, $dbId] as $mid) $req('/api.php?action=check', ['csrf' => $tok, 'id' => $mid]);
 $openInc = (int)$val('SELECT COUNT(*) FROM incidents WHERE ended_at IS NULL');
-ok('incidents ouverts enregistrés', $openInc >= 2, $openInc . ' ouvert(s)');
+ok('incidents ouverts à la confirmation', $openInc >= 2, $openInc . ' ouvert(s)');
 
 $incId = (int)$val('SELECT id FROM incidents WHERE ended_at IS NULL ORDER BY id ASC LIMIT 1');
 $r = $req('/index.php?p=incidents', ['csrf' => $tok, 'action' => 'ack_incident', 'id' => $incId]);

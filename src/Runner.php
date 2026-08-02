@@ -443,6 +443,17 @@ final class Runner
             $findings[] = ['state' => $state, 'reason' => $reason, 'message' => $message, 'vars' => $vars];
         };
 
+        // Le contexte que reçoivent les règles extraites. Il est bâti une fois, ici, parce
+        // que c'est le collecteur qui a le droit d'aller chercher ce qu'elles n'ont pas le
+        // droit de demander : la base, l'horloge, le réseau.
+        $contexte = new \Uptimeez\Regle\Contexte(
+            sonde: $mon,
+            reponse: $res,
+            detecteurs: [],
+            manuel: $manual,
+            etatPrecedent: isset($mon['status']) ? (string) $mon['status'] : null,
+        );
+
         // ---- 1. Couche réseau ---------------------------------------------
         if (!$res->ok || $res->status === 0) {
             $code = $res->errorCode ?: 'NET_ERROR';
@@ -520,21 +531,14 @@ final class Runner
         }
 
         // ---- 4. Chaîne attendue / interdite -------------------------------
-        $expectStr = trim((string)($mon['expect_string'] ?? ''));
-        if ($expectStr !== '') {
-            $found = self::containsAny($res->body, $expectStr);
-            if (!$found && $complete) {
-                $note('down', 'STRING_MISSING',
-                    'La chaîne de contrôle « {string} » est absente de la page : le contenu n\'est plus servi, par le serveur web ou par la base de données.',
-                    ['string' => str_cut($expectStr, 60)]);
-            } elseif (!$found) {
-                // Dire « je n'ai pas pu vérifier » plutôt que d'inventer une
-                // panne : la page dépasse la taille lue, et la chaîne est
-                // peut-être juste au-delà de la coupure.
-                $note('degraded', 'BODY_TRUNCATED',
-                    'Page trop volumineuse pour être vérifiée en entier ({size} lus) : la chaîne de contrôle n\'a pas pu être cherchée jusqu\'au bout.',
-                    ['size' => human_bytes(strlen($res->body))]);
-            }
+        //
+        // PREMIÈRE RÈGLE EXTRAITE, LE 2026-08-02. La chaîne de preuve vit désormais dans
+        // src/Regle/ChaineDePreuve.php, avec son propre test. Le collecteur ne fait plus
+        // que l'appeler et remettre son verdict au format qu'il connaît, ce qui permet
+        // d'extraire les vingt-trois autres UNE PAR UNE sans jamais laisser le moteur à
+        // moitié converti.
+        if ($v = (new \Uptimeez\Regle\ChaineDePreuve())->evaluer($contexte)) {
+            $findings[] = $v->enTableau();
         }
         // Une chaîne interdite ABSENTE d'une page coupée ne prouve rien non plus.
         // Sa présence, elle, reste une certitude : on la signale toujours.
@@ -1000,7 +1004,23 @@ final class Runner
         // L'AGGRAVATION N'ATTEND PAS. Une sonde déjà en incident qui empire est traitée
         // plus bas, sans confirmation : la panne est établie, retarder son aggravation
         // n'apporterait rien et coûterait trente secondes sur le cas le plus grave.
-        if (!$open && (int)($mon['consecutive_fail'] ?? 0) < 1) {
+        // LA CONDITION PORTE SUR L'ÉTAT PRÉCÉDENT, ET NON SUR « consecutive_fail ».
+        //
+        // Première version : « consecutive_fail < 1 ». Elle marchait pour les pannes et
+        // cassait tout le reste, parce que ce compteur n'est incrémenté que sur « down »
+        // (voir persist()). Une sonde DÉGRADÉE le laissait donc à zéro pour toujours, et
+        // son incident ne se serait jamais ouvert. Le parcours de bout en bout l'a
+        // attrapé en une passe, là où le selftest était vert : un compteur juste, une
+        // condition juste, et une combinaison qui rend le produit muet sur une famille
+        // entière de cas.
+        //
+        // « $mon » porte l'état AVANT cette passe, puisque persist() écrit le nouveau
+        // plus bas. La question posée est donc la bonne : « est-ce la première fois qu'on
+        // voit ce problème ? » Elle vaut pour « down » comme pour « degraded », sans
+        // dépendre d'un compteur qui ne connaît que l'un des deux.
+        $premiereObservation = ($mon['status'] ?? 'up') === 'up';
+
+        if (!$open && $premiereObservation) {
             Db::update('monitors', [
                 'next_check_at' => date('Y-m-d H:i:s', time() + self::CONFIRMATION_SEC),
             ], 'id = :__id', ['__id' => $id]);
