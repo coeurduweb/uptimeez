@@ -1421,6 +1421,40 @@ if ($REAL) {
         ok('certificat réel mesuré', ($m['ssl_days_left'] ?? null) !== null, ($m['ssl_days_left'] ?? '?') . ' jours');
         ok('chaîne de contrôle vérifiée sur un vrai site', ($m['expect_string'] ?? '') !== '',
             (string)($m['expect_string'] ?? ''));
+
+        // LA BRANCHE EN CACHE, ÉPROUVÉE DE BOUT EN BOUT. Une inspection TLS ne se refait
+        // pas à chaque passe : en deçà de six heures on relit les colonnes en base. C'est
+        // cette branche-là qui portait sa propre copie des verdicts, et qui avait divergé
+        // de l'autre. Aucun contrôle ne la traversait, ni ici ni dans le selftest, parce
+        // qu'il aurait fallu un certificat sur le point d'expirer. On n'en fabrique pas :
+        // on écrit le compte à rebours en base, ce qui est EXACTEMENT ce que la branche
+        // relit, et la branche ne sait pas d'où vient ce qu'elle lit.
+        //
+        // IL FAUT UNE PASSE PLANIFIÉE, PAS UNE VÉRIFICATION MANUELLE. Un déclenchement
+        // humain force la réouverture de la connexion TLS, donc emprunte l'autre branche
+        // et écrase le compte à rebours qu'on vient d'écrire. La première version de ce
+        // contrôle est tombée dedans et rendait « causes=— » : elle mesurait la branche
+        // qu'elle croyait éviter.
+        Uptimeez\Db::update('monitors', [
+            'ssl_days_left'  => 5,
+            'ssl_checked_at' => date('Y-m-d H:i:s'),
+            'ssl_warn_days'  => 30,
+            'next_check_at'  => date('Y-m-d H:i:s', time() - 3600),
+        ], 'id = :__id', ['__id' => $rid]);
+
+        $req('/cron.php?key=cle-e2e');
+
+        $dernier = $db('SELECT state, reason_code, details FROM checks WHERE monitor_id = ?
+                        ORDER BY id DESC LIMIT 1', [$rid])[0] ?? [];
+        $traces = ((string)($dernier['reason_code'] ?? '')) . ' ' . ((string)($dernier['details'] ?? ''));
+
+        ok('un certificat proche de l\'expiration est signalé depuis le cache',
+            str_contains($traces, 'SSL_SOON'),
+            'cause=' . (($dernier['reason_code'] ?? '') ?: '—'));
+        // ET IL EST DÉGRADÉ, PAS HORS SERVICE : le site fonctionne, il fonctionnera encore
+        // demain. Confondre les deux réveille quelqu'un la nuit pour un renouvellement.
+        ok('et une expiration proche ne met pas le site hors service',
+            ($dernier['state'] ?? '?') !== 'down', 'état=' . ($dernier['state'] ?? '?'));
     } else {
         ok('example.com importé', false, 'sonde non créée');
     }
