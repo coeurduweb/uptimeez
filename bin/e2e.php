@@ -491,6 +491,64 @@ ok('et le retour déposé plus haut y figure', $has($r, 'la police manque'));
 // « contrôles jugés faux » se lit comme une file de corrections déjà appliquées.
 ok('et elle rappelle qu\'aucun verdict n\'a changé', $has($r, 'ils décrivent'));
 
+// ---- Les exceptions, et l'interdit qui les borde ------------------------
+//
+// L'INTERDIT SE VÉRIFIE PAR L'API, PAS SEULEMENT PAR LA CLASSE. Le selftest prouve que
+// Exceptions::poser() refuse une cause de panne ; celui-ci prouve qu'on ne peut pas
+// contourner le refus en appelant le point d'entrée directement, ce qui est le chemin
+// qu'emprunterait quelqu'un de pressé ou de mal intentionné.
+// LES DEUX CAS SONT ÉPROUVÉS, ET AUCUN N'EST LAISSÉ AU HASARD DES DONNÉES. Une première
+// version prenait « le premier incident venu » et branchait sur sa cause : elle est tombée
+// sur un CSS_BROKEN, si bien que le contrôle le plus important du sprint — le refus de
+// taire une panne — n'a pas tourné du tout, tout en affichant du vert. Un test conditionnel
+// qui passe sans rien tester est pire qu'un test absent : il rassure.
+$midInterdit = (int)$val('SELECT id FROM monitors ORDER BY id LIMIT 1');
+$incApparence = (int)Uptimeez\Db::insert('incidents', [
+    'monitor_id' => $midInterdit, 'severity' => 'degraded', 'reason_code' => 'NOINDEX',
+    'message' => 'Page en noindex', 'started_at' => date('Y-m-d H:i:s'), 'checks_failed' => 1]);
+$incPanne = (int)Uptimeez\Db::insert('incidents', [
+    'monitor_id' => $midInterdit, 'severity' => 'down', 'reason_code' => 'HTTP_5XX',
+    'message' => 'Erreur serveur', 'started_at' => date('Y-m-d H:i:s'), 'checks_failed' => 1]);
+
+$r = $req('/api.php?action=exception_poser', ['csrf' => $tok, 'action' => 'exception_poser',
+    'incident_id' => $incApparence, 'raison' => 'recette interne, noindex volontaire']);
+ok('une exception se pose sur une alerte d\'apparence',
+    (json_decode($r['body'], true)['ok'] ?? false) === true, str_cut(trim($r['body']), 60));
+
+// ON PEUT TAIRE UNE POLICE MANQUANTE, JAMAIS UN 503. Et l'interdit doit tenir à l'API, pas
+// seulement dans la classe : c'est le point d'entrée qu'emprunterait quelqu'un de pressé.
+$r = $req('/api.php?action=exception_poser', ['csrf' => $tok, 'action' => 'exception_poser',
+    'incident_id' => $incPanne, 'raison' => 'je voudrais ne plus voir ça']);
+ok('l\'API refuse de taire une cause de panne', $r['code'] === 422, 'HTTP ' . $r['code']);
+ok('et rien n\'a été posé en base',
+    (int)$val('SELECT COUNT(*) FROM exceptions WHERE reason_code = ?', ['HTTP_5XX']) === 0);
+ok('et le message interne ne fuit pas', !str_contains($r['body'], 'Cause non excusable'));
+
+// Une exception sans raison est refusée aussi : dans six mois, « pourquoi » sera la seule
+// question qui compte.
+$r = $req('/api.php?action=exception_poser', ['csrf' => $tok, 'action' => 'exception_poser',
+    'incident_id' => $incApparence, 'raison' => '   ']);
+ok('une exception sans raison est refusée par l\'API', $r['code'] === 422, 'HTTP ' . $r['code']);
+
+// Une exception posée à la main sur une cause d'apparence, puis vérifiée sur le parcours.
+$midExc = (int)$val('SELECT id FROM monitors ORDER BY id LIMIT 1');
+Uptimeez\Exceptions::poser($midExc, 'NOINDEX', 'recette e2e, noindex volontaire');
+$restant = Uptimeez\Exceptions::filtrer($midExc, [
+    ['state' => 'degraded', 'reason' => 'NOINDEX', 'message' => 'x', 'vars' => []],
+    ['state' => 'down', 'reason' => 'NOINDEX', 'message' => 'x', 'vars' => []],
+]);
+ok('l\'exception tait le dégradé', count($restant) === 1);
+// LA GARANTIE QUI NE PEUT PAS SE PÉRIMER : même sur sa propre cause, une exception ne
+// masque jamais un « hors service ».
+ok('et laisse passer le hors service de la même cause',
+    ($restant[0]['state'] ?? '') === 'down');
+ok('l\'alerte tue est comptée',
+    (int)$val('SELECT masquees_total FROM exceptions WHERE monitor_id = ?', [$midExc]) === 1);
+
+$r = $req('/index.php?p=retours');
+ok('l\'écran annonce les alertes tues', $has($r, 'Vos exceptions'));
+ok('et rappelle la date de revue', $has($r, 'Date de revue'));
+
 $r = $req('/index.php?p=incidents', ['csrf' => $tok, 'action' => 'close_incident', 'id' => $incId]);
 ok('incident clos manuellement', $val('SELECT ended_at FROM incidents WHERE id = ?', [$incId]) !== null);
 

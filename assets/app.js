@@ -74,6 +74,54 @@
     });
   });
 
+  // ---------- Poser une exception depuis un incident ----------
+  //
+  // CELUI-CI AGIT, contrairement au formulaire de retour juste au-dessus. Les deux partent
+  // du même incident, et les confondre serait le pire défaut de cet écran : quelqu'un
+  // croirait avoir donné son avis alors qu'il vient d'éteindre une alerte. Le message de
+  // confirmation dit donc ce qui s'est réellement passé, et la ligne est retirée du tableau
+  // pour que l'effet soit visible immédiatement.
+  document.addEventListener('submit', function (ev) {
+    var f = ev.target;
+    if (!f.classList || !f.classList.contains('exception-form')) return;
+    ev.preventDefault();
+
+    var raison = (f.querySelector('[name=raison]') || {}).value || '';
+    if (!raison.trim()) { return; }
+
+    var bouton = f.querySelector('button');
+    if (bouton) { bouton.disabled = true; }
+
+    post('exception_poser', {
+      incident_id: f.dataset.incident || '',
+      raison: raison,
+      motif_signal: (f.querySelector('[name=motif_signal]') || {}).value || ''
+    }).then(function (j) {
+      if (bouton) { bouton.disabled = false; }
+      toast(j.message || '', j.ok ? 'ok' : 'bad', 7000);
+      if (j.ok) {
+        var d = f.closest('details');
+        if (d) { d.open = false; }
+        f.reset();
+      }
+    }).catch(function () {
+      if (bouton) { bouton.disabled = false; }
+    });
+  });
+
+  // ---------- Lever une exception ----------
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('[data-revoquer]') : null;
+    if (!b) return;
+    ev.preventDefault();
+    b.disabled = true;
+    post('exception_revoquer', { id: b.dataset.revoquer }).then(function (j) {
+      toast(j.message || '', j.ok ? 'ok' : 'bad');
+      if (j.ok) { var tr = b.closest('tr'); if (tr) { tr.remove(); } }
+      else { b.disabled = false; }
+    }).catch(function () { b.disabled = false; });
+  });
+
   // ---------- Thème ----------
   var toggle = $('#theme-toggle');
   if (toggle) {

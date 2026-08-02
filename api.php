@@ -10,6 +10,7 @@ require __DIR__ . '/src/bootstrap.php';
 use Uptimeez\Auth;
 use Uptimeez\Config;
 use Uptimeez\Db;
+use Uptimeez\Exceptions;
 use Uptimeez\I18n;
 use Uptimeez\Importer;
 use Uptimeez\Retour;
@@ -40,7 +41,7 @@ if (Uptimeez\Demo::refuses($action)) {
     json_out(['ok' => false, 'error' => 'demo', 'message' => Uptimeez\Demo::refusal()[1]], 403);
 }
 
-$isWrite = in_array($action, ['check', 'toggle', 'setup', 'fix', 'undo', 'retour'], true);
+$isWrite = in_array($action, ['check', 'toggle', 'setup', 'fix', 'undo', 'retour', 'exception_poser', 'exception_revoquer'], true);
 if ($isWrite) {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') json_out(['error' => 'method'], 405);
     if (!Auth::checkCsrf($_POST['csrf'] ?? null)) json_out(['error' => 'csrf', 'message' => t('Jeton invalide')], 403);
@@ -112,6 +113,42 @@ switch ($action) {
             'verdict_modifie' => false,
             'message' => t('Merci : c\'est enregistré. Aucun verdict n\'a changé, cette alerte reste visible.'),
         ]);
+
+    // ---- Taire un signal sur une sonde ----------------------------------
+    //
+    // CELLE-CI, CONTRAIREMENT AU RETOUR, CHANGE QUELQUE CHOSE. Les deux partent du même
+    // incident et il ne faut jamais les confondre : le retour décrit, l'exception agit.
+    // L'interface les sépare visuellement, l'API les sépare en deux actions, et les
+    // messages de retour disent lequel des deux vient de se produire.
+    case 'exception_poser':
+        $exIncident = (int)($_POST['incident_id'] ?? 0) > 0
+            ? Db::one('SELECT * FROM incidents WHERE id = ?', [(int)$_POST['incident_id']])
+            : null;
+        $exSondeId = $exIncident ? (int)$exIncident['monitor_id'] : $id;
+        $exMon = $exSondeId > 0 ? Db::one('SELECT id FROM monitors WHERE id = ?', [$exSondeId]) : null;
+        if (!$exMon) json_out(['error' => 'not_found'], 404);
+
+        try {
+            $excId = Exceptions::poser(
+                monitorId: (int)$exMon['id'],
+                // La cause vient de l'incident, jamais du formulaire : sinon n'importe qui
+                // pourrait poser une exception sur une cause que sa sonde n'a jamais rendue.
+                causeCode: (string)($exIncident['reason_code'] ?? ''),
+                raison: (string)($_POST['raison'] ?? ''),
+                motifSignal: (string)($_POST['motif_signal'] ?? ''),
+            );
+        } catch (\InvalidArgumentException $e) {
+            error_log('UptimeEZ: exception refusée — ' . $e->getMessage());
+            json_out(['error' => 'invalid',
+                      'message' => t('Ce signal ne peut pas être tu : seules les alertes d\'apparence sont concernées.')], 422);
+        }
+
+        json_out(['ok' => true, 'exception_id' => $excId,
+                  'message' => t('C\'est noté : ce signal ne comptera plus sur cette page. Les alertes tues restent comptées, et l\'exception sera à revoir dans six mois.')]);
+
+    case 'exception_revoquer':
+        Exceptions::revoquer($id);
+        json_out(['ok' => true, 'message' => t('Exception levée : ce signal compte de nouveau.')]);
 
     // ---- Activer / mettre en pause --------------------------------------
     case 'toggle':

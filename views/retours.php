@@ -24,6 +24,57 @@ $porteeLisible = [
 ?>
 <div class="row-between mt"><h1><?= te('Retours sur la détection') ?></h1></div>
 
+<?php
+// LE BILAN DES EXCEPTIONS EST EN HAUT, ET C'EST TOUT LE POINT. Une exception oubliée est
+// une panne qu'on ne verra pas. Le seul moyen de ne pas l'oublier est de rappeler, sans
+// qu'on ait à le demander, combien d'alertes elles ont tues et combien sont à revoir.
+//
+// Une exception silencieuse et éternelle serait pire que le faux positif qu'elle supprime,
+// parce qu'un faux positif, au moins, se voit.
+$bilan = Uptimeez\Exceptions::bilan();
+$exceptions = Db::all('SELECT e.*, m.name FROM exceptions e LEFT JOIN monitors m ON m.id = e.monitor_id
+                       WHERE e.actif = 1 ORDER BY e.revoir_le ASC');
+?>
+<?php if ($bilan['actives'] > 0): ?>
+<div class="panel">
+  <div class="panel-head">
+    <h2><?= te('Vos exceptions') ?></h2>
+    <span class="muted small"><?= e(t('{n} alerte(s) tue(s) ce mois-ci par vos exceptions',
+        ['n' => $bilan['ce_mois']])) ?></span>
+  </div>
+  <div class="panel-body tight">
+    <?php if ($bilan['a_revoir'] > 0): ?>
+      <p class="v-warn small" style="padding:.5rem .75rem"><?= e(t('{n} exception(s) ont dépassé leur date de revue. Une exception posée pendant une migration survit à la migration.',
+          ['n' => $bilan['a_revoir']])) ?></p>
+    <?php endif; ?>
+    <div class="table-scroll"><table class="tbl">
+      <thead><tr>
+        <th><?= te('Sonde') ?></th><th><?= te('Contrôle') ?></th><th><?= te('Pourquoi') ?></th>
+        <th class="num"><?= te('Tues ce mois') ?></th><th class="num"><?= te('Tues en tout') ?></th>
+        <th><?= te('Date de revue') ?></th><th></th>
+      </tr></thead>
+      <tbody>
+      <?php foreach ($exceptions as $x): $enRetard = strtotime((string)$x['revoir_le']) <= time(); ?>
+        <tr>
+          <td class="small"><a href="<?= e(u('monitor', ['id' => (int)$x['monitor_id']])) ?>"><?= e((string)($x['name'] ?? '—')) ?></a></td>
+          <td><?= Ui::reasonBadge((string)$x['reason_code']) ?>
+            <?php if (trim((string)$x['motif_signal']) !== ''): ?>
+              <div class="tiny muted"><?= e(str_cut((string)$x['motif_signal'], 40)) ?></div>
+            <?php endif; ?>
+          </td>
+          <td class="tiny muted"><?= e(str_cut((string)$x['raison'], 80)) ?></td>
+          <td class="num small"><?= (int)$x['masquees_ce_mois'] ?></td>
+          <td class="num small"><?= (int)$x['masquees_total'] ?></td>
+          <td class="small nowrap<?= $enRetard ? ' v-warn' : '' ?>"><?= e(date('d/m/Y', strtotime((string)$x['revoir_le']))) ?></td>
+          <td class="num"><button class="btn btn-sm btn-ghost" data-revoquer="<?= (int)$x['id'] ?>"><?= te('Lever') ?></button></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+<?php endif; ?>
+
 <?php if ($total === 0): ?>
   <div class="panel"><div class="panel-body">
     <div class="empty">

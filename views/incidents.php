@@ -129,6 +129,30 @@ foreach ($rows as $r) {
                   </label>
                   <button class="btn btn-sm"><?= te('Envoyer') ?></button>
                 </form>
+
+                <?php
+                // ICI, ET SEULEMENT ICI, ON AGIT. Le formulaire du dessus décrit sans rien
+                // changer ; celui-ci tait le signal pour de bon. Les deux partent du même
+                // incident, et les confondre serait le pire défaut possible de cet écran :
+                // quelqu'un croirait avoir seulement donné son avis alors qu'il vient
+                // d'éteindre une alerte, ou l'inverse. D'où le trait de séparation, le
+                // libellé qui dit ce qui va se passer, et la raison obligatoire.
+                //
+                // Le bloc n'apparaît QUE sur les causes d'apparence. Sur un 503, il ne sert
+                // à rien de proposer un geste que le moteur refusera : une action offerte
+                // puis refusée use la confiance autant qu'une action absente.
+                ?>
+                <?php if (Uptimeez\Exceptions::estExcusable((string)$r['reason_code'])): ?>
+                  <hr class="retour-sep">
+                  <form class="exception-form" data-incident="<?= (int)$r['id'] ?>">
+                    <p class="tiny"><strong><?= te('Ou taire ce signal sur cette page') ?></strong></p>
+                    <p class="tiny muted"><?= te('Celui-ci agit vraiment : l\'alerte n\'apparaîtra plus. Elle restera comptée, et l\'exception sera à revoir dans six mois.') ?></p>
+                    <label class="tiny"><?= te('Pourquoi (obligatoire)') ?>
+                      <input type="text" name="raison" maxlength="500" required>
+                    </label>
+                    <button class="btn btn-sm btn-ghost"><?= te('Taire ce signal ici') ?></button>
+                  </form>
+                <?php endif; ?>
               </details>
             </td>
           </tr>
