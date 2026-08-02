@@ -38,6 +38,7 @@ $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
   <h1><?= te('Sondes') ?> <span class="muted" style="font-weight:400"><?= (int)$total ?></span></h1>
   <a class="btn btn-primary btn-sm" href="<?= e(u('import')) ?>"><?= Ui::icon('plus', 15) ?> <?= te('Ajouter des sites') ?></a>
 </div>
+<p class="muted small"><?= te('Tout ce qui est surveillé, page par page. Les marqueurs de la colonne de droite disent quels contrôles sont actifs sur chacune : survolez-les pour savoir ce qu\'ils vérifient.') ?></p>
 
 <form method="get" class="toolbar">
   <input type="hidden" name="p" value="monitors">

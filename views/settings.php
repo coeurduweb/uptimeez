@@ -33,6 +33,7 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
   <span class="muted small">UptimeEZ <?= UPTIMEEZ_VERSION ?> · PHP <?= PHP_VERSION ?>
     · <?= te('base {driver}', ['driver' => Db::driver()]) ?></span>
 </div>
+<p class="muted small"><?= te('Les valeurs par défaut de toute nouvelle sonde, les canaux d\'alerte, les comptes et les outils de vérification. Ce qui est réglé ici ne change pas les sondes existantes, qui gardent leurs propres valeurs.') ?></p>
 
 <!-- ============================ TÂCHE PLANIFIÉE ============================ -->
 <?php /* L'aide se place dans le corps de l'accordéon : un titre reste un titre. */ ?>

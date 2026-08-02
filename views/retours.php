@@ -23,6 +23,7 @@ $porteeLisible = [
 ];
 ?>
 <div class="row-between mt"><h1><?= te('Retours sur la détection') ?></h1></div>
+<p class="muted small"><?= te('Ce que vous nous dites quand un contrôle se trompe, et ce que vous avez choisi de taire. Rien ici n\'a modifié un verdict : cette page décrit, elle ne décide pas.') ?></p>
 
 <?php
 // LE BILAN DES EXCEPTIONS EST EN HAUT, ET C'EST TOUT LE POINT. Une exception oubliée est

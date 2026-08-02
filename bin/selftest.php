@@ -4187,6 +4187,87 @@ foreach (['README.md', 'README.fr.md'] as $fichier) {
     check("$fichier : pas de liste de mots-clés en pied de page", $bourrages, []);
 }
 
+section('Les faux positifs du 2026-08-02, comme jeu d\'essai permanent');
+// ---------------------------------------------------------------------------
+// Ce jour-là, 43 des 47 sondes non vertes d'un parc réel étaient FAUSSES, dont treize
+// annoncées hors service. Cinq défauts du détecteur, chacun prouvé sur le contenu qui l'a
+// produit. Quatre ont déjà leur contrôle plus haut ; celui-ci manquait, et c'est celui qui
+// expliquait à lui seul trois des quatre derniers sites « cassés » du parc.
+//
+// UN FICHIER VIDE SERVI EN 200 N'EST PAS UNE PANNE, C'EST UNE FEUILLE SANS RÈGLE. Les
+// greffons WordPress en produisent couramment : le méga-menu d'Astra, les styles
+// conditionnels d'Elementor. Le navigateur la charge, n'en tire rien, et la page s'affiche
+// parfaitement.
+//
+// La distinction qui compte est celle du SERVEUR : un 200 à zéro octet est une réponse
+// délibérée, là où un 404 ou une coupure signalent une vraie absence. On vérifie donc les
+// DEUX faces, sans quoi corriger le faux positif aurait pu éteindre le vrai.
+$reponseCss = static function (string $corps, int $statut = 200, string $type = 'text/css'): Uptimeez\Response {
+    $r = new Uptimeez\Response();
+    $r->ok = $statut > 0;
+    $r->status = $statut;
+    $r->body = $corps;
+    $r->contentType = $type;
+    return $r;
+};
+
+$refErreur = new ReflectionMethod(Uptimeez\Check\Css::class, 'looksLikeErrorPage');
+$refErreur->setAccessible(true);
+
+check('un fichier vide n\'est pas pris pour une page d\'erreur',
+    $refErreur->invoke(null, $reponseCss('')), false);
+check('et un CSS normal non plus',
+    $refErreur->invoke(null, $reponseCss('.a{color:red}')), false);
+// L'AUTRE FACE : ce qui doit RESTER détecté. Corriger un faux positif en éteignant le vrai
+// signal serait un progrès apparent et une régression réelle.
+check('une page d\'erreur HTML servie à la place du CSS reste vue',
+    $refErreur->invoke(null, $reponseCss('<!doctype html><html><body>404</body></html>', 200, 'text/html')), true);
+
+section('Chaque écran dit en une ligne ce qu\'il montre');
+// ---------------------------------------------------------------------------
+// Relevé le 2026-08-02 : « events » était le seul écran sans phrase sous son titre, alors
+// que tous les autres en avaient une. Le défaut est petit et il se reproduit tout seul : on
+// ajoute un écran, on écrit son titre, et la phrase attend un tour de relecture qui ne
+// vient pas.
+//
+// Le contrôle lit les GABARITS plutôt que les pages rendues : il tourne donc sans serveur,
+// et il tombe au moment où l'écran est écrit, pas au moment où quelqu'un le regarde.
+$ecransSansPhrase = [];
+foreach (glob(UPTIMEEZ_ROOT . '/views/*.php') ?: [] as $gabarit) {
+    $nom = basename($gabarit, '.php');
+    // « layout » est le cadre, « login » et « status » sont des pages d'entrée sans
+    // navigation : elles n'ont pas de titre d'écran à expliquer.
+    if (in_array($nom, ['layout', 'login', 'status'], true)) continue;
+
+    $texte = (string) file_get_contents($gabarit);
+    if (!preg_match('~<h1[^>]*>~', $texte)) continue;
+
+    // MA PREMIÈRE VERSION ACCUSAIT TROIS ÉCRANS QUI N'AVAIENT RIEN À SE REPROCHER, et elle
+    // ne cherchait qu'une classe. Ce qu'il faut reconnaître est plus large :
+    //
+    //   - un titre « band-title » EST déjà une phrase (« 3 sites à remettre en ligne ») et
+    //     n'a rien à expliquer ; c'est un titre nominal comme « Journal » qui en a besoin ;
+    //   - un simple <p> qui suit le titre est une phrase d'introduction, classe ou pas.
+    //
+    // La distinction porte sur la NATURE du titre, pas sur la présence d'une classe.
+    $apres = substr($texte, (int) strpos($texte, '<h1'), 1400);
+
+    // DEUXIÈME ERREUR, ATTRAPÉE EN FALSIFIANT. La version d'avant acceptait « panel-head »
+    // comme phrase d'introduction. Or TOUS les écrans ont des panneaux : le contrôle était
+    // satisfait partout et ne pouvait pas échouer pour le cas qu'il visait. Retiré la
+    // phrase du journal pour l'éprouver, il est resté vert.
+    //
+    // Une phrase d'introduction appartient à l'ÉCRAN, donc elle vient AVANT le premier
+    // panneau. Ce qui est écrit dans l'en-tête d'un panneau décrit ce panneau, pas l'écran.
+    $titreEstUnePhrase = preg_match('~<h1[^>]*class="[^"]*\bband-title\b~', $texte) === 1;
+
+    $avantPremierPanneau = preg_split('~<div class="panel~', $apres, 2)[0];
+    $suiviDunePhrase = preg_match('~</h1>.*?<p[ >]~su', $avantPremierPanneau) === 1;
+
+    if (!$titreEstUnePhrase && !$suiviDunePhrase) $ecransSansPhrase[] = $nom;
+}
+check('aucun écran sans phrase d\'introduction', $ecransSansPhrase, []);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

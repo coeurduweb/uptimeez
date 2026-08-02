@@ -60,6 +60,7 @@ $rows = Db::all('SELECT i.*, m.name, m.url FROM incidents i JOIN monitors m ON m
        title="<?= te('Tableur des incidents de la période (rapport client, justificatif de SLA)') ?>"><?= te('Export CSV') ?></a>
   </div>
 </div>
+<p class="muted small"><?= te('Chaque interruption détectée, sa cause, sa durée et ce qui l\'a résolue. Un incident se clôt tout seul dès que le site répond de nouveau ; le clore à la main sert quand vous savez que c\'est réglé avant la vérification suivante.') ?></p>
 
 <section class="stats mt">
   <div class="stat"><div class="stat-label"><?= te('Incidents') ?></div><div class="stat-value"><?= $total ?></div>
