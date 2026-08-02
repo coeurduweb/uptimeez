@@ -3048,6 +3048,33 @@ foreach ($en as $fr => $anglais) {
 }
 check('le catalogue anglais ne recopie pas le français', $identiques, []);
 
+// LES MESSAGES DES DÉTECTEURS PASSENT TOUS PAR t(), SANS EXCEPTION.
+//
+// Ce sont les phrases que le client LIT dans une alerte et dans un incident, donc les plus
+// visibles du produit, et elles sont stockées telles quelles en base. Une seule oubliée et
+// un client anglophone reçoit une alerte en français, des mois après, sans que rien ne le
+// signale : le message est juste, seulement pas dans sa langue.
+//
+// C'est arrivé sur « Aucune feuille de style détectée sur cette page. » dans
+// src/Check/Css.php, à deux lignes d'un voisin correctement traduit. L'audit ne l'a pas vu
+// parce que la phrase EST un msgid par ailleurs, et qu'il exempte les msgid connus, en
+// supposant qu'ils sont traduits quelque part. Ici, le littéral partait droit à l'écran.
+//
+// Le contrôle est volontairement étroit et syntaxique : il regarde les affectations dans
+// « messages », là où le faux positif est impossible, plutôt que de tenter de deviner
+// partout. Un contrôle étroit et sûr vaut mieux qu'un large qu'on désactive.
+$brutes = [];
+foreach (array_merge(glob(UPTIMEEZ_ROOT . '/src/Check/*.php') ?: [],
+                     glob(UPTIMEEZ_ROOT . '/src/Detect/*.php') ?: []) as $f) {
+    foreach (file($f, FILE_IGNORE_NEW_LINES) ?: [] as $n => $ligne) {
+        if (!preg_match('~\[\x27messages\x27\]\[\]\s*=\s*([\x27"])(.+)~', $ligne, $m)) continue;
+        // Une chaîne qui commence par un appel de traduction est conforme ; ici on a
+        // capturé un guillemet ouvrant, donc c'est bien un littéral nu.
+        $brutes[] = basename($f) . ':' . ($n + 1) . ' « ' . mb_substr($m[2], 0, 45) . '… »';
+    }
+}
+check('les messages des détecteurs passent tous par t()', $brutes, []);
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.

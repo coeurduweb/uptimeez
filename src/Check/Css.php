@@ -434,7 +434,7 @@ final class Css
                 // Première observation : on le signale une fois. Si c'est l'état
                 // normal de la page, la référence l'enregistrera et on se taira.
                 $soft++;
-                $result['messages'][] = 'Aucune feuille de style détectée sur cette page.';
+                $result['messages'][] = t('Aucune feuille de style détectée sur cette page.');
             }
         }
         // Une référence bâtie par une autre version de l'extracteur ne se compare pas :
