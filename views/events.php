@@ -9,15 +9,15 @@ use Uptimeez\Ui;
 // deux paginations indépendantes sur une même page obligeraient à comprendre laquelle on
 // vient de déplacer, ce qui coûte plus cher que ça ne rapporte.
 $page = Ui::page();
-$saut = ($page - 1) * Ui::PAR_PAGE;
+$saut = Ui::saut($page, Ui::PAR_PAGE_DOUBLE);
 
 $totalEvents = (int) Db::val('SELECT COUNT(*) FROM events');
 $totalNotifs = (int) Db::val('SELECT COUNT(*) FROM notifications');
 
 $events = Db::all('SELECT e.*, m.name FROM events e LEFT JOIN monitors m ON m.id = e.monitor_id
-                   ORDER BY e.ts DESC LIMIT ' . Ui::PAR_PAGE . ' OFFSET ' . $saut);
+                   ORDER BY e.ts DESC LIMIT ' . Ui::PAR_PAGE_DOUBLE . ' OFFSET ' . $saut);
 $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m ON m.id = n.monitor_id
-                   ORDER BY n.ts DESC LIMIT ' . Ui::PAR_PAGE . ' OFFSET ' . $saut);
+                   ORDER BY n.ts DESC LIMIT ' . Ui::PAR_PAGE_DOUBLE . ' OFFSET ' . $saut);
 ?>
 <?php
 // TOUS LES AUTRES ÉCRANS ONT UNE PHRASE SOUS LEUR TITRE, celui-ci n'en avait pas. Un
@@ -76,6 +76,6 @@ $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m 
         ['link' => '<a href="' . e(u('settings')) . '">' . te('réglages') . '</a>']) ?></td></tr><?php endif; ?>
       </tbody>
     </table></div>
-    <?= Ui::pagination($page, max($totalEvents, $totalNotifs), 'events') ?>
+    <?= Ui::pagination($page, max($totalEvents, $totalNotifs), 'events', [], Ui::PAR_PAGE_DOUBLE) ?>
   </div>
 </div>

@@ -45,7 +45,7 @@ foreach (Db::all('SELECT i.started_at FROM incidents i JOIN monitors m ON m.id =
 $page = Ui::page();
 $rows = Db::all('SELECT i.*, m.name, m.url FROM incidents i JOIN monitors m ON m.id = i.monitor_id
                  WHERE ' . $filtre . ' ORDER BY i.started_at DESC
-                 LIMIT ' . Ui::PAR_PAGE . ' OFFSET ' . (($page - 1) * Ui::PAR_PAGE), $params);
+                 LIMIT ' . Ui::PAR_PAGE_DENSE . ' OFFSET ' . Ui::saut($page, Ui::PAR_PAGE_DENSE), $params);
 ?>
 <div class="row-between mt">
   <h1><?= te('Incidents') ?></h1>
@@ -186,6 +186,6 @@ $rows = Db::all('SELECT i.*, m.name, m.url FROM incidents i JOIN monitors m ON m
     </div>
     <?= Ui::pagination($page, $total, 'incidents',
           ['s' => $state !== 'all' ? $state : null, 'range' => $range,
-           'id' => $onlyId ?: null]) ?>
+           'id' => $onlyId ?: null], Ui::PAR_PAGE_DENSE) ?>
   </div>
 </div>

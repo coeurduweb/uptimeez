@@ -504,8 +504,24 @@ final class Ui
      *
      * Cinquante lignes tiennent sous le plafond de 4 000 px qu'on s'est fixé, tout en
      * remplissant un écran de bureau : moins ferait tourner les pages pour rien.
+     *
+     * MAIS PAS SUR TOUS LES ÉCRANS, ET SEULE LA MESURE POUVAIT LE DIRE. Après la première
+     * pose, la mesure au navigateur sur l'instance réelle a rendu : sondes 3 551 px,
+     * journal 4 892 px, incidents 4 072 px. Deux dépassements, pour deux raisons
+     * différentes qu'aucun raisonnement n'aurait données d'avance.
+     *
+     * Le journal affiche DEUX tableaux, donc cinquante lignes par page en font cent à
+     * l'écran. Les incidents portent un bandeau de quatre statistiques, des filtres, et
+     * depuis aujourd'hui un panneau de retour par ligne. D'où deux valeurs, chacune
+     * justifiée par ce qui a été mesuré et non par une préférence.
      */
     public const PAR_PAGE = 50;
+
+    /** Journal : deux tableaux sur la même page, donc moitié moins par tableau. */
+    public const PAR_PAGE_DOUBLE = 25;
+
+    /** Incidents : bandeau de statistiques, filtres, et un panneau replié par ligne. */
+    public const PAR_PAGE_DENSE = 40;
 
     /**
      * La page demandée, bornée.
@@ -519,6 +535,12 @@ final class Ui
         return max(1, (int) ($_GET['page'] ?? 1));
     }
 
+    /** Le décalage SQL correspondant, pour ne pas le recalculer dans chaque vue. */
+    public static function saut(int $page, int $parPage = self::PAR_PAGE): int
+    {
+        return max(0, ($page - 1) * $parPage);
+    }
+
     /**
      * Les liens de pagination, ou rien du tout s'il n'y a qu'une page.
      *
@@ -528,9 +550,10 @@ final class Ui
      *
      * @param array<string,mixed> $params paramètres à conserver dans les liens
      */
-    public static function pagination(int $page, int $total, string $vue, array $params = []): string
+    public static function pagination(int $page, int $total, string $vue, array $params = [],
+                                      int $parPage = self::PAR_PAGE): string
     {
-        $pages = (int) ceil($total / self::PAR_PAGE);
+        $pages = (int) ceil($total / max(1, $parPage));
 
         if ($pages <= 1) {
             return '';
@@ -541,8 +564,8 @@ final class Ui
                 . e(u($vue, $params + ['page' => $p > 1 ? $p : null])) . '">' . $texte . '</a>';
         };
 
-        $premier = (($page - 1) * self::PAR_PAGE) + 1;
-        $dernier = min($page * self::PAR_PAGE, $total);
+        $premier = (($page - 1) * $parPage) + 1;
+        $dernier = min($page * $parPage, $total);
 
         $out = '<div class="row-between mt" style="align-items:center">';
         $out .= '<span class="tiny muted">' . e(t('{de} à {a} sur {total}',

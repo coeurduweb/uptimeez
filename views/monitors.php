@@ -30,7 +30,7 @@ $page  = Ui::page();
 $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
                  FROM monitors m LEFT JOIN sites s ON s.id = m.site_id
                  WHERE $where ORDER BY $order
-                 LIMIT " . Ui::PAR_PAGE . " OFFSET " . (($page - 1) * Ui::PAR_PAGE), $params);
+                 LIMIT " . Ui::PAR_PAGE . " OFFSET " . Ui::saut($page), $params);
 ?>
 <div class="row-between mt">
   <?php // Le compte affiché est celui du PARC, pas celui de la page : sinon l'en-tête
