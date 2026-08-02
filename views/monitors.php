@@ -21,12 +21,21 @@ if ($q !== '') {
     $like = '%' . $q . '%';
     $params = [$like, $like, $like];
 }
+// PAGINATION. Mesuré le 2026-08-02 : cet écran faisait 12 835 px de haut pour 200 lignes.
+// Le total est compté à part, parce que « 1 à 50 » ne veut rien dire sans le « sur 200 » :
+// des flèches seules laissent croire qu'on a tout lu quand on a lu le quart.
+$total = (int) Db::val("SELECT COUNT(*) FROM monitors m LEFT JOIN sites s ON s.id = m.site_id
+                        WHERE $where", $params);
+$page  = Ui::page();
 $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
                  FROM monitors m LEFT JOIN sites s ON s.id = m.site_id
-                 WHERE $where ORDER BY $order LIMIT 500", $params);
+                 WHERE $where ORDER BY $order
+                 LIMIT " . Ui::PAR_PAGE . " OFFSET " . (($page - 1) * Ui::PAR_PAGE), $params);
 ?>
 <div class="row-between mt">
-  <h1><?= te('Sondes') ?> <span class="muted" style="font-weight:400"><?= count($rows) ?></span></h1>
+  <?php // Le compte affiché est celui du PARC, pas celui de la page : sinon l'en-tête
+        // annoncerait « 50 sondes » à quelqu'un qui en surveille deux cents. ?>
+  <h1><?= te('Sondes') ?> <span class="muted" style="font-weight:400"><?= (int)$total ?></span></h1>
   <a class="btn btn-primary btn-sm" href="<?= e(u('import')) ?>"><?= Ui::icon('plus', 15) ?> <?= te('Ajouter des sites') ?></a>
 </div>
 
@@ -129,6 +138,7 @@ $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
         </tbody>
       </table>
     </div>
+    <?= Ui::pagination($page, $total, 'monitors', ['sort' => $sort ?: null, 'q' => $q ?: null]) ?>
   </div>
 </form>
 

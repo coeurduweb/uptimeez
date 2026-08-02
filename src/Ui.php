@@ -493,6 +493,70 @@ final class Ui
         '365d' => '1 an',
     ];
 
+    /**
+     * Combien de lignes par page, et pourquoi il en faut une limite.
+     *
+     * MESURÉ LE 2026-08-02 SUR UNE INSTANCE RÉELLE : l'écran des sondes faisait 12 835 px
+     * de haut pour 200 lignes, le journal 14 685 px pour 320, les incidents 12 144 px pour
+     * 175. Aucune pagination. Ce n'est pas qu'une question de confort : une page de treize
+     * mille pixels ne se parcourt pas, elle se subit, et la ligne rouge qui compte se perd
+     * dans neuf écrans de lignes vertes.
+     *
+     * Cinquante lignes tiennent sous le plafond de 4 000 px qu'on s'est fixé, tout en
+     * remplissant un écran de bureau : moins ferait tourner les pages pour rien.
+     */
+    public const PAR_PAGE = 50;
+
+    /**
+     * La page demandée, bornée.
+     *
+     * Une page négative ou absurde ne doit pas produire un OFFSET négatif, que SQLite
+     * accepte en silence et que MySQL refuse : le même lien casserait sur un moteur et pas
+     * sur l'autre, ce qui est la pire forme de défaut.
+     */
+    public static function page(): int
+    {
+        return max(1, (int) ($_GET['page'] ?? 1));
+    }
+
+    /**
+     * Les liens de pagination, ou rien du tout s'il n'y a qu'une page.
+     *
+     * ON AFFICHE LE TOTAL, PAS SEULEMENT LES FLÈCHES. « 1 à 50 sur 200 » dit à la fois où
+     * l'on est et ce qu'on ne voit pas ; des flèches seules laissent croire qu'on a tout lu
+     * quand on a lu le quart.
+     *
+     * @param array<string,mixed> $params paramètres à conserver dans les liens
+     */
+    public static function pagination(int $page, int $total, string $vue, array $params = []): string
+    {
+        $pages = (int) ceil($total / self::PAR_PAGE);
+
+        if ($pages <= 1) {
+            return '';
+        }
+
+        $lien = static function (int $p, string $texte) use ($vue, $params): string {
+            return '<a class="btn btn-sm btn-ghost" href="'
+                . e(u($vue, $params + ['page' => $p > 1 ? $p : null])) . '">' . $texte . '</a>';
+        };
+
+        $premier = (($page - 1) * self::PAR_PAGE) + 1;
+        $dernier = min($page * self::PAR_PAGE, $total);
+
+        $out = '<div class="row-between mt" style="align-items:center">';
+        $out .= '<span class="tiny muted">' . e(t('{de} à {a} sur {total}',
+            ['de' => $premier, 'a' => $dernier, 'total' => $total])) . '</span>';
+        $out .= '<div class="row" style="gap:6px">';
+        $out .= $page > 1 ? $lien($page - 1, te('Précédentes')) : '';
+        $out .= '<span class="tiny muted">' . e(t('page {n} sur {total}',
+            ['n' => $page, 'total' => $pages])) . '</span>';
+        $out .= $page < $pages ? $lien($page + 1, te('Suivantes')) : '';
+        $out .= '</div></div>';
+
+        return $out;
+    }
+
     public static function rangePicker(string $current, array $params = []): string
     {
         $out = '<div class="segmented" role="tablist" aria-label="' . te('Période affichée') . '">';

@@ -4,12 +4,29 @@ use Uptimeez\Db;
 use Uptimeez\Notify\Notifier;
 use Uptimeez\Ui;
 
+// PAGINATION. Mesuré le 2026-08-02 : cet écran faisait 14 685 px de haut pour 320 lignes,
+// le plus lourd du produit. Les deux tableaux se paginent ENSEMBLE, sur le même paramètre :
+// deux paginations indépendantes sur une même page obligeraient à comprendre laquelle on
+// vient de déplacer, ce qui coûte plus cher que ça ne rapporte.
+$page = Ui::page();
+$saut = ($page - 1) * Ui::PAR_PAGE;
+
+$totalEvents = (int) Db::val('SELECT COUNT(*) FROM events');
+$totalNotifs = (int) Db::val('SELECT COUNT(*) FROM notifications');
+
 $events = Db::all('SELECT e.*, m.name FROM events e LEFT JOIN monitors m ON m.id = e.monitor_id
-                   ORDER BY e.ts DESC LIMIT 200');
+                   ORDER BY e.ts DESC LIMIT ' . Ui::PAR_PAGE . ' OFFSET ' . $saut);
 $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m ON m.id = n.monitor_id
-                   ORDER BY n.ts DESC LIMIT 120');
+                   ORDER BY n.ts DESC LIMIT ' . Ui::PAR_PAGE . ' OFFSET ' . $saut);
+?>
+<?php
+// TOUS LES AUTRES ÉCRANS ONT UNE PHRASE SOUS LEUR TITRE, celui-ci n'en avait pas. Un
+// visiteur qui arrive sur « Journal » doit savoir en une ligne ce qu'il regarde : ici, ce
+// que le moteur a CONSTATÉ (une page modifiée, un CSS redéployé) et ce qu'il a ENVOYÉ.
+// Deux choses différentes, et c'est justement pour ça qu'il faut le dire.
 ?>
 <div class="row-between mt"><h1><?= te('Journal') ?></h1></div>
+<p class="muted small"><?= te('Ce que le moteur a constaté sur vos sites, et les alertes qu\'il a envoyées. Les constats ne sont pas des pannes : un texte surveillé qui change ou un CSS redéployé s\'inscrivent ici sans déclencher d\'alerte.') ?></p>
 
 <div class="panel">
   <div class="panel-head"><h2><?= te('Évènements de contenu') ?></h2>
@@ -31,6 +48,7 @@ $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m 
       <?php if (!$events): ?><tr><td colspan="4" class="muted small" style="padding:20px"><?= te('Rien à signaler pour l\'instant.') ?></td></tr><?php endif; ?>
       </tbody>
     </table></div>
+
   </div>
 </div>
 
@@ -58,5 +76,6 @@ $notifs = Db::all('SELECT n.*, m.name FROM notifications n LEFT JOIN monitors m 
         ['link' => '<a href="' . e(u('settings')) . '">' . te('réglages') . '</a>']) ?></td></tr><?php endif; ?>
       </tbody>
     </table></div>
+    <?= Ui::pagination($page, max($totalEvents, $totalNotifs), 'events') ?>
   </div>
 </div>

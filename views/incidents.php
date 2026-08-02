@@ -17,15 +17,35 @@ if ($onlyId) { $where[] = 'i.monitor_id = ?'; $params[] = $onlyId; }
 if ($state === 'open')   $where[] = 'i.ended_at IS NULL';
 if ($state === 'closed') $where[] = 'i.ended_at IS NOT NULL';
 
-$rows = Db::all('SELECT i.*, m.name, m.url FROM incidents i JOIN monitors m ON m.id = i.monitor_id
-                 WHERE ' . implode(' AND ', $where) . ' ORDER BY i.started_at DESC LIMIT 2000', $params);
+// PAGINATION. Mesuré le 2026-08-02 : cet écran faisait 12 144 px de haut pour 175 lignes.
+//
+// LES STATISTIQUES DU HAUT PORTENT SUR LA PÉRIODE ENTIÈRE, PAS SUR LA PAGE, et c'est le
+// piège de cette modification : compter sur les lignes affichées ferait dire « 3 incidents
+// sur la période » à quelqu'un qui en a cent soixante-quinze. Le total se calcule donc en
+// base, sur le même filtre, indépendamment de la tranche affichée.
+$filtre = implode(' AND ', $where);
 
-$open = 0; $total = 0; $downSec = 0;
-foreach ($rows as $r) {
-    $total++;
-    if (!$r['ended_at']) { $open++; $downSec += max(0, time() - strtotime((string)$r['started_at'])); }
-    else $downSec += (int)$r['duration_sec'];
+$agg = Db::one('SELECT COUNT(*) AS n,
+                       SUM(CASE WHEN i.ended_at IS NULL THEN 1 ELSE 0 END) AS ouverts,
+                       SUM(CASE WHEN i.ended_at IS NULL THEN 0 ELSE i.duration_sec END) AS clos_sec
+                FROM incidents i JOIN monitors m ON m.id = i.monitor_id
+                WHERE ' . $filtre, $params) ?: [];
+
+$total = (int)($agg['n'] ?? 0);
+$open  = (int)($agg['ouverts'] ?? 0);
+$downSec = (int)($agg['clos_sec'] ?? 0);
+
+// Les incidents encore ouverts n'ont pas de durée en base : elle se compte jusqu'à
+// maintenant, et il faut donc lire leurs dates de début.
+foreach (Db::all('SELECT i.started_at FROM incidents i JOIN monitors m ON m.id = i.monitor_id
+                  WHERE ' . $filtre . ' AND i.ended_at IS NULL', $params) as $ouvert) {
+    $downSec += max(0, time() - strtotime((string)$ouvert['started_at']));
 }
+
+$page = Ui::page();
+$rows = Db::all('SELECT i.*, m.name, m.url FROM incidents i JOIN monitors m ON m.id = i.monitor_id
+                 WHERE ' . $filtre . ' ORDER BY i.started_at DESC
+                 LIMIT ' . Ui::PAR_PAGE . ' OFFSET ' . (($page - 1) * Ui::PAR_PAGE), $params);
 ?>
 <div class="row-between mt">
   <h1><?= te('Incidents') ?></h1>
@@ -164,5 +184,8 @@ foreach ($rows as $r) {
         </tbody>
       </table>
     </div>
+    <?= Ui::pagination($page, $total, 'incidents',
+          ['s' => $state !== 'all' ? $state : null, 'range' => $range,
+           'id' => $onlyId ?: null]) ?>
   </div>
 </div>
