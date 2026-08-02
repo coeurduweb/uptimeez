@@ -3414,6 +3414,36 @@ check('un certificat invalide reste signalé quelle que soit sa provenance',
         'error' => 'hostname mismatch', 'expires_at' => null, 'days_left' => 300]))?->cause,
     'SSL_INVALID');
 
+section('Règle extraite : la lenteur');
+// ---------------------------------------------------------------------------
+// Cinquième extraction. Le verdict le plus isolé qui restait : deux valeurs lues, aucun
+// détecteur, aucune référence, aucun état précédent.
+
+$en = static function (int $ms, int $seuil) use ($contexteAvec, $reponseAvec): ?Uptimeez\Regle\Verdict {
+    $r = $reponseAvec('<html>ok</html>');
+    $r->totalMs = $ms;
+    return (new Uptimeez\Regle\Lenteur())->evaluer($contexteAvec(['slow_ms' => $seuil], $r));
+};
+
+check('sous le seuil : rien à dire', $en(800, 3000), null);
+check('au-dessus du seuil : dégradé', $en(4187, 3000)?->etat, 'degraded');
+check('et la cause est nommée', $en(4187, 3000)?->cause, 'SLOW');
+
+// LE SEUIL EST UNE BORNE STRICTE : « plus lent que », pas « aussi lent que ». Sinon une
+// sonde réglée sur trois secondes alerte sur une page qui met exactement trois secondes,
+// ce que personne ne lit dans le mot « seuil ».
+check('le seuil exact ne déclenche pas', $en(3000, 3000), null);
+check('une milliseconde au-dessus déclenche', $en(3001, 3000)?->cause, 'SLOW');
+
+// ZÉRO VEUT DIRE « PAS DE SEUIL », ET LE CONTRAIRE A DÉJÀ ÉTÉ CODÉ. Le repli sur 3000
+// rendait le champ trompeur : le client éteignait l'alerte et continuait à la recevoir.
+// C'est un défaut qu'aucune alerte ne révèle, puisqu'il se manifeste PAR une alerte.
+check('un seuil à zéro désactive vraiment le contrôle', $en(99000, 0), null);
+check('un seuil négatif ne réactive rien', $en(99000, -1), null);
+
+// La durée est annoncée en secondes : « 4 187 ms » demande une conversion mentale.
+check('la durée est lisible en secondes', $en(4187, 3000)?->variables['seconds'] ?? '', '4,19');
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

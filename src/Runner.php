@@ -687,13 +687,9 @@ final class Runner
         }
 
         // ---- 9. Lenteur ----------------------------------------------------
-        // Zéro veut dire « pas de seuil », comme l'annonce le formulaire. Le
-        // repli sur 3000 rendait le champ trompeur : mettre 0 pour désactiver
-        // remettait en réalité la valeur par défaut.
-        $slow = (int)($mon['slow_ms'] ?? 0);
-        if ($slow > 0 && $res->totalMs > $slow) {
-            $note('degraded', 'SLOW', 'Temps de réponse élevé : {seconds} s',
-                  ['seconds' => number_format($res->totalMs / 1000, 2, ',', ' ')]);
+        // CINQUIÈME EXTRACTION, LE 2026-08-02 : src/Regle/Lenteur.php.
+        if ($v = (new \Uptimeez\Regle\Lenteur())->evaluer($contexte)) {
+            $findings[] = $v->enTableau();
         }
 
         // ---- 10. Mot surveillé (mise à jour de page) ----------------------
