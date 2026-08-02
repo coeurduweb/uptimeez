@@ -555,37 +555,42 @@ final class Runner
         }
 
         // ---- 6. Certificat SSL --------------------------------------------
+        // QUATRIÈME EXTRACTION, LE 2026-08-02 : src/Regle/Certificat.php, trois verdicts.
+        //
+        // Ce qui restait ici s'est réduit à la question « où trouver les faits ». Une
+        // inspection TLS coûte une connexion, on ne la refait donc pas à chaque passe :
+        // au-delà de six heures, ou sur demande d'un humain, on rouvre la connexion ;
+        // en deçà, on relit les colonnes écrites la dernière fois.
+        //
+        // Les deux chemins produisent DÉSORMAIS LA MÊME FORME, et c'est tout l'intérêt.
+        // Ils portaient chacun leur copie des verdicts, et la copie en cache avait déjà
+        // divergé : elle ne savait pas dire « invalide ». Un certificat au mauvais nom
+        // d'hôte redevenait donc muet pendant six heures.
         if ($https && (int)$mon['check_ssl'] === 1) {
-            $stale = !$mon['ssl_checked_at'] || strtotime((string)$mon['ssl_checked_at']) < time() - 21600;
-            if ($stale || $manual) {
-                $ssl = Ssl::inspect(host_of($mon['url']), self::portOf($mon['url']), (int)$mon['timeout_sec']);
-                $details['ssl'] = $ssl;
-                if ($ssl['checked']) {
-                    if ($ssl['code'] === 'SSL_EXPIRED') {
-                        if ($ssl['expires_at']) {
-                            $note('down', 'SSL_EXPIRED', 'Certificat SSL expiré le {date}',
-                                  ['date' => date('d/m/Y', strtotime($ssl['expires_at']))]);
-                        } else {
-                            $note('down', 'SSL_EXPIRED', 'Certificat SSL expiré');
-                        }
-                    } elseif (!$ssl['valid']) {
-                        $note('down', 'SSL_INVALID', 'Certificat SSL invalide : {reason}',
-                              ['reason' => $ssl['error'] ?: t('refusé')]);
-                    } elseif ($ssl['days_left'] !== null && $ssl['days_left'] <= (int)$mon['ssl_warn_days']) {
-                        $note('degraded', 'SSL_SOON',
-                            $ssl['days_left'] === 1 ? 'Certificat SSL expire demain'
-                                                    : 'Certificat SSL expire dans {n} jours',
-                            ['n' => (int)$ssl['days_left']]);
-                    }
-                }
+            $perime = !$mon['ssl_checked_at'] || strtotime((string)$mon['ssl_checked_at']) < time() - 21600;
+
+            if ($perime || $manual) {
+                $faitsCert = Ssl::inspect(host_of($mon['url']), self::portOf($mon['url']), (int)$mon['timeout_sec']);
+                $details['ssl'] = $faitsCert;
             } else {
-                $d = $mon['ssl_days_left'];
-                if ($d !== null && (int)$d < 0) $note('down', 'SSL_EXPIRED', 'Certificat SSL expiré');
-                elseif ($d !== null && (int)$d <= (int)$mon['ssl_warn_days']) {
-                    $note('degraded', 'SSL_SOON', (int)$d === 1 ? 'Certificat SSL expire demain'
-                                                                : 'Certificat SSL expire dans {n} jours',
-                          ['n' => (int)$d]);
-                }
+                // La base ne retient que le compte à rebours. On ne prétend donc pas
+                // savoir si le certificat est valide : on dit ce qu'on sait, et la règle
+                // se taira sur le reste plutôt que d'inventer.
+                $faitsCert = [
+                    'checked'    => true,
+                    'valid'      => true,
+                    'code'       => null,
+                    'error'      => '',
+                    'expires_at' => null,
+                    'days_left'  => $mon['ssl_days_left'],
+                ];
+            }
+
+            $v = (new \Uptimeez\Regle\Certificat())
+                ->evaluer($contexte->avecDetecteur(\Uptimeez\Regle\Certificat::DETECTEUR, $faitsCert));
+
+            if ($v) {
+                $findings[] = $v->enTableau();
             }
         }
 

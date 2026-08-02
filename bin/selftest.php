@@ -3010,13 +3010,34 @@ if ($causesDown !== []) {
 // ET LE GARDE-FOU DU GARDE-FOU : une cause retirée de cette liste doit l'être parce
 // qu'elle a été EXTRAITE, pas parce qu'elle a disparu. On vérifie donc que chaque cause
 // absente d'evaluate() se retrouve dans une règle.
-$sourcesRegles = '';
-foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) $sourcesRegles .= (string) file_get_contents($f);
-$perdues = [];
-foreach (['STRING_MISSING', 'BODY_TRUNCATED', 'STRING_FORBIDDEN'] as $extraite) {
-    if (!str_contains($sourcesRegles, "'" . $extraite . "'")) $perdues[] = $extraite;
+// L'INVENTAIRE EST LU, PAS RECOPIÉ. Une liste écrite ici aurait le même défaut que celle
+// du dessus : à chaque extraction il faudrait penser à l'allonger, et une cause oubliée
+// ne serait plus surveillée par personne, ce qui est exactement le cas qu'on veut voir.
+//
+// src/Diagnose.php tient déjà le catalogue des causes, celui qui donne à l'utilisateur la
+// marche à suivre pour chacune. C'est donc lui la référence : toute cause qu'on explique
+// à l'utilisateur doit encore être PRODUITE par quelqu'un. Le jour où une extraction en
+// égare une, plus personne ne l'émet, l'explication reste en vitrine, et ce contrôle
+// tombe sans qu'on ait rien eu à déclarer.
+preg_match_all("/^\s+'([A-Z_]{3,})'\s*=>/m", (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Diagnose.php'), $mCat);
+$catalogue = array_values(array_unique($mCat[1]));
+
+check('le catalogue des causes n\'est pas vide', count($catalogue) >= 15, true);
+
+$producteurs = '';
+foreach (array_merge(
+    [UPTIMEEZ_ROOT . '/src/Runner.php', UPTIMEEZ_ROOT . '/src/Triage.php'],
+    glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [],
+    glob(UPTIMEEZ_ROOT . '/src/Check/*.php') ?: [],
+    glob(UPTIMEEZ_ROOT . '/src/Notify/*.php') ?: [],
+) as $f) {
+    $producteurs .= (string) file_get_contents($f);
 }
-check('aucune cause extraite ne s\'est perdue en route', $perdues, []);
+
+$orphelines = array_values(array_filter($catalogue,
+    static fn (string $c): bool => !str_contains($producteurs, "'" . $c . "'")));
+
+check('toute cause expliquée à l\'utilisateur est encore produite', $orphelines, []);
 
 section("Aucun texte d'interface écrit en dur dans le balisage");
 // ---------------------------------------------------------------------------
@@ -3301,6 +3322,97 @@ check('valeur conforme : rien à dire',
 check('un chemin traverse un tableau par son indice',
     $json->evaluer($contexteAvec($sondeApi(['json_path' => '0.id']),
         $reponseAvec('[{"id":12}]'))), null);
+
+section('Règle extraite : le certificat TLS');
+// ---------------------------------------------------------------------------
+// Quatrième extraction, trois verdicts. Elle ne fait pas que déplacer du code : dans
+// evaluate(), ces verdicts étaient écrits DEUX FOIS, une fois après une inspection TLS
+// fraîche et une fois à partir des colonnes en base quand l'inspection datait de moins
+// de six heures. Deux copies, et la seconde avait déjà divergé de la première.
+//
+// Ces cas-là étaient jusqu'ici invérifiables : il aurait fallu un serveur, un vrai
+// certificat, et une horloge qu'on puisse avancer de quatre-vingt-neuf jours.
+
+$cert = new Uptimeez\Regle\Certificat();
+$avecCert = static fn (array $faits, int $seuil = 30): Uptimeez\Regle\Contexte
+    => $contexteAvec(['ssl_warn_days' => $seuil], $reponseAvec(''))
+        ->avecDetecteur(Uptimeez\Regle\Certificat::DETECTEUR, $faits);
+
+$sain = ['checked' => true, 'valid' => true, 'code' => null, 'error' => '',
+         'expires_at' => null, 'days_left' => 200];
+
+check('un certificat sain ne dit rien', $cert->evaluer($avecCert($sain)), null);
+
+// UNE INSPECTION QUI N'A PAS ABOUTI N'EST PAS UN CERTIFICAT INVALIDE. Se taire est le
+// seul verdict honnête : sinon une panne réseau nous ferait accuser le certificat.
+check('sans détecteur, la règle se tait',
+    $cert->evaluer($contexteAvec(['ssl_warn_days' => 30], $reponseAvec(''))), null);
+check('une inspection qui n\'a pas abouti ne conclut pas',
+    $cert->evaluer($avecCert(['checked' => false, 'valid' => false])), null);
+
+$expire = $cert->evaluer($avecCert(['checked' => true, 'valid' => false, 'code' => 'SSL_EXPIRED',
+    'error' => 'certificate has expired', 'expires_at' => '2026-07-01 00:00:00', 'days_left' => -32]));
+check('certificat expiré : hors service', $expire?->etat, 'down');
+check('et la cause est l\'expiration, pas l\'invalidité', $expire?->cause, 'SSL_EXPIRED');
+// LA DATE TUE UNE QUESTION : « expiré » seul laisse chercher si le renouvellement a
+// échoué hier soir ou il y a trois semaines. Ce n'est pas la même urgence.
+check('et le message porte la date', $expire?->variables['date'] ?? '', '01/07/2026');
+
+check('expiré sans date connue : le message reste juste',
+    $cert->evaluer($avecCert(['checked' => true, 'valid' => false, 'code' => 'SSL_EXPIRED',
+        'expires_at' => null, 'days_left' => null]))?->variables, []);
+
+$invalide = $cert->evaluer($avecCert(['checked' => true, 'valid' => false, 'code' => null,
+    'error' => 'hostname mismatch', 'expires_at' => null, 'days_left' => 120]));
+check('nom d\'hôte erroné : hors service', $invalide?->etat, 'down');
+check('et la cause est l\'invalidité', $invalide?->cause, 'SSL_INVALID');
+check('et le message porte la raison', $invalide?->variables['reason'] ?? '', 'hostname mismatch');
+
+$bientot = $cert->evaluer($avecCert(['checked' => true, 'valid' => true, 'code' => null,
+    'error' => '', 'expires_at' => null, 'days_left' => 12]));
+// EXPIRE BIENTÔT N'EST PAS UNE PANNE : le site fonctionne, il fonctionnera encore demain.
+check('expiration proche : dégradé, pas hors service', $bientot?->etat, 'degraded');
+check('et la cause est nommée', $bientot?->cause, 'SSL_SOON');
+
+check('le seuil d\'alerte est respecté : 31 jours sous un seuil de 30 ne dit rien',
+    $cert->evaluer($avecCert(['checked' => true, 'valid' => true, 'days_left' => 31])), null);
+check('et 30 jours pile déclenche',
+    $cert->evaluer($avecCert(['checked' => true, 'valid' => true, 'days_left' => 30]))?->cause, 'SSL_SOON');
+
+// « expire dans 1 jours » a déjà été lu en production. Le cas particulier existait dans
+// les DEUX copies du code, ce qui montre bien qu'on le recopiait au lieu de le partager.
+check('un seul jour restant se dit au singulier',
+    $cert->evaluer($avecCert(['checked' => true, 'valid' => true, 'days_left' => 1]))?->message,
+    'Certificat SSL expire demain');
+
+// CE QUE LA BRANCHE EN CACHE NE SAVAIT PAS DIRE. Elle ne connaissait que le compte à
+// rebours : un décompte négatif devait donc suffire à conclure à l'expiration, sans quoi
+// le certificat s'annonçait « expire dans -3 jours ».
+check('un décompte négatif sans code conclut à l\'expiration',
+    $cert->evaluer($avecCert(['checked' => true, 'valid' => true, 'code' => null,
+        'days_left' => -3]))?->cause, 'SSL_EXPIRED');
+
+// LA FORME PAUVRE NE DOIT NI PERDRE NI INVENTER. La branche en cache ne connaît que le
+// compte à rebours, et les autres champs y sont vides. Deux risques, opposés : perdre un
+// verdict que la branche fraîche aurait rendu, ou en fabriquer un que rien ne soutient.
+$formePauvre = ['checked' => true, 'valid' => true, 'code' => null, 'error' => '',
+                'expires_at' => null, 'days_left' => 7];
+check('la forme pauvre rend quand même l\'alerte d\'expiration proche',
+    $cert->evaluer($avecCert($formePauvre))?->cause, 'SSL_SOON');
+// Et surtout : ne pas déduire l'invalidité d'une absence d'information. La base ne dit
+// rien de la validité, ce qui n'est pas la même chose que dire qu'elle est mauvaise.
+check('la forme pauvre n\'invente pas d\'invalidité',
+    $cert->evaluer($avecCert(['checked' => true, 'valid' => true, 'code' => null, 'error' => '',
+        'expires_at' => null, 'days_left' => 300])), null);
+
+// LE CAS QUI TOMBAIT DANS LE TROU DES SIX HEURES. Un certificat au mauvais nom d'hôte
+// vu par une inspection fraîche doit être signalé ; la branche en cache en était
+// incapable, et le site restait donc muet jusqu'à l'inspection suivante. Ici les deux
+// provenances passent par la même règle, donc le trou ne peut plus se rouvrir.
+check('un certificat invalide reste signalé quelle que soit sa provenance',
+    $cert->evaluer($avecCert(['checked' => true, 'valid' => false, 'code' => null,
+        'error' => 'hostname mismatch', 'expires_at' => null, 'days_left' => 300]))?->cause,
+    'SSL_INVALID');
 
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------

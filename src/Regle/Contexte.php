@@ -66,6 +66,26 @@ final class Contexte
         return (int) ($this->sonde[$cle] ?? 0) === 1;
     }
 
+    /**
+     * Le même contexte, avec un détecteur de plus.
+     *
+     * Certains détecteurs coûtent une connexion réseau et ne tournent donc qu'au moment
+     * où on en a besoin, bien après la construction du contexte. Plutôt que de rendre le
+     * tableau modifiable, ce qui autoriserait une règle à écrire dans ce que la suivante
+     * va lire, on rend un nouvel objet : le contexte reste une valeur, et l'ordre des
+     * règles ne peut pas devenir un ordre de dépendances caché.
+     */
+    public function avecDetecteur(string $nom, mixed $valeur): self
+    {
+        return new self(
+            sonde: $this->sonde,
+            reponse: $this->reponse,
+            detecteurs: [$nom => $valeur] + $this->detecteurs,
+            manuel: $this->manuel,
+            etatPrecedent: $this->etatPrecedent,
+        );
+    }
+
     /** Le résultat d'un détecteur, ou null s'il n'a pas tourné. */
     public function detecteur(string $nom): mixed
     {
