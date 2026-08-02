@@ -1,181 +1,221 @@
-# UptimeEZ : analyse concurrentielle et backlog
+# UptimeEZ: competitor research and product backlog
 
-Document de travail. Il sert de brief de conception : chaque décision d'interface renvoie à un
-constat vérifié sur les produits concurrents.
+A working document, and a design brief: every interface decision below points back to something
+observed on a competing product rather than to a preference.
+
+**Competitor research: July 2026. Delivery status: 2 August 2026.**
+The research section ages slowly — these products change over months, not weeks. The status marks
+age fast, and have been wrong before: on 29 July, six items marked "ready to build" turned out to
+have shipped several iterations earlier. A backlog running behind the code sends people to rebuild
+what already exists, which costs more than an empty backlog.
 
 ---
 
-## 1. Ce que disent les utilisateurs des concurrents
+## 1. What users say about the competition
 
-| Produit | Points forts reconnus | Reproches récurrents |
+| Product | Acknowledged strengths | Recurring complaints |
 |---|---|---|
-| **UptimeRobot** | mise en route immédiate, offre gratuite généreuse, notoriété | « Consistently bad UI », « Confusing UI » ; faux positifs à l'échelle ; facturation par contact d'alerte ; personnalisation d'alerte pauvre ; pas de contrôle scripté |
-| **Uptime Kuma** | interface réactive et agréable, intervalles à 20 s, sondes *push*, page d'état, auto-hébergé | tout se configure sonde par sonde, à la main ; aucune détection automatique ; ingérable au-delà de ~100 sondes ; pas de notion de « site » |
-| **Site24x7** | couverture fonctionnelle très large | « interface encombrée de configurations, lourde en clics, à l'étroit » ; écrasante pour un nouvel arrivant ; gestion des alertes frustrante quand le parc grandit |
-| **Checkly** | monitoring-as-code, Playwright natif, excellent pour une équipe dev | « l'interface peut être franchement confuse » ; périmètre volontairement étroit ; suppose de savoir coder |
-| **Zabbix** | puissance, gratuité, extensibilité | « bloqué dans le passé » ; courbe d'apprentissage raide ; hôtes/items/triggers/templates à monter un par un ; réglage fin des alertes réservé aux experts |
-| **New Relic** | profondeur d'analyse | fatigue d'alerte reconnue par l'éditeur lui-même, qui vend des « decisions » pour corréler le bruit |
-| **SiteGuru** *(SEO, pas uptime)* | **transforme des données d'audit en liste de tâches priorisées** ; « SEO audits that actually tell you what to fix » ; interface épurée | périmètre SEO uniquement |
+| **UptimeRobot** | instant setup, generous free tier, name recognition | "Consistently bad UI", "Confusing UI"; false positives at scale; billing per alert contact; poor alert customisation; no scripted checks |
+| **Uptime Kuma** | responsive, pleasant interface, 20 s intervals, push monitors, status page, self-hosted | everything is configured monitor by monitor, by hand; no automatic detection; unmanageable past ~100 monitors; no notion of a "site" |
+| **Site24x7** | very broad feature coverage | "cluttered with configuration, click-heavy, cramped"; overwhelming for a newcomer; alert management frustrating as the estate grows |
+| **Checkly** | monitoring-as-code, native Playwright, excellent for a dev team | "the interface can be downright confusing"; deliberately narrow scope; assumes you can code |
+| **Zabbix** | power, free, extensible | "stuck in the past"; steep learning curve; hosts/items/triggers/templates built one at a time; fine-grained alerting is expert-only |
+| **New Relic** | analytical depth | alert fatigue acknowledged by the vendor itself, which sells "decisions" to correlate the noise |
+| **SiteGuru** *(SEO, not uptime)* | **turns audit data into a prioritised to-do list**; "SEO audits that actually tell you what to fix"; clean interface | SEO scope only |
 
-### Trois constats qui structurent tout le reste
+### Three findings that shape everything else
 
-1. **Le coût de configuration est le vrai frein.** Kuma, Zabbix et Site24x7 demandent de tout déclarer
-   à la main. Personne ne propose de *deviner* les réglages à partir du site.
-2. **Le bruit d'alerte est le second frein.** UptimeRobot est critiqué pour ses faux positifs, New Relic
-   vend une couche de corrélation. Une alerte par site quand un serveur tombe est un anti-patron.
-3. **Les données ne valent rien sans la conduite à tenir.** Le seul produit unanimement salué pour son
-   UX de la liste ci-dessus est SiteGuru, précisément parce qu'il répond « voilà quoi corriger, dans cet
-   ordre ». Aucun outil d'uptime ne fait ça.
+1. **Configuration cost is the real barrier.** Kuma, Zabbix and Site24x7 all require declaring
+   everything by hand. Nobody offers to *infer* the settings from the site itself.
+2. **Alert noise is the second barrier.** UptimeRobot is criticised for false positives; New Relic
+   sells a correlation layer. One alert per site when a server goes down is an anti-pattern.
+3. **Data is worth nothing without the course of action.** The only product on this list praised
+   unanimously for its UX is SiteGuru, precisely because it answers "here is what to fix, in this
+   order". No uptime tool does that.
 
-### Positionnement retenu
+### The resulting position
 
-> Les autres montrent **des états**. UptimeEZ donne **une liste de choses à faire**, et devine tout le reste.
+> The others show you **states**. UptimeEZ gives you **a list of things to do**, and guesses
+> everything else.
 
-Trois règles de conception, opposables à chaque écran :
+Three design rules, each of which can be held against any screen:
 
-- **Zéro réglage pour démarrer.** Ce qui peut être déduit du site est déduit, et l'outil explique ce
-  qu'il a décidé plutôt que de le demander.
-- **Un écran, une lecture de haut en bas, on s'arrête quand c'est vert.** Aucun tableau de bord à
-  interpréter : une file de priorités.
-- **Chaque problème porte son action.** L'action se fait sur place, jamais dans un écran de réglages.
+- **Zero configuration to start.** Whatever can be inferred from the site is inferred, and the tool
+  explains what it decided instead of asking.
+- **One screen, read top to bottom, stop when it is green.** No dashboard to interpret: a queue of
+  priorities.
+- **Every problem carries its action.** The action happens in place, never in a settings screen.
 
 ---
 
 ## 2. Backlog
 
-Légende : **✅ livré** · **◐ partiel** · **▶︎ prêt** (spécifié, à développer) · **◻︎ à cadrer**.
+Key: **✅ shipped** · **◐ partial** · **▶︎ ready** (specified, to build) · **◻︎ to scope**.
 
-> Recalé le 2026-07-29, fichier par fichier : six items annoncés « prêts » étaient en
-> réalité livrés depuis plusieurs itérations. Un backlog en retard sur le code envoie
-> retravailler du fait, ce qui coûte plus cher qu'un backlog vide.
+### Epic A: nothing to configure
 
-### Épopée A : Ne rien avoir à configurer
+**A1 ✅ As an agency owner, I paste a list of domains and there is nothing else to do.**
+- Given any text (domains, URLs, `client | domain` lines, addresses buried in prose)
+- When I paste it and confirm
+- Then UptimeEZ extracts the candidates, drops duplicates, detects the technology, picks
+  representative pages, infers the proof string and creates the monitors, with no further input.
 
-**A1 ✅ En tant que gérant d'agence, je colle une liste de domaines et je n'ai rien d'autre à faire.**
-- Étant donné un texte quelconque (domaines, URLs, lignes `client | domaine`, adresses noyées dans de la prose)
-- Quand je le colle et que je valide
-- Alors UptimeEZ extrait les candidats, écarte les doublons, détecte la technologie, choisit les pages
-  représentatives, déduit la chaîne de preuve et crée les sondes : sans autre saisie.
+**A2 ✅ As a user, I see what is about to be created before I confirm.**
 
-**A2 ✅ En tant qu'utilisateur, je vois ce qui va être créé avant de valider.**
-- Un aperçu liste chaque site retenu, la cadence proposée, les pages qui seront suivies, les lignes rejetées.
-- Critère d'acceptation : aucune création n'a lieu avant confirmation ; l'aperçu tient dans un écran.
+**A3 ✅ As a user, thresholds set themselves from what the site actually does** (measured p95), not
+from a round number.
 
-**A3 ✅ En tant qu'utilisateur, les seuils s'ajustent d'eux-mêmes à chaque site.**
-- Le seuil de lenteur est calculé sur les premières mesures (p95 × 1,8, borné), pas fixé arbitrairement.
-- La cadence dépend de l'importance de la page : accueil plus souvent que mentions légales.
-- Critère : après 20 mesures, le seuil est recalculé automatiquement et l'ancien est journalisé.
+**A4 ✅ As a user, the tool tells me what it decided and why**, so I can disagree with it.
 
-**A4 ✅ En tant qu'utilisateur, je peux savoir *pourquoi* UptimeEZ a choisi ces réglages.**
-- Chaque sonde affiche en clair les décisions prises et leur justification.
-- Critère : une ligne par décision, en français, sans jargon.
+**A5 ✅ As a user, adding one site by hand is still possible** for an API, a protected page or an
+unusual file.
 
-**A5 ✅ En tant qu'agence, j'importe depuis un sitemap ou un fichier CSV d'hébergeur.**
-- Coller l'URL d'un `sitemap.xml` suffit à proposer les pages ; un CSV à colonnes est reconnu (domaine, nom, groupe).
+**A6 ◻︎ As an agency, I connect my host's API (o2switch/cPanel) to import the domains.**
 
-**A6 ◻︎ En tant qu'agence, je connecte l'API de mon hébergeur (o2switch/cPanel) pour importer les domaines.**
+### Epic B: go straight to what needs doing
 
-### Épopée B : Aller droit à ce qu'il faut faire
+**B1 ✅ The home screen is a to-do list, not a dashboard.**
+- Three blocks: *Handle now*, *Coming up*, *All fine* (collapsed to one line).
+- Criterion: when all is well, the page fits in less than one screen and shows a green sentence.
 
-**B1 ✅ En tant qu'utilisateur, l'écran d'accueil est une liste de tâches, pas un tableau de bord.**
-- Trois blocs : *À traiter maintenant*, *À prévoir*, *Tout va bien* (replié, une ligne).
-- Critère : quand tout va bien, la page tient en moins d'un écran et affiche une phrase verte.
+**B2 ✅ Every problem tells me what to do and lets me do it in place.**
+- Cause, impact, course of action, then the actions: re-check, open, copy the report, relearn the
+  baseline, pause, open the record.
+- Criterion: none of these actions leaves the page; each gives immediate visual feedback.
 
-**B2 ✅ En tant qu'utilisateur, chaque problème me dit quoi faire et me le fait faire sur place.**
-- Cause, impact, conduite à tenir, puis les actions : revérifier, ouvrir, copier le rapport,
-  réapprendre la référence, mettre en pause, ouvrir la fiche.
-- Critère : aucune de ces actions ne quitte la page ; chacune donne un retour visuel immédiat.
+**B3 ✅ I am warned about what is *going* to break.**
+- Certificate under 30 days, domain under 45 days, sustained slowdown, CSS drift, `noindex`.
+- Criterion: a +50 % slowdown over 3 days appears in "Coming up" before any outage.
 
-**B3 ✅ En tant qu'utilisateur, je suis prévenu de ce qui *va* casser.**
-- Certificat sous 30 jours, domaine sous 45 jours, ralentissement durable, dérive du CSS, `noindex`.
-- Critère : un ralentissement de +50 % sur 3 jours apparaît dans « À prévoir » avant toute panne.
+**B4 ✅ Everything is reachable from the keyboard** — command palette (`Ctrl/⌘ K`).
+- Criterion: add a site from any screen in 2 keystrokes.
 
-**B4 ✅ En tant qu'utilisateur, tout est atteignable au clavier sans chercher dans un menu.**
-- Palette de commandes (`Ctrl/⌘ K`) : aller à un site, lancer une action, ajouter, changer de vue.
-- Critère : ajouter un site depuis n'importe quel écran en 2 frappes.
+**B5 ✅ One action too many can be undone.** Anything destructive offers "Undo" for 8 seconds.
 
-**B5 ✅ En tant qu'utilisateur, une action de trop se répare.**
-- Toute action destructive ou perturbante propose « Annuler » pendant 8 secondes.
+**B6 ✅ Problems are grouped by probable cause.** "These 6 sites share server 51.x.x.x" surfaces as
+a single item to handle.
 
-**B6 ✅ En tant qu'utilisateur, je regroupe les problèmes par cause probable.**
-- « Ces 6 sites partagent le serveur 51.x.x.x » remonte comme un seul élément à traiter.
+### Epic C: not drowning in alerts
 
-### Épopée C : Ne pas se faire noyer par les alertes
+**C1 ✅ A server outage costs me one alert, not forty.** Correlated by contacted IP, threshold at 3
+distinct sites, message that names the server.
 
-**C1 ✅ En tant qu'astreinte, une panne de serveur me vaut une alerte, pas quarante.**
-- Corrélation par IP contactée, seuil à 3 sites distincts, message qui nomme le serveur.
+**C2 ✅ I can cut the noise without cutting the monitoring.** Quiet hours (real outages still get
+through), maintenance windows, acknowledgement.
 
-**C2 ✅ En tant qu'utilisateur, je peux couper le bruit sans couper la surveillance.**
-- Heures calmes (les pannes réelles passent), fenêtres de maintenance, « pris en compte ».
+**C3 ✅ A recurring alert offers to tune itself.** After 3 slowness alerts in 7 days on the same
+monitor, UptimeEZ offers to raise the threshold in one click.
 
-**C3 ✅ En tant qu'utilisateur, une alerte récurrente me propose de s'auto-régler.**
-- Après 3 alertes de lenteur en 7 jours sur la même sonde, UptimeEZ propose de relever le seuil (un clic).
+**C4 ▶︎ A daily digest instead of per-event alerts for the non-urgent.** 08:00 digest: what was
+detected, what is fixed, what is coming.
 
-**C4 ▶︎ En tant qu'astreinte, je reçois un résumé quotidien au lieu d'alertes unitaires pour le non-urgent.**
-- Digest de 8 h : ce qui a été détecté, ce qui est réparé, ce qui arrive.
+**C5 ✅ *(August 2026)* When the check is the one that is wrong, I can say so — and it changes no
+verdict.** Four reasons, three scopes, on every incident. The scope is the load-bearing part:
+*normal here* and *normal everywhere* call for opposite fixes, and without the distinction one
+operator would degrade detection for everyone else. Silence is never counted as agreement.
 
-### Épopée D : Surveiller ce que les autres ne voient pas
+**C6 ✅ *(August 2026)* I can silence a signal on one page, and that one really acts.** It stays
+**counted** — "12 alerts silenced by your exceptions this month" — and carries a mandatory review
+date, six months by default, because an exception set during a migration outlives the migration.
+**No setting can silence an outage**: beyond the list of excusable appearance causes, the engine
+refuses to hide any verdict that is not *degraded*.
 
-**D1 ✅ Mise en page cassée** : 9 signaux croisés, messages console reconstitués. *(Aucun concurrent grand public ne le fait.)*
-**D2 ✅ Base de données HS derrière un 200** : signatures d'erreur + chaîne de preuve + sonde CMS.
-**D3 ✅ `noindex` oublié en production** : spécificité agence, absent partout ailleurs.
-**D4 ✅ Sonde *dead-man* (battement)**, surveiller le cron ou la sauvegarde d'un client : c'est l'absence
-de signal qui déclenche l'alerte. Équivalent des *push monitors* de Kuma, avec URL prête à copier.
-**D5 ✅ Cœur des Web Vitals**. LCP/CLS/INP via l'API PageSpeed, une mesure par jour, en tendance.
-**D6 ✅ Veille de vulnérabilités WordPress** : version du cœur et des plugins visibles, croisées avec un flux CVE.
-**D7 ◻︎ Parcours scripté sans navigateur** : enchaîner 3 requêtes (accueil → formulaire → confirmation)
-avec extraction de jeton, pour valider un tunnel de contact sans Playwright.
+### Epic D: watching what the others do not see
 
-### Épopée E : Rendre des comptes au client
+**D1 ✅ Broken layout**: 9 cross-checked signals, reconstructed console messages. *(No mainstream
+competitor does this.)*
+**D2 ✅ Database down behind a 200**: error signatures + proof string + CMS probe.
+**D3 ✅ `noindex` left on in production**: an agency-specific need, absent everywhere else.
+**D4 ✅ Dead-man heartbeat**, to watch a client's cron or backup: the *absence* of a signal raises
+the alert. Equivalent to Kuma's push monitors, with a ready-to-copy URL.
+**D5 ✅ Core Web Vitals**. LCP/CLS/INP through the PageSpeed API, one measurement a day, as a trend.
+**D6 ✅ WordPress vulnerability watch**: core and plugin versions read from the HTML, cross-checked
+against a CVE feed.
+**D7 ◻︎ Scripted journey without a browser**: chain 3 requests (home → form → confirmation) with
+token extraction, to validate a contact funnel without Playwright.
 
-**E1 ✅ Rapport client imprimable** : un écran par site, période au choix, prêt à envoyer en PDF.
-**E2 ✅ Export CSV des incidents** : justificatif de SLA.
-**E3 ✅ Page d'état publique par jeton** : à partager sans donner d'accès.
-**E4 ✅ Envoi automatique du rapport mensuel** par e-mail au client.
+### Epic E: reporting to the client
 
-### Épopée F : Tenir à l'échelle
+**E1 ✅ Printable client report**: one screen per site, period of your choosing, ready to send as PDF.
+**E2 ✅ CSV export of incidents**: SLA evidence.
+**E3 ✅ Token-based public status page**: shareable without granting access.
+**E4 ✅ Monthly report e-mailed to the client automatically.**
 
-**F1 ✅ 300 sondes sur un mutualisé** : agrégation SQL, plafond d'analyses coûteuses par passe, purge.
-**F2 ✅ Mise à jour sans intervention** : le schéma se complète tout seul.
-**F3 ◐ Vue « mur »** pour écran d'agence, sans authentification, jeton dédié.
-  *Partiel : la page de statut publique par jeton existe (`p=status&token=`) ; le mur
-  plein écran sans authentification, pour un téléviseur d'agence, reste à faire.*
-**F5 ✅ Renommage en UptimeEZ** : nom, dossier, base, catalogues, documentation.
-**F4 ✅ Multi-utilisateur et accès client en lecture seule.**
-  *Mode agence livré : `src/Client.php`, un jeton par client, cloisonnement vérifié
-  par le banc d'essai. Le multi-utilisateur au sens comptes nominatifs relève de la
-  coque SaaS (cdwstarterkit), pas du moteur.*
+### Epic F: holding up at scale
 
-### Épopée G : Internationalisation
+**F1 ✅ 300 monitors on shared hosting**: SQL aggregation, a cap on expensive analyses per pass, purge.
+**F2 ✅ Updates with no intervention**: the schema completes itself.
+**F3 ◐ Wall view** for an agency screen, unauthenticated, dedicated token.
+  *Partial: the token-based public status page exists (`p=status&token=`); the full-screen wall for
+  an office television is still to build.*
+**F4 ✅ Client read-only access.** `src/Client.php`, one token per client, isolation verified by the
+test bench.
+**F5 ✅ Renamed to UptimeEZ**: name, directory, database, catalogues, documentation.
+**F6 ✅ *(August 2026)* Named accounts in the engine itself**, which **supersedes an earlier
+decision**: this was previously scoped to the SaaS shell rather than the engine. It moved because a
+single shared password has no way to tell who came in, and no way to withdraw one person's access.
+Username, password, e-mail reset, and a sign-in journal that records failures alongside successes.
+The single instance password **survives as a named emergency access**, because an instance whose
+mail server is down still has to be reachable — and its use is recorded, since an emergency access
+nobody knows was used is not an emergency access but a back door.
 
-**G1 ✅ i18n, 10 langues, anglais par défaut.** Moteur `I18n` : les clés de traduction sont les phrases
-françaises du source (msgid à la gettext), donc aucune clé technique dans les gabarits et une chaîne
-oubliée reste lisible. Repli en cascade langue → anglais → source. Négociation sans jamais poser la
-question : `?lang=` → choix mémorisé → réglage d'instance → `Accept-Language` → anglais. Règles de
-pluriel par famille (trois formes pour le russe et l'arabe). Écriture de droite à gauche pour l'arabe et
-l'ourdou, avec les mesures, URL et extraits de code qui restent en lecture gauche-droite. Nombres
-formatés selon la langue. `bin/i18n-audit.php` mesure la couverture, liste les fragments intraduisibles
-et les littéraux encore hors traduction.
-**G2 ✅ Catalogues.** Anglais 796/796 et français (langue source) complets. Huit autres langues couvrent
-l'interface d'exploitation ; les textes d'aide longs retombent sur l'anglais.
+### Epic G: internationalisation
 
-### Épopée H : Réduire la charge cognitive
+**G1 ✅ i18n, 10 languages, English by default.** The `I18n` engine uses the source French sentences
+as translation keys (gettext-style msgids), so no technical keys in the templates and a forgotten
+string stays readable. Cascading fallback language → English → source. Negotiation without ever
+asking: `?lang=` → remembered choice → instance setting → `Accept-Language` → English. Plural rules
+per family (three forms for Russian and Arabic). Right-to-left for Arabic and Urdu, with
+measurements, URLs and code snippets kept left-to-right. Numbers formatted per language.
+`bin/i18n-audit.php` measures coverage, lists untranslatable fragments and literals still outside
+translation.
+**G2 ✅ Catalogues.** 1 616 msgids, English complete, French complete as the source language (its
+catalogue is deliberately empty — the msgids are already French). Eight other languages cover the
+operating interface; long help texts fall back to English.
 
-**H1 ✅ Interrupteur Simple / Complet.** Un clic dans la barre change tout : la navigation, le contenu
-des cartes, les blocs de la fiche de sonde, l'étendue du formulaire. Simple est le défaut : pari
-assumé. Un champ masqué reste envoyé avec sa valeur : changer de mode ne peut pas désactiver une sonde.
-**H2 ✅ Aides contextuelles.** Un `?` sur les dix-sept notions qui font hésiter (chaîne de preuve, seuil
-de lenteur, chute CSS tolérée, relances, heures calmes, jeton public…). Accessibles au clavier
-(`aria-describedby`, `role="tooltip"`), positionnées en JavaScript pour échapper à tout parent qui les
-rognerait, et jamais contaminées par la casse d'un titre de section.
-**H3 ✅ Béta-test destructif.** `bin/chaos.php` : 825 requêtes hostiles jouant un utilisateur qui écrit
-mal, clique partout et cherche à casser. Contrat vérifié : aucun 500, aucun message PHP dans la page,
-aucune saisie réinjectée, base cohérente à l'arrivée. Deux vrais bugs trouvés.
-**H4** → fusionné avec **C4** (même besoin décrit deux fois, dans deux épopées).
+### Epic H: reducing cognitive load
+
+**H1 ✅ Simple / Full switch.** One click in the bar changes everything: navigation, card contents,
+monitor-record blocks, form scope. Simple is the default, deliberately. A hidden field is still
+submitted with its value: switching modes cannot disable a monitor.
+**H2 ✅ Contextual help.** A `?` on the seventeen notions that give people pause (proof string,
+slowness threshold, tolerated CSS drop, retries, quiet hours, public token…). Keyboard-accessible
+(`aria-describedby`, `role="tooltip"`), positioned in JavaScript to escape any parent that would
+clip them.
+**H3 ✅ Destructive beta test.** `bin/chaos.php`: 859 hostile requests playing a user who mistypes,
+clicks everywhere and tries to break things. Contract verified: no 500, no PHP message in the page,
+no input reflected back, database coherent at the end. Two real bugs found.
+**H4** → merged into **C4** (the same need described twice, in two epics).
+
+### Epic I *(August 2026)*: making the rules modular
+
+**I1 ✅ One class per detection verdict.** `Runner::evaluate()` was 340 lines, 24 verdicts and
+sixteen levels of nesting; the verdicts now live in `src/Regle/`, ten rules, and the nesting is down
+to four. That number was the point: at sixteen levels nobody can tell which conditions hold when a
+line runs, and that is where the invisible regressions came from.
+**I2 ✅ The order of the rules is data**, declared in `Runner::REGLES`: changing it means moving one
+line, and a test proves the loop honours the declaration rather than the source order.
+**I3 ✅ The severity ceiling is structural.** `Verdict`'s constructor is private and `Verdict::pour()`
+is the only way in, so a rule cannot return "down" on an appearance cause even by asking. It is no
+longer a convention under watch; it is a door that does not exist.
+
+*What the extraction found, which is the real return on it: three defects running in production that
+no reading of the code would have shown, because they lived in duplication. The certificate verdicts
+were written twice and the two copies had diverged, so a certificate with the wrong hostname went
+quiet for six hours. The CSS verdicts repeated the same defect. And a slowness threshold of zero,
+documented as "disabled", silently fell back to three seconds — the customer turned the alert off
+and kept receiving it.*
 
 ---
 
 ## 3. Sources
+
+*A link checker will report several of these as broken. They are not.* G2, Gartner, Capterra,
+GetApp and The CTO Club sit behind bot protection and answer `403 Just a moment...` to anything
+that is not a human in a browser; StackShare rate-limits and answers `429` if you check a batch of
+links quickly. All of them were re-opened in a real browser on 2 August 2026 and all load. This is
+worth writing down because the same false alarm has now cost time twice on this project.
+
 
 - [UptimeRobot Reviews (2026): What Users Actually Say. Hyperping](https://hyperping.com/blog/uptimerobot-reviews)
 - [Best Uptime Kuma Alternatives. Hyperping](https://hyperping.com/blog/best-uptime-kuma-alternatives)
