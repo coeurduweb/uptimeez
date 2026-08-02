@@ -629,6 +629,22 @@ ok('alertes réellement envoyées (webhook)', $notif >= 1, $notif . ' envoi(s) r
 title('Page d\'état publique');
 $r = $req('/index.php?p=status');
 ok('sans jeton : introuvable', $r['code'] === 404, 'HTTP ' . $r['code']);
+// CE QUE VOIT QUELQU'UN QUI SUIT UN VIEUX LIEN. C'était du TEXTE NU : une phrase seule sur
+// fond blanc, sans titre d'onglet, sans dire de quel service il s'agit. Le client d'un
+// client en conclut raisonnablement que le site est cassé.
+ok('et c\'est une page, pas du texte nu',
+    str_contains($r['body'], '<!doctype html') && str_contains($r['body'], '<title>'),
+    str_cut(trim(strip_tags($r['body'])), 50));
+// Un lien mort ne doit ni s'indexer ni faire fuir le jeton par référent.
+ok('elle refuse l\'indexation', str_contains($r['body'], 'noindex'));
+
+$r = $req('/index.php?p=client&k=jeton-qui-nexiste-pas');
+ok('un lien client expiré rend une page lui aussi',
+    $r['code'] === 404 && str_contains($r['body'], '<!doctype html'), 'HTTP ' . $r['code']);
+// La règle d'origine tient : rien ne distingue « ce lien n'existe pas » de « ce lien est
+// coupé », sinon on pourrait deviner lesquels ont existé.
+ok('et il ne dit pas si le lien a existé',
+    !str_contains($r['body'], 'désactivé') && !str_contains($r['body'], 'revoked'));
 $r = $req('/index.php?p=status&token=jeton-e2e');
 ok('avec jeton : accessible', $r['code'] === 200 && $noPhpError($r) && $has($r, 'État des services'));
 ok('page publique sans navigation privée', !str_contains($r['body'], 'p=settings'));

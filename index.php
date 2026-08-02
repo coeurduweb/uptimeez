@@ -34,8 +34,10 @@ if (isset($_GET['ui']) && is_string($_GET['ui'])) Ui::setMode($_GET['ui']);
 if ($page === 'status') {
     $token = (string)Config::get('app.public_token', '');
     if ($token === '' || !hash_equals($token, (string)($_GET['token'] ?? ''))) {
-        http_response_code(404);
-        exit(t('Page de statut non activée.'));
+        // Ce que voit quelqu'un qui suit un vieux lien : une page, pas du texte nu.
+        Ui::pagePublique(t('Page indisponible'),
+            t('Cette page de statut n\'est pas activée, ou son adresse a changé.'));
+        exit;
     }
     I18n::init();
     Db::migrate();
@@ -53,10 +55,11 @@ if ($page === 'client') {
     Db::migrate();
     $client = Uptimeez\Client::byToken((string)($_GET['k'] ?? ''));
     if ($client === null) {
-        http_response_code(404);
         // Même réponse pour un jeton inconnu, mal formé ou désactivé : rien ne
         // permet de distinguer « ce lien n'existe pas » de « ce lien est coupé ».
-        exit(t('Lien invalide ou expiré.'));
+        Ui::pagePublique(t('Lien invalide ou expiré'),
+            t('Ce lien n\'est plus valable. Demandez-en un nouveau à la personne qui vous l\'a transmis.'));
+        exit;
     }
     // Le jeton voyage dans l'URL : on empêche l'indexation et la fuite par
     // référent vers les sites que la page met en lien.

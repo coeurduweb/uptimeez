@@ -494,6 +494,47 @@ final class Ui
     ];
 
     /**
+     * Une page autonome pour un refus attendu, montrée à un visiteur non connecté.
+     *
+     * CE QUE VOIT QUELQU'UN QUI SUIT UN VIEUX LIEN. La page de statut désactivée et un
+     * lien d'espace client expiré rendaient du TEXTE NU : « Page de statut non activée. »
+     * seul sur fond blanc, sans mise en forme, sans titre d'onglet, sans même dire de quel
+     * service il s'agit. C'est ce que voit le client d'un client, et il en conclut
+     * raisonnablement que le site est cassé.
+     *
+     * Ce n'est pas une panne, c'est une réponse : un lien qui n'est plus valable. Elle
+     * mérite donc une page, courte, qui dit ce qui se passe sans en dire trop.
+     *
+     * ON RESTE VOLONTAIREMENT VAGUE, et c'est déjà la règle du code appelant : un jeton
+     * inconnu, mal formé ou révoqué reçoivent le même message. Distinguer les trois
+     * permettrait de deviner lesquels ont existé.
+     */
+    public static function pagePublique(string $titre, string $texte, int $code = 404): void
+    {
+        http_response_code($code);
+        header('Content-Type: text/html; charset=utf-8');
+        // Un lien mort ne doit pas se retrouver indexé, ni faire fuir le jeton par référent.
+        header('X-Robots-Tag: noindex, nofollow, noarchive');
+        header('Referrer-Policy: no-referrer');
+
+        $lang = 'en';
+        $dir = 'ltr';
+        try { $lang = I18n::lang(); $dir = I18n::dir(); } catch (\Throwable) {}
+
+        echo '<!doctype html><html lang="' . e($lang) . '" dir="' . e($dir) . '">'
+           . '<head><meta charset="utf-8">'
+           . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+           . '<meta name="robots" content="noindex,nofollow">'
+           . '<title>' . e($titre) . '</title></head>'
+           . '<body style="margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;'
+           . 'background:#f6f7f9;color:#1f2430">'
+           . '<div style="max-width:30rem;margin:16vh auto;padding:0 1.25rem;text-align:center">'
+           . '<h1 style="font-size:1.35rem;margin:0 0 .5rem">' . e($titre) . '</h1>'
+           . '<p style="margin:0;color:#5b6472">' . e($texte) . '</p>'
+           . '</div></body></html>';
+    }
+
+    /**
      * Combien de lignes par page, et pourquoi il en faut une limite.
      *
      * MESURÉ LE 2026-08-02 SUR UNE INSTANCE RÉELLE : l'écran des sondes faisait 12 835 px
