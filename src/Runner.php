@@ -25,6 +25,16 @@ final class Runner
     public const SEVERITY = ['up' => 0, 'degraded' => 1, 'down' => 2];
 
     /**
+     * Délai avant de confirmer un premier échec, en secondes.
+     *
+     * Trente secondes couvrent ce qui produit les fausses alertes : redémarrage de
+     * PHP-FPM, purge de cache, pic de charge. Plus court ne laisserait pas le temps au
+     * serveur de revenir ; plus long retarderait une vraie panne sans rien gagner, la
+     * quasi-totalité de ces incidents se résolvant sous dix secondes.
+     */
+    public const CONFIRMATION_SEC = 30;
+
+    /**
      * Une analyse CSS télécharge toutes les feuilles de la page : c'est la sonde
      * la plus coûteuse. On en limite le nombre par passe pour qu'une minute de
      * cron reste une minute de cron, même avec 300 sites. Les sondes non
@@ -960,6 +970,41 @@ final class Runner
                 Db::update('incidents', ['ended_at' => $ts, 'duration_sec' => $dur], 'id = :__i', ['__i' => (int)$open['id']]);
                 Notifier::sendRecovery($mon, $open + ['duration_sec' => $dur]);
             }
+            return;
+        }
+
+        // UNE SEULE PASSE EN ÉCHEC N'OUVRE PLUS D'INCIDENT : ON CONFIRME D'ABORD.
+        //
+        // Le collecteur relançait déjà les échecs réseau et les 5xx jusqu'à « retries + 1 »
+        // fois, mais IMMÉDIATEMENT, dans la même seconde. Ça attrape un paquet perdu, et
+        // rien d'autre : un redémarrage de PHP-FPM, une purge de cache ou un pic de charge
+        // durent de une à dix secondes, et les trois tentatives immédiates tombent toutes
+        // dedans. L'incident s'ouvrait donc, et le client recevait une alerte pour une
+        // panne qui n'existait plus quand il ouvrait son courriel.
+        //
+        // POURQUOI PAS TROIS PAUSES DE 5, 15 ET 30 SECONDES, qui étaient l'autre option.
+        // Elles immobiliseraient un ouvrier cinquante secondes, alors que la passe entière
+        // dispose de cinquante secondes de budget : une seule sonde instable mangerait la
+        // passe, et les douze autres sondes de la minute passeraient à la suivante. On
+        // paierait une fausse alerte par un vrai retard de détection sur tout le reste.
+        //
+        // CE QU'ON FAIT À LA PLACE. Le premier échec ne crée rien : il replanifie la sonde
+        // dans trente secondes et compte. L'incident n'est ouvert qu'au SECOND échec
+        // consécutif. Un contrôle de plus, aucun ouvrier bloqué, trente secondes de délai
+        // sur un intervalle de quinze minutes.
+        //
+        // La colonne « consecutive_fail » existait déjà et était tenue à jour depuis
+        // toujours par persist(). Personne ne la lisait. C'est le troisième cas cette
+        // semaine d'une information que le moteur collecte et n'utilise pas.
+        //
+        // L'AGGRAVATION N'ATTEND PAS. Une sonde déjà en incident qui empire est traitée
+        // plus bas, sans confirmation : la panne est établie, retarder son aggravation
+        // n'apporterait rien et coûterait trente secondes sur le cas le plus grave.
+        if (!$open && (int)($mon['consecutive_fail'] ?? 0) < 1) {
+            Db::update('monitors', [
+                'next_check_at' => date('Y-m-d H:i:s', time() + self::CONFIRMATION_SEC),
+            ], 'id = :__id', ['__id' => $id]);
+
             return;
         }
 

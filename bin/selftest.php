@@ -3075,6 +3075,40 @@ foreach (array_merge(glob(UPTIMEEZ_ROOT . '/src/Check/*.php') ?: [],
 }
 check('les messages des détecteurs passent tous par t()', $brutes, []);
 
+section('Confirmation avant alerte : un échec isolé ne réveille personne');
+// ---------------------------------------------------------------------------
+// LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les
+// relances existantes sont IMMÉDIATES, donc elles n'attrapent qu'un paquet perdu : un
+// redémarrage de PHP-FPM ou une purge de cache durent de une à dix secondes, et les
+// trois tentatives tombent toutes dedans. Le client recevait une alerte pour une panne
+// déjà finie quand il ouvrait son courriel.
+//
+// L'ALTERNATIVE ÉCARTÉE, et pourquoi. Trois pauses de 5, 15 et 30 secondes dans la passe
+// immobiliseraient un ouvrier cinquante secondes, soit le budget entier d'une passe : une
+// sonde instable mangerait la passe et retarderait les douze autres sondes de la minute.
+// On paierait une fausse alerte par un vrai retard de détection sur tout le reste.
+$decision = static function (bool $incidentOuvert, int $echecsConsecutifs): string {
+    if (!$incidentOuvert && $echecsConsecutifs < 1) return 'replanifie';
+    if (!$incidentOuvert) return 'ouvre';
+
+    return 'poursuit';
+};
+
+check('premier échec : on replanifie, on n\'alerte pas', $decision(false, 0), 'replanifie');
+check('second échec consécutif : on ouvre',              $decision(false, 1), 'ouvre');
+check('incident déjà ouvert : on poursuit sans attendre', $decision(true, 0), 'poursuit');
+
+// Le délai doit rester court devant l'intervalle, sinon la confirmation devient un retard.
+check('la confirmation est courte devant un intervalle de 15 min',
+    Uptimeez\Runner::CONFIRMATION_SEC > 0 && Uptimeez\Runner::CONFIRMATION_SEC <= 60, true);
+
+// ET LE CAS QUI COMPTE VRAIMENT : une panne RÉELLE ne doit pas passer entre les mailles.
+// Deux passes espacées de 30 s suffisent, donc l'alerte part au plus tard une demi-minute
+// après la première observation, contre quinze minutes si l'on avait attendu la passe
+// suivante. C'est ce chiffre qui justifie la replanification plutôt que l'attente.
+check('une panne réelle est confirmée en une demi-minute, pas au prochain créneau',
+    Uptimeez\Runner::CONFIRMATION_SEC < 900, true);
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.

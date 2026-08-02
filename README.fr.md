@@ -492,7 +492,7 @@ Un outil de surveillance qui vous ment est pire que pas d'outil du tout. La logi
 testée contre de vraies pannes, et l'interface est testée dans un vrai navigateur.
 
 ```
-php bin/selftest.php      879 contrôles   logique de détection, hors ligne, sans réseau
+php bin/selftest.php      884 contrôles   logique de détection, hors ligne, sans réseau
 php bin/bench.php          73 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
 php bin/e2e.php           252 contrôles   parcours complet en HTTP réel, instance isolée
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
@@ -505,7 +505,7 @@ php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, ms
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**1 574 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**1 579 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
 Quatre suites méritent un mot.
 
