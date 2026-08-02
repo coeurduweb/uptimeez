@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Write to **contactez@coeurduweb.com** with `UptimeEZ` in the subject. Please do not open a public
+Write to **support(@)uptimeEZ.com** with `UptimeEZ` in the subject. Please do not open a public
 issue: UptimeEZ is self-hosted, so a public report is a working exploit against every installation
 that has not updated yet.
 
