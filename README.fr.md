@@ -350,6 +350,42 @@ de version, jamais l'adresse du site concerné, et l'ensemble se coupe en un cli
 
 ---
 
+## Quand c'est le contrôle qui se trompe
+
+Tout outil de surveillance se trompe parfois. Presque aucun ne permet de le dire, et ceux qui le permettent
+donnent un bouton « ignorer » — qui transforme un défaut visible en défaut invisible. Le jour où la règle se
+trompe vraiment, plus personne ne le sait.
+
+UptimeEZ sépare ça en deux gestes délibérément distincts.
+
+**Dire que le contrôle s'est trompé.** Chaque incident porte un bouton *Donner mon avis* : quatre motifs (*le
+contrôle s'est trompé* · *réel, mais sans effet visible* · *normal sur ce site* · *c'était vrai, c'est
+corrigé*) et une portée (*cette page* · *ce serveur* · *tous mes sites*). **Aucun verdict ne change.** L'alerte
+reste affichée et la réponse le dit. Ce qu'on apprend n'est pas « cet incident était faux » mais quelle règle
+s'est trompée, sur quel signal, à quelles conditions.
+
+La portée est la partie qui compte. « Normal ici » et « normal partout » appellent deux corrections opposées :
+une exception locale, ou une règle assouplie pour tout le monde. Sans la distinction, un exploitant déclarant
+« normal » ce qui ne l'est que sur son serveur dégraderait la détection de tous les autres.
+
+**Taire un signal, ici.** Un `noindex` laissé volontairement sur une recette, une police d'icônes qu'on assume
+absente. Celui-ci agit vraiment : l'alerte cesse d'apparaître. Elle reste **comptée** — *« 12 alertes tues par
+vos exceptions ce mois-ci »* — et porte une **date de revue**, six mois par défaut, parce qu'une exception
+posée pendant une migration survit à la migration.
+
+**On ne peut pas taire une panne.** Aucun réglage, aucune exception, aucune configuration ne le permet. Seuls
+les signaux d'apparence sont excusables, et au-delà de cette liste le moteur refuse de masquer tout verdict qui
+n'est pas « dégradé ». Un `503` veut dire que le visiteur n'a pas la page, et rien ne doit pouvoir l'effacer.
+
+L'écran qui relit tout ça place les **contradictions en premier** : un contrôle jugé faux sur un serveur et
+confirmé vrai sur un autre dit que la règle dépend d'un contexte que personne n'a encore nommé. C'est le
+renseignement le plus utile du corpus, et le plus facile à perdre dans une liste classée par volume. Le
+silence, au passage, n'est jamais compté comme un accord : la plupart des gens ne signalent jamais rien, et
+compter les installations muettes comme approbatrices mesurerait la propension à se plaindre plutôt que la
+justesse de la règle.
+
+---
+
 ## Face aux concurrents
 
 Comparatif des fonctions face aux outils que l'on évalue réellement. Il reflète le **comportement par défaut
@@ -591,9 +627,18 @@ uptimeez/
 ## Feuille de route
 
 Le [backlog](BACKLOG.md) contient la recherche concurrentielle et les user stories derrière chaque décision.
-À suivre :
+
+**Livré récemment** (août 2026) : les vingt-quatre verdicts de détection ont chacun leur classe, donc une règle
+se lit et s'éprouve seule ; les retours et les exceptions locales (ci-dessus) ; des comptes nominatifs avec un
+journal des connexions, à la place du mot de passe unique partagé — lequel survit comme accès de secours nommé,
+parce qu'une instance dont le serveur de courrier est tombé doit rester joignable.
+
+**À suivre :**
 
 - Résumé quotidien au lieu d'une alerte par évènement, pour ceux qui préfèrent un seul e-mail
+- Des propositions tirées du corpus de retours — des propositions seulement, jamais des verdicts, et pas avant
+  qu'il y ait un vrai corpus à lire. Apprendre d'un corpus que personne n'a regardé, c'est automatiser une
+  erreur qu'on n'a pas encore identifiée.
 
 ---
 

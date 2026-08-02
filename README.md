@@ -340,6 +340,41 @@ the address of the site concerned, and the whole thing switches off in one click
 
 ---
 
+## When the check is the one that is wrong
+
+Every monitoring tool is wrong sometimes. Almost none of them let you say so, and the ones that do give you a
+mute button — which turns a visible defect into an invisible one. The day the rule is genuinely wrong, nobody
+finds out.
+
+UptimeEZ splits that into two deliberately separate gestures.
+
+**Tell us it got it wrong.** Every incident carries a *Give feedback* button: four reasons (*the check got it
+wrong* · *real, but no visible effect* · *normal on this site* · *it was real, and it is fixed*) and a scope
+(*this page* · *this server* · *all my sites*). **It changes no verdict.** The alert stays on screen and the
+reply says so. What we learn is not "this incident was false" but which rule got it wrong, on which signal,
+under which conditions.
+
+The scope is the part that matters. *Normal here* and *normal everywhere* call for opposite fixes: a local
+exception, or a rule loosened for everyone. Without the distinction, one operator declaring "normal" for
+something that is only normal on their own server would degrade detection for everybody else.
+
+**Silence a signal, here.** A `noindex` you left on a staging site on purpose, an icon font you accept as
+missing. This one does act: the alert stops appearing. It is still **counted** — *"12 alerts silenced by your
+exceptions this month"* — and it carries a **review date**, six months by default, because an exception set
+during a migration outlives the migration.
+
+**You cannot silence an outage.** Not with any setting, any exception, any configuration. Only appearance
+signals can be excused, and beyond that list the engine refuses to hide any verdict that is not *degraded*. A
+`503` means the visitor does not get the page, and nothing may make that disappear.
+
+The screen that reads all this back puts **contradictions first**: a check judged wrong on one server and
+confirmed real on another says the rule depends on a context nobody has named yet. That is the most useful
+thing the corpus can tell you, and the easiest to lose in a list sorted by volume. Silence, by the way, is
+never counted as agreement — most people never report anything, so counting quiet installs as approval would
+measure willingness to complain rather than whether the rule is right.
+
+---
+
 ## How it compares
 
 Feature comparison against the tools people actually evaluate. This reflects **out-of-the-box behaviour on
@@ -576,9 +611,18 @@ uptimeez/
 
 ## Roadmap
 
-The [backlog](BACKLOG.md) holds the competitor research and the user stories behind each decision. Next up:
+The [backlog](BACKLOG.md) holds the competitor research and the user stories behind each decision.
+
+**Recently shipped** (2026-08): the twenty-four detection verdicts moved into one class each, so a rule can be
+read and tested on its own; feedback and local exceptions (above); per-user accounts with a sign-in journal,
+replacing the single shared instance password — which survives as a named emergency access, because an
+instance whose mail server is down still has to be reachable.
+
+**Next up:**
 
 - A daily digest instead of per-event alerts, for people who prefer one e-mail
+- Proposals drawn from the feedback corpus — proposals only, never verdicts, and not before there is a real
+  corpus to read. Learning from a corpus nobody has looked at automates a mistake you have not identified yet.
 
 ---
 
