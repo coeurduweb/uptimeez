@@ -115,15 +115,52 @@ $rows = Db::all("SELECT m.*, s.domain AS site_domain, s.cms AS site_cms
             <td class="num small"><?= Ui::ms($m['last_ms'] !== null ? (int)$m['last_ms'] : null) ?></td>
             <td class="small">
               <?php
+              // CHAQUE SIGLE PORTE SA LÉGENDE, plutôt qu'un bloc de légendes à part.
+              //
+              // Un exploitant lit « CSS · BDD · SSL » sans y penser ; SON CLIENT, qui voit
+              // les mêmes marqueurs dans l'espace partagé, n'en devine aucun. Une légende
+              // rangée en bas de page ne se lit pas : on ne va pas la chercher pour un mot
+              // qu'on croit avoir compris. Attachée au marqueur, elle se trouve au moment
+              // où la question se pose.
+              //
+              // « preuve » était par ailleurs écrit en français en dur, hors traduction :
+              // l'interface anglaise l'affichait tel quel.
               $flags = [];
+
               if ((int)$m['check_css'] === 1) {
-                  $flags[] = 'CSS' . ($m['css_state'] === 'broken' ? ' ✗' : ($m['css_state'] === 'warn' ? ' !' : ''));
+                  $etatCss = $m['css_state'] === 'broken' ? ' ✗' : ($m['css_state'] === 'warn' ? ' !' : '');
+                  $flags[] = ['CSS' . $etatCss,
+                      t('Feuilles de style surveillées : on vérifie qu\'elles se chargent encore et que la mise en page tient.')];
               }
-              if ((int)$m['check_db'] === 1)  $flags[] = t('BDD');
-              if ((int)$m['check_ssl'] === 1) $flags[] = 'SSL' . ($m['ssl_days_left'] !== null ? ' ' . (int)$m['ssl_days_left'] . 'j' : '');
-              if ($m['expect_string']) $flags[] = 'preuve';
-              if ($m['watch_string'])  $flags[] = t('mot-clé');
-              echo '<span class="tiny muted">' . e(implode(' · ', $flags)) . '</span>';
+              if ((int)$m['check_db'] === 1) {
+                  $flags[] = [t('BDD'),
+                      t('Base de données surveillée : on cherche dans la page les traces d\'une base qui ne répond plus.')];
+              }
+              if ((int)$m['check_ssl'] === 1) {
+                  // « SSL 42 j » est une phrase, pas un sigle suivi d'une lettre : traduire
+                  // « j » séparément est intraduisible, l'abréviation de « jours » n'ayant
+                  // ni la même forme ni la même place selon la langue.
+                  $jours = $m['ssl_days_left'] !== null
+                      ? t('SSL {n} j', ['n' => (int)$m['ssl_days_left']])
+                      : 'SSL';
+                  $flags[] = [$jours,
+                      t('Certificat de sécurité surveillé. Le nombre est le nombre de jours avant son expiration.')];
+              }
+              if ($m['expect_string']) {
+                  $flags[] = [t('preuve'),
+                      t('Un texte qui ne peut venir que du contenu du site. S\'il disparaît alors que la page répond, c\'est ce qui la remplit qui est en panne.')];
+              }
+              if ($m['watch_string']) {
+                  $flags[] = [t('mot-clé'),
+                      t('Un mot dont on surveille l\'apparition ou la disparition, sans que ce soit une panne.')];
+              }
+
+              $rendus = [];
+              foreach ($flags as [$texte, $legende]) {
+                  $rendus[] = '<abbr title="' . e($legende) . '" style="text-decoration:none;border-bottom:1px dotted currentColor">'
+                            . e($texte) . '</abbr>';
+              }
+              echo '<span class="tiny muted">' . implode(' · ', $rendus) . '</span>';
               ?>
             </td>
             <td class="num tiny muted nowrap"><?= e(human_since((string)$m['last_check_at'])) ?></td>
