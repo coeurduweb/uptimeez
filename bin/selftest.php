@@ -2987,7 +2987,7 @@ check("aucune cause d'apparence ne rend « hors service »", $apparence, []);
 //
 // Ce qui reste ici garde les causes ENCORE dans evaluate(). Quand la liste sera vide,
 // tout ce bloc disparaîtra, et ce sera la fin du Sprint A.
-$encoreDansEvaluate = ['STRING_FORBIDDEN', 'JSON_INVALID', 'JSON_PATH'];
+$encoreDansEvaluate = ['JSON_INVALID', 'JSON_PATH'];
 foreach ($encoreDansEvaluate as $attendue) {
     check("« $attendue » reste un hors service", in_array($attendue, $causesDown, true), true);
 }
@@ -2998,7 +2998,7 @@ foreach ($encoreDansEvaluate as $attendue) {
 $sourcesRegles = '';
 foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) $sourcesRegles .= (string) file_get_contents($f);
 $perdues = [];
-foreach (['STRING_MISSING', 'BODY_TRUNCATED'] as $extraite) {
+foreach (['STRING_MISSING', 'BODY_TRUNCATED', 'STRING_FORBIDDEN'] as $extraite) {
     if (!str_contains($sourcesRegles, "'" . $extraite . "'")) $perdues[] = $extraite;
 }
 check('aucune cause extraite ne s\'est perdue en route', $perdues, []);
@@ -3207,6 +3207,38 @@ check('l\'apostrophe typographique ne casse pas la recherche',
 $srcRegle = (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Regle/ChaineDePreuve.php');
 check('la règle n\'écrit pas et n\'interroge pas la base',
     preg_match('~\bDb::|\bNotifier::~', $srcRegle), 0);
+
+section('Règle extraite : la chaîne interdite');
+// ---------------------------------------------------------------------------
+// Deuxième des vingt-quatre. On la croit jumelle de la précédente parce que les deux
+// cherchent un texte, et la différence est justement ce qui mérite un test : une chaîne
+// de preuve ABSENTE d'une page coupée ne prouve rien, une chaîne interdite PRÉSENTE
+// reste une certitude quelle que soit la troncature. Ce qu'on a lu, on l'a lu.
+
+$interdite = new Uptimeez\Regle\ChaineInterdite();
+
+check('sans chaîne interdite configurée, la règle se tait',
+    $interdite->evaluer($contexteAvec(['forbid_string' => ''], $reponseAvec('Fatal error'))), null);
+
+check('chaîne interdite absente : rien à signaler',
+    $interdite->evaluer($contexteAvec(['forbid_string' => 'Fatal error'],
+        $reponseAvec('<h1>Bienvenue</h1>'))), null);
+
+$vue = $interdite->evaluer($contexteAvec(['forbid_string' => 'Fatal error'],
+    $reponseAvec('<b>Fatal error</b>: Uncaught Error')));
+check('chaîne interdite présente : hors service', $vue?->etat, 'down');
+check('et la cause est nommée', $vue?->cause, 'STRING_FORBIDDEN');
+
+// LA DIFFÉRENCE AVEC LA CHAÎNE DE PREUVE, éprouvée plutôt que commentée : une page
+// COUPÉE ne change rien au verdict, parce que la présence est une certitude.
+$coupeeMaisVue = $interdite->evaluer($contexteAvec(['forbid_string' => 'Fatal error'],
+    $reponseAvec('<b>Fatal error</b> puis beaucoup de texte', true)));
+check('la troncature ne relativise pas une PRÉSENCE', $coupeeMaisVue?->etat, 'down');
+
+// Plusieurs chaînes séparées par une barre : une seule suffit.
+check('une seule des chaînes interdites suffit',
+    $interdite->evaluer($contexteAvec(['forbid_string' => 'Under construction|Fatal error'],
+        $reponseAvec('<p>Under construction</p>')))?->cause, 'STRING_FORBIDDEN');
 
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------

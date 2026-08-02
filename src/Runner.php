@@ -540,12 +540,9 @@ final class Runner
         if ($v = (new \Uptimeez\Regle\ChaineDePreuve())->evaluer($contexte)) {
             $findings[] = $v->enTableau();
         }
-        // Une chaîne interdite ABSENTE d'une page coupée ne prouve rien non plus.
-        // Sa présence, elle, reste une certitude : on la signale toujours.
-        $forbid = trim((string)($mon['forbid_string'] ?? ''));
-        if ($forbid !== '' && self::containsAny($res->body, $forbid)) {
-            $note('down', 'STRING_FORBIDDEN', 'Chaîne interdite détectée : « {string} »',
-                  ['string' => str_cut($forbid, 60)]);
+        // DEUXIÈME RÈGLE EXTRAITE, LE 2026-08-02 : src/Regle/ChaineInterdite.php.
+        if ($v = (new \Uptimeez\Regle\ChaineInterdite())->evaluer($contexte)) {
+            $findings[] = $v->enTableau();
         }
 
         // ---- 5. API JSON ---------------------------------------------------
