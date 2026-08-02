@@ -423,11 +423,20 @@ Ouvrez une pull request, le tableau est dans ce fichier.
 | Le client ne voit que ses sites | ✅ par construction | ❌ | ❌ | ⚠️ configuration de rôles | ❌ | ⚠️ à construire | ⚠️ configuration de rôles |
 | Page d'état publique | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 | Interrupteur interface simple / complète | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Langues de l'interface | **10 + RTL** | 1 | 1 | plusieurs | nombreuses (communauté) | plusieurs | plusieurs |
+| Langues de l'interface (les écrans de l'exploitant) | **10 + RTL** | 1 | 1 | plusieurs | nombreuses (communauté) | plusieurs | plusieurs |
 | Tourne sur un mutualisé | ✅ PHP seul | SaaS | SaaS | SaaS | ❌ Node/Docker | ❌ serveur | SaaS |
 | Dépendances à installer | **aucune** | n/a | Node + navigateurs | n/a | Node ou Docker | serveur + base + agent | agent |
 | Vos données restent chez vous | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Coût pour 40 sites | **gratuit** | formule payante | formule payante | formule payante | gratuit | gratuit | formule payante |
+| Offre gratuite à 40 sites | **oui, sans limite** | oui, 50 sondes / 5 min | non, 10 sondes | oui, 50 ressources | oui, sans limite | oui, sans limite | quota de données seulement |
+
+**Deux corrections que nous devons aux concurrents,** trouvées en revérifiant ce tableau le 2026-08-02 et
+consignées ici plutôt que corrigées en silence. La ligne des coûts annonçait « formule payante » pour
+UptimeRobot et Site24x7 à quarante sites. Les deux sont faux : l'offre gratuite d'UptimeRobot porte 50 sondes
+à cinq minutes, et celle de Site24x7 couvre 50 ressources. La ligne donne désormais les limites de l'offre
+gratuite au lieu d'un verdict. Et les **pages de statut** d'UptimeRobot gèrent 11 langues, même si son tableau
+de bord d'exploitation est anglophone : la ligne dit maintenant de quels écrans elle parle. Un outil de
+supervision qui exagère ce qu'il détecte se disqualifie tout seul ; sous-estimer ce qu'un concurrent donne
+gratuitement revient au même.
 
 **Là où les autres sont réellement meilleurs.** Checkly pour les parcours utilisateurs scriptés en intégration
 continue ; Zabbix pour les métriques d'infrastructure sur vos propres serveurs ; New Relic pour le traçage
@@ -530,7 +539,7 @@ Un outil de surveillance qui vous ment est pire que pas d'outil du tout. La logi
 testée contre de vraies pannes, et l'interface est testée dans un vrai navigateur.
 
 ```
-php bin/selftest.php      1 131 contrôles   logique de détection, hors ligne, sans réseau
+php bin/selftest.php      1 132 contrôles   logique de détection, hors ligne, sans réseau
 php bin/bench.php          73 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
 php bin/e2e.php           291 contrôles   parcours complet en HTTP réel, instance isolée
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
@@ -543,7 +552,7 @@ php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, ms
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**1 865 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**1 866 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
 Quatre suites méritent un mot.
 

@@ -412,11 +412,19 @@ request; the table lives in this file.
 | Client sees only their own sites | ✅ by construction | ❌ | ❌ | ⚠️ role configuration | ❌ | ⚠️ build it yourself | ⚠️ role configuration |
 | Public status page | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ |
 | Simple / Full interface switch | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Interface languages | **10 + RTL** | 1 | 1 | several | many (community) | several | several |
+| Interface languages (the operator's own screens) | **10 + RTL** | 1 | 1 | several | many (community) | several | several |
 | Runs on plain shared hosting | ✅ PHP only | SaaS | SaaS | SaaS | ❌ Node/Docker | ❌ server | SaaS |
 | Dependencies to install | **none** | n/a | Node + browsers | n/a | Node or Docker | server + DB + agent | agent |
 | Your data stays on your server | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Cost for 40 sites | **free** | paid tier | paid tier | paid tier | free | free | paid tier |
+| Free tier at 40 sites | **yes, no limit** | yes, 50 monitors / 5 min | no, 10 monitors | yes, 50 resources | yes, no limit | yes, no limit | data allowance only |
+
+**Two corrections we owe the competition,** found while re-checking this table on 2 August 2026 and
+recorded here rather than quietly fixed. The cost row used to read "paid tier" for UptimeRobot and Site24x7 at
+forty sites. Both are wrong: UptimeRobot's free plan carries 50 monitors at a 5-minute interval, and
+Site24x7's free-forever plan covers 50 resources. The row now states the free-tier limits instead of a verdict.
+And UptimeRobot's **status pages** support 11 languages even though its operator dashboard is English-only, so
+that row now says whose screens it is talking about. A monitoring tool that overstates what it detects
+disqualifies itself; the same goes for understating what a competitor gives away.
 
 **Where the others are genuinely better.** Checkly for scripted end-to-end journeys in CI; Zabbix for
 infrastructure metrics on servers you own; New Relic for application tracing inside your code; Site24x7 for
@@ -518,7 +526,7 @@ A monitoring tool that lies to you is worse than no monitoring tool. So the dete
 real failures, and the interface is tested in a real browser.
 
 ```
-php bin/selftest.php      1,131 checks   detection logic, offline, no network needed
+php bin/selftest.php      1,132 checks   detection logic, offline, no network needed
 php bin/bench.php          73 checks   real failures reproduced end to end (incl. badssl.com)
 php bin/e2e.php           291 checks   full user journey over real HTTP, isolated instance
 node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
@@ -531,7 +539,7 @@ php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, 
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**1,865 checks, all green**, plus zero dead code and a complete default catalogue.
+**1,866 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Four suites deserve a word.
 

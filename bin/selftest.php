@@ -2649,12 +2649,35 @@ $annonces = [
     'signaux'    => ['/(\d+)[ \t]+' . $qualificatifs . '(?:signals?|signaux)\b/i', $signaux],
     'langues'    => ['/(\d+)[ \t]+' . $qualificatifs . '(?:languages?|langues)\b/i', $langues],
 ];
+// UN CHIFFRE ATTRIBUÉ À UN CONCURRENT N'EST PAS UNE AFFIRMATION SUR NOUS.
+//
+// Ce garde-fou vérifie que NOTRE documentation ne surestime pas ce que NOUS faisons. Le
+// 2026-08-02, il a refusé « UptimeRobot's status pages support 11 languages », qui est vrai
+// et qui parle d'un autre produit. La tentation était d'écrire le nombre en toutes lettres
+// pour passer dessous : c'est exactement le contournement qu'on se reproche ailleurs.
+//
+// Une ligne qui NOMME un concurrent est donc écartée, et seulement celle-là. La portée
+// reste étroite : c'est la ligne, pas le paragraphe ni le fichier.
+$concurrents = ['UptimeRobot', 'Uptime Kuma', 'Checkly', 'Site24x7', 'Zabbix',
+                'New Relic', 'SiteGuru', 'Pingdom'];
+check('la liste des concurrents n\'est pas vide', count($concurrents) >= 5, true);
+
+$parleDunConcurrent = static function (string $ligne) use ($concurrents): bool {
+    foreach ($concurrents as $nom) {
+        if (str_contains($ligne, $nom)) return true;
+    }
+    return false;
+};
+
 foreach ($annonces as $quoi => [$motif, $mesure]) {
     $faux = [];
     foreach ($textes as $f => $t) {
-        if (preg_match_all($motif, $t, $m)) {
-            foreach ($m[1] as $n) {
-                if ((int)$n !== $mesure) $faux[] = basename($f) . ":$n";
+        foreach (explode("\n", $t) as $ligne) {
+            if ($parleDunConcurrent($ligne)) continue;
+            if (preg_match_all($motif, $ligne, $m)) {
+                foreach ($m[1] as $n) {
+                    if ((int)$n !== $mesure) $faux[] = basename($f) . ":$n";
+                }
             }
         }
     }
