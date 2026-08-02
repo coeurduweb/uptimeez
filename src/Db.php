@@ -384,6 +384,51 @@ final class Db
             seen {$bool} NOT NULL DEFAULT 0
         ){$eng}";
 
+        // ------------------------------------------------------------------
+        // CE QUE L'EXPLOITANT CORRIGE, ET QUI NE CORRIGE ENCORE RIEN
+        // ------------------------------------------------------------------
+        //
+        // Le 2026-08-02, sur un parc réel, 43 des 47 sondes non vertes étaient des FAUX
+        // POSITIFS, dont treize annoncées hors service. La seule boucle de correction
+        // existante est « quelqu'un remarque, quelqu'un enquête, quelqu'un modifie le
+        // code » : elle a demandé une journée entière pour un seul client, et elle ne
+        // tiendra pas à dix.
+        //
+        // LE PIÈGE EST LE SUJET ENTIER. Un bouton qui MASQUE l'incident aggrave le
+        // produit : il transforme un défaut visible en défaut invisible, et le jour où la
+        // règle se trompe vraiment plus personne ne le sait. Ce qu'il faut apprendre n'est
+        // donc pas « cet incident était faux » mais « QUELLE RÈGLE s'est trompée, sur QUEL
+        // SIGNAL, à QUELLES CONDITIONS ».
+        //
+        // Cette table est délibérément INERTE : elle enregistre, elle ne décide de rien, et
+        // aucun verdict ne change parce qu'elle se remplit. On regarde d'abord ce que les
+        // gens déclarent avant d'en tirer quoi que ce soit, sinon on apprend d'un corpus
+        // qu'on n'a jamais lu.
+        //
+        // LA PORTÉE EST LA COLONNE QUI COMPTE. « Normal sur cette sonde » et « normal
+        // partout » appellent deux gestes opposés : une exception locale ou un assouplissement
+        // général. Sans elle, un exploitant qui déclare normal quelque chose qui ne l'est
+        // que chez lui dégrade la détection de tous les autres — c'est la porte
+        // d'empoisonnement du corpus, et elle se ferme ici, à l'écriture.
+        $tables['retours'] = "CREATE TABLE IF NOT EXISTS retours (
+            id {$pk},
+            incident_id {$int} DEFAULT NULL,
+            monitor_id {$int} NOT NULL,
+            /* La cause mise en question, telle qu'elle a été rendue. */
+            reason_code {$str(40)} DEFAULT NULL,
+            /* Le signal précis, quand la cause en couvre plusieurs (un message CSS). */
+            signal {$txt},
+            /* sans_effet | controle_errone | normal_ici | vrai_et_corrige */
+            motif {$str(30)} NOT NULL,
+            /* sonde | serveur | parc — voir le commentaire ci-dessus. */
+            portee {$str(20)} NOT NULL DEFAULT 'sonde',
+            /* L'hôte au moment du retour : une portée « serveur » n'a de sens
+               qu'accompagnée du serveur dont on parle, et l'IP peut changer après. */
+            hote {$str(255)} DEFAULT NULL,
+            commentaire {$txt},
+            ts {$ts} NOT NULL
+        ){$eng}";
+
         $tables['notifications'] = "CREATE TABLE IF NOT EXISTS notifications (
             id {$pk},
             incident_id {$int} DEFAULT NULL,

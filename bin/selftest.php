@@ -3754,6 +3754,76 @@ check('et la lenteur ferme la marche',
 check('la couche réseau n\'est pas dans la boucle',
     in_array(Uptimeez\Regle\CoucheReseau::class, $registre, true), false);
 
+section('Sprint B1 : la trace des retours, qui n\'agit sur rien');
+// ---------------------------------------------------------------------------
+// LE PIÈGE EST LE SUJET ENTIER. Un bouton « fausse alerte » qui MASQUE l'incident aggrave
+// le produit : il transforme un défaut visible en défaut invisible, et le jour où la règle
+// se trompe vraiment, plus personne ne le sait. Ce qu'il faut apprendre n'est pas « cet
+// incident était faux » mais QUELLE règle s'est trompée, sur QUEL signal, à QUELLES
+// conditions. On enregistre donc, et on ne décide qu'après avoir lu le corpus.
+
+check('quatre motifs, pas un de plus', count(Uptimeez\Retour::MOTIFS), 4);
+check('et ils distinguent la détection du contexte',
+    Uptimeez\Retour::MOTIFS,
+    ['sans_effet', 'controle_errone', 'normal_ici', 'vrai_et_corrige']);
+check('trois portées', Uptimeez\Retour::PORTEES, ['sonde', 'serveur', 'parc']);
+
+// PAS DE CASE « AUTRE ». Elle se remplit toujours, et le jour où on lit le corpus elle est
+// la première en volume sans rien vouloir dire.
+$refuse = static function (callable $f): bool {
+    try { $f(); return false; } catch (\InvalidArgumentException) { return true; }
+};
+check('un motif hors liste est refusé, pas rangé dans « autre »',
+    $refuse(fn() => Uptimeez\Retour::enregistrer(1, 'autre')), true);
+check('une portée hors liste est refusée',
+    $refuse(fn() => Uptimeez\Retour::enregistrer(1, 'sans_effet', 'univers')), true);
+check('un retour sans sonde est refusé',
+    $refuse(fn() => Uptimeez\Retour::enregistrer(0, 'sans_effet')), true);
+
+$idRetour = Uptimeez\Retour::enregistrer(
+    monitorId: 1, motif: 'controle_errone', portee: 'parc',
+    causeCode: 'CSS_BROKEN', signal: 'police absente', hote: '10.0.0.1');
+check('un retour valide est enregistré', $idRetour > 0, true);
+
+$lu = Uptimeez\Db::one('SELECT * FROM retours WHERE id = ?', [$idRetour]);
+check('et il retient la cause mise en question', $lu['reason_code'] ?? '', 'CSS_BROKEN');
+check('et le signal précis', $lu['signal'] ?? '', 'police absente');
+check('et la portée déclarée', $lu['portee'] ?? '', 'parc');
+
+// UNE PORTÉE « SERVEUR » SANS SERVEUR NOMMÉ NE VEUT RIEN DIRE : on ne saurait ni à qui
+// l'appliquer ni la relire dans six mois. On la RAMÈNE à la sonde plutôt que de la
+// refuser, parce que perdre le retour serait pire que le rétrécir.
+$idSansHote = Uptimeez\Retour::enregistrer(1, 'normal_ici', 'serveur', hote: '');
+check('une portée « serveur » sans serveur retombe sur la sonde',
+    Uptimeez\Db::val('SELECT portee FROM retours WHERE id = ?', [$idSansHote]), 'sonde');
+check('mais avec un serveur nommé elle est conservée',
+    Uptimeez\Db::val('SELECT portee FROM retours WHERE id = ?',
+        [Uptimeez\Retour::enregistrer(1, 'normal_ici', 'serveur', hote: 'web12.example')]), 'serveur');
+
+// L'ACCEPTATION DE L'ÉTAPE : aucun verdict ne change. La table se remplit, c'est tout.
+// Ce contrôle vaut plus que les autres réunis : c'est lui qui interdit que le bouton
+// devienne un interrupteur, ce qui est la dérive que tout le sprint cherche à éviter.
+$sourceRetour = (string) file_get_contents(UPTIMEEZ_ROOT . '/src/Retour.php');
+foreach (['UPDATE monitors', 'UPDATE incidents', 'Db::update', 'Db::delete'] as $interdit) {
+    check("Retour.php ne fait pas « $interdit »", str_contains($sourceRetour, $interdit), false);
+}
+
+// LES SERVEURS DISTINCTS SONT LA COLONNE QUI TRANCHE. Trente retours d'un seul serveur
+// disent qu'une installation est particulière ; trois retours de trois serveurs disent que
+// la RÈGLE est en cause. Compter les retours sans compter les serveurs ferait passer le
+// premier cas pour dix fois plus grave que le second, alors que c'est l'inverse.
+Uptimeez\Retour::enregistrer(1, 'controle_errone', 'sonde', causeCode: 'SLOW', hote: 'a.example');
+Uptimeez\Retour::enregistrer(1, 'controle_errone', 'sonde', causeCode: 'SLOW', hote: 'b.example');
+Uptimeez\Retour::enregistrer(1, 'controle_errone', 'sonde', causeCode: 'SLOW', hote: 'c.example');
+foreach (range(1, 8) as $ignore) {
+    Uptimeez\Retour::enregistrer(1, 'sans_effet', 'sonde', causeCode: 'NOINDEX', hote: 'z.example');
+}
+$corpus = Uptimeez\Retour::parSignal();
+$premier = $corpus[0] ?? [];
+check('le signal vu sur le plus de serveurs arrive en tête, pas le plus volumineux',
+    $premier['reason_code'] ?? '', 'SLOW');
+check('et le compte de serveurs distincts est rendu', (int)($premier['serveurs'] ?? 0), 3);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

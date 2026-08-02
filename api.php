@@ -12,6 +12,7 @@ use Uptimeez\Config;
 use Uptimeez\Db;
 use Uptimeez\I18n;
 use Uptimeez\Importer;
+use Uptimeez\Retour;
 use Uptimeez\Runner;
 use Uptimeez\Stats;
 use Uptimeez\Ui;
@@ -39,7 +40,7 @@ if (Uptimeez\Demo::refuses($action)) {
     json_out(['ok' => false, 'error' => 'demo', 'message' => Uptimeez\Demo::refusal()[1]], 403);
 }
 
-$isWrite = in_array($action, ['check', 'toggle', 'setup', 'fix', 'undo'], true);
+$isWrite = in_array($action, ['check', 'toggle', 'setup', 'fix', 'undo', 'retour'], true);
 if ($isWrite) {
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') json_out(['error' => 'method'], 405);
     if (!Auth::checkCsrf($_POST['csrf'] ?? null)) json_out(['error' => 'csrf', 'message' => t('Jeton invalide')], 403);
@@ -59,6 +60,58 @@ switch ($action) {
             'reason'  => $res['reason'] ?? null,
             'message' => $res['message'] ?? '',
         ]]);
+
+    // ---- Dire ce qu'on pense d'un incident ------------------------------
+    //
+    // CETTE ACTION NE CHANGE AUCUN VERDICT, ET C'EST LA MOITIÉ DU SUJET. Un bouton qui
+    // ferait taire l'incident transformerait un défaut visible en défaut invisible : le
+    // jour où la règle se tromperait vraiment, plus personne ne le saurait. On enregistre
+    // d'abord, on lira le corpus ensuite, et on ne décidera qu'après l'avoir lu.
+    //
+    // La réponse le dit explicitement au client, plutôt que de le laisser supposer que
+    // quelque chose vient de se produire côté détection.
+    case 'retour':
+        $incidentId = (int)($_POST['incident_id'] ?? 0);
+        $incident = $incidentId > 0
+            ? Db::one('SELECT * FROM incidents WHERE id = ?', [$incidentId])
+            : null;
+
+        // La sonde vient de l'incident quand il existe : sans ça, un identifiant de sonde
+        // fourni par le formulaire permettrait de rattacher un retour à n'importe laquelle.
+        $sondeId = $incident ? (int)$incident['monitor_id'] : $id;
+        $mon = $sondeId > 0 ? Db::one('SELECT * FROM monitors WHERE id = ?', [$sondeId]) : null;
+        if (!$mon) json_out(['error' => 'not_found'], 404);
+
+        try {
+            $retourId = Retour::enregistrer(
+                monitorId:   (int)$mon['id'],
+                motif:       (string)($_POST['motif'] ?? ''),
+                portee:      (string)($_POST['portee'] ?? 'sonde'),
+                incidentId:  $incident ? (int)$incident['id'] : null,
+                // La cause vient de l'incident, jamais du formulaire : c'est ce qui
+                // garantit que le corpus parle de ce que le moteur a réellement rendu.
+                causeCode:   $incident['reason_code'] ?? ($mon['reason_code'] ?? null),
+                signal:      (string)($_POST['signal'] ?? ''),
+                commentaire: (string)($_POST['commentaire'] ?? ''),
+                hote:        $mon['last_ip'] ?: host_of((string)$mon['url']),
+            );
+        } catch (\InvalidArgumentException $e) {
+            // LE MESSAGE DE L'EXCEPTION NE SORT PAS. Il est écrit pour celui qui lit le
+            // code, en français et avec la valeur fautive ; le renvoyer au client le
+            // livrerait tel quel, non traduit, à quelqu'un qui n'a rien à en faire — et
+            // c'est le garde-fou d'internationalisation qui l'a signalé, pas moi.
+            // La cause reste dans le journal, où elle sert vraiment.
+            error_log('UptimeEZ: retour refusé — ' . $e->getMessage());
+            json_out(['error' => 'invalid',
+                      'message' => t('Ce retour n\'a pas pu être enregistré.')], 422);
+        }
+
+        json_out([
+            'ok' => true,
+            'retour_id' => $retourId,
+            'verdict_modifie' => false,
+            'message' => t('Merci : c\'est enregistré. Aucun verdict n\'a changé, cette alerte reste visible.'),
+        ]);
 
     // ---- Activer / mettre en pause --------------------------------------
     case 'toggle':
