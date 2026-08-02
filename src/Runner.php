@@ -681,9 +681,11 @@ final class Runner
         }
 
         // ---- 8. Indexabilité (utile en agence : un noindex oublié) --------
-        if ((int)($mon['check_noindex'] ?? 0) === 1 && $htmlOk) {
-            $ni = Discovery::noindex($res);
-            if ($ni) $note('degraded', 'NOINDEX', 'Page en noindex : {detail}', ['detail' => $ni]);
+        // SIXIÈME EXTRACTION, LE 2026-08-02 : src/Regle/Indexabilite.php. La condition
+        // « ai-je une page HTML analysable » est partie dans le contexte, où les quatre
+        // règles du CSS viendront la chercher au lieu d'en faire cinq copies.
+        if ($v = (new \Uptimeez\Regle\Indexabilite())->evaluer($contexte)) {
+            $findings[] = $v->enTableau();
         }
 
         // ---- 9. Lenteur ----------------------------------------------------

@@ -3444,6 +3444,52 @@ check('un seuil négatif ne réactive rien', $en(99000, -1), null);
 // La durée est annoncée en secondes : « 4 187 ms » demande une conversion mentale.
 check('la durée est lisible en secondes', $en(4187, 3000)?->variables['seconds'] ?? '', '4,19');
 
+section('Règle extraite : l\'indexabilité');
+// ---------------------------------------------------------------------------
+// Sixième extraction. Ce n'est pas une panne, et c'est pourtant le défaut le plus coûteux
+// du parc : un « noindex » oublié après une recette est invisible. Le site répond, il
+// s'affiche, et il disparaît des moteurs. Personne ne s'en aperçoit avant l'effondrement
+// du trafic, des semaines plus tard. Aucun autre verdict n'a ce délai entre cause et
+// symptôme, et le parc en portait quatre en production le 2026-08-02.
+
+$index = new Uptimeez\Regle\Indexabilite();
+$page = static function (string $corps, int $statut = 200, string $type = 'text/html'): Uptimeez\Response {
+    $r = new Uptimeez\Response();
+    $r->body = $corps;
+    $r->status = $statut;
+    $r->contentType = $type;
+    return $r;
+};
+$saine = '<html><head><title>x</title></head><body>ok</body></html>';
+$interdite = '<html><head><meta name="robots" content="noindex,nofollow"></head><body>x</body></html>';
+
+check('contrôle désactivé : la règle se tait',
+    $index->evaluer($contexteAvec(['check_noindex' => 0], $page($interdite))), null);
+
+check('page indexable : rien à dire',
+    $index->evaluer($contexteAvec(['check_noindex' => 1], $page($saine))), null);
+
+$v = $index->evaluer($contexteAvec(['check_noindex' => 1], $page($interdite)));
+check('balise noindex détectée', $v?->cause, 'NOINDEX');
+// DÉGRADÉ ET NON HORS SERVICE : le site fonctionne. Réveiller quelqu'un la nuit userait
+// l'alerte pour une correction qui attendra sans dommage jusqu'au matin.
+check('et c\'est dégradé, pas hors service', $v?->etat, 'degraded');
+// LE DÉTAIL DIT OÙ CORRIGER : en-tête ou balise, ce n'est ni le même fichier ni le même
+// interlocuteur. L'omettre transformerait l'alerte en chasse au trésor.
+check('et le message dit où l\'interdiction a été trouvée',
+    ($v?->variables['detail'] ?? '') !== '', true);
+
+// LA CONDITION D'ENTRÉE : chercher une directive « robots » dans une réponse 500, un PDF
+// ou un flux JSON n'apprend rien, puisque son absence y est normale.
+check('une réponse en erreur n\'est pas analysée',
+    $index->evaluer($contexteAvec(['check_noindex' => 1], $page($interdite, 500))), null);
+check('une réponse qui n\'est pas du HTML n\'est pas analysée',
+    $index->evaluer($contexteAvec(['check_noindex' => 1],
+        $page('{"robots":"noindex"}', 200, 'application/json'))), null);
+// Une redirection n'est pas une page : la directive vivra sur la destination.
+check('une redirection n\'est pas analysée',
+    $index->evaluer($contexteAvec(['check_noindex' => 1], $page($interdite, 301))), null);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les

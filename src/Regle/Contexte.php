@@ -103,6 +103,25 @@ final class Contexte
     }
 
     /**
+     * A-t-on sous la main une page HTML qu'on puisse analyser ?
+     *
+     * Cinq règles posent cette même question avant de faire quoi que ce soit : celle de
+     * l'indexabilité et les quatre du CSS. Analyser le balisage d'une réponse 500, ou
+     * d'un PDF, ou d'un flux JSON, ne produit que du bruit : on y chercherait des
+     * feuilles de style et une balise « robots » qui n'ont aucune raison d'exister, et
+     * chaque absence deviendrait un verdict.
+     *
+     * La question est donc posée UNE fois ici. Recopiée dans cinq règles, elle finirait
+     * par diverger, ce qui est exactement ce qui est arrivé aux deux copies du certificat.
+     */
+    public function htmlExploitable(): bool
+    {
+        return $this->reponse->status >= 200
+            && $this->reponse->status < 300
+            && $this->reponse->isHtml();
+    }
+
+    /**
      * Le corps a-t-il été reçu ENTIER ?
      *
      * Le drapeau existait et personne ne le lisait, ce qui transformait une page de
