@@ -439,6 +439,38 @@ function handle_post(): ?array
             }
             return ['warn', t('Action de masse inconnue.')];
 
+        // ---- Comptes ------------------------------------------------------
+        //
+        // SANS CET ÉCRAN, TOUT LE RESTE EST INERTE : la table existe, l'écran de connexion
+        // sait la lire, et personne ne peut y mettre un compte. Une fonctionnalité qu'on
+        // ne peut pas activer n'existe pas.
+        case 'compte_creer':
+            try {
+                Uptimeez\Compte::creer(
+                    (string)($_POST['identifiant'] ?? ''),
+                    (string)($_POST['mot_de_passe'] ?? ''),
+                    (string)($_POST['courriel'] ?? ''),
+                    (string)($_POST['nom'] ?? ''),
+                );
+            } catch (\InvalidArgumentException $e) {
+                // Le message de l'exception est écrit pour qui lit le code, en français et
+                // avec la valeur fautive : il va au journal, pas à l'écran.
+                error_log('UptimeEZ: création de compte refusée — ' . $e->getMessage());
+                return ['bad', t('Compte refusé : identifiant déjà pris, vide, ou mot de passe de moins de {n} caractères.',
+                    ['n' => Uptimeez\Compte::MDP_MIN])];
+            }
+            return ['ok', t('Compte créé. Le mot de passe unique de l\'instance reste actif comme accès de secours, et son usage est désormais consigné.')];
+
+        // UN COMPTE SE DÉSACTIVE, IL NE SE SUPPRIME PAS. Le journal des connexions le
+        // référence : effacer la ligne rendrait illisible la trace de ce qu'il a fait,
+        // c'est-à-dire exactement ce qu'on voulait obtenir en créant des comptes.
+        case 'compte_desactiver':
+            $cid = (int)($_POST['id'] ?? 0);
+            if ($cid > 0) {
+                Db::update('comptes', ['actif' => 0], 'id = :__i', ['__i' => $cid]);
+            }
+            return ['ok', t('Compte désactivé. Son historique de connexions est conservé.')];
+
         // ---- Réglages ---------------------------------------------------
         case 'save_settings':
             $patch = [

@@ -555,6 +555,56 @@ ok('et laisse passer le hors service de la même cause',
 ok('l\'alerte tue est comptée',
     (int)$val('SELECT masquees_total FROM exceptions WHERE monitor_id = ?', [$midExc]) === 1);
 
+// ---- Les comptes, de bout en bout ---------------------------------------
+//
+// LE PARCOURS ENTIER, PAS SEULEMENT LES CLASSES. Le selftest éprouve Compte:: sans
+// navigateur ; celui-ci vérifie qu'on peut réellement créer un compte depuis l'écran des
+// réglages, s'y connecter, et que le mot de passe d'instance reste un secours ouvert.
+$r = $req('/index.php?p=settings', ['csrf' => $tok, 'action' => 'compte_creer',
+    'identifiant' => 'e2e-operateur', 'mot_de_passe' => 'motdepassee2e',
+    'courriel' => 'e2e@example.test', 'nom' => 'Opérateur E2E']);
+ok('un compte se crée depuis les réglages',
+    (int)$val('SELECT COUNT(*) FROM comptes WHERE identifiant = ?', ['e2e-operateur']) === 1);
+
+// L'ÉCRAN DE CONNEXION CHANGE DE FORME dès qu'un compte existe.
+$r = $req('/index.php?p=login');
+ok('l\'écran de connexion demande désormais un identifiant', $has($r, 'name="identifiant"'));
+
+// Une session neuve, pour éprouver la connexion par compte sans réutiliser l'ancienne.
+$req('/index.php?p=logout');
+$r = $req('/index.php?p=login', ['identifiant' => 'e2e-operateur', 'password' => 'motdepassee2e']);
+ok('on entre avec l\'identifiant et le mot de passe du compte', $r['code'] === 302, 'HTTP ' . $r['code']);
+ok('et la connexion est consignée sous son nom',
+    (int)$val('SELECT COUNT(*) FROM connexions WHERE voie = ? AND reussie = 1 AND identifiant = ?',
+        ['mot_de_passe', 'e2e-operateur']) >= 1);
+
+// LE MESSAGE NE DIT PAS LEQUEL DES DEUX EST FAUX : sinon l'écran devient un annuaire.
+$req('/index.php?p=logout');
+$r = $req('/index.php?p=login', ['identifiant' => 'e2e-operateur', 'password' => 'faux']);
+ok('un mauvais mot de passe sur un compte est refusé', $has($r, 'incorrect'));
+ok('et le message ne révèle pas que le compte existe',
+    !str_contains($r['body'], 'Identifiant inconnu') && !str_contains($r['body'], 'Unknown username'));
+ok('et l\'échec est consigné',
+    (int)$val('SELECT COUNT(*) FROM connexions WHERE reussie = 0 AND identifiant = ?',
+        ['e2e-operateur']) >= 1);
+
+// L'ARBITRAGE, ÉPROUVÉ : le mot de passe d'instance FONCTIONNE ENCORE, et son usage est
+// consigné comme secours. Une instance dont la coque ou le courriel est en panne doit
+// rester joignable, et un accès de secours dont on ne sait pas qu'il a servi n'est pas un
+// secours mais une porte dérobée.
+$r = $req('/index.php?p=login', ['password' => $PASS]);
+ok('le mot de passe d\'instance reste un accès de secours', $r['code'] === 302, 'HTTP ' . $r['code']);
+ok('et son usage est consigné comme tel',
+    (int)$val('SELECT COUNT(*) FROM connexions WHERE voie = ? AND reussie = 1', ['secours']) >= 1);
+$tok = $csrf();
+
+$r = $req('/index.php?p=settings');
+ok('les réglages listent le compte créé', $has($r, 'e2e-operateur'));
+// Le journal doit montrer les DEUX voies : sans le secours, on ne verrait pas qu'il a
+// servi, et c'est précisément ce qui distingue un accès de secours d'une porte dérobée.
+ok('et le journal montre la voie de secours à côté des connexions ordinaires',
+    (int)$val('SELECT COUNT(DISTINCT voie) FROM connexions') >= 2);
+
 $r = $req('/index.php?p=retours');
 ok('l\'écran annonce les alertes tues', $has($r, 'Vos exceptions'));
 ok('et rappelle la date de revue', $has($r, 'Date de revue'));

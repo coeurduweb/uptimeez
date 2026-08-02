@@ -364,6 +364,106 @@ if ($idxIssues): ?>
 <?php endif; ?>
 
 <!-- ==================== TESTS ==================== -->
+<?php
+// ------------------------------------------------------------------------
+// DES COMPTES, PARCE QU'UN SECRET PARTAGÉ N'EST PAS UN ACCÈS
+// ------------------------------------------------------------------------
+//
+// Tant qu'il n'y a qu'un mot de passe d'instance, il circule par courriel dès qu'un client
+// a deux personnes, et on ne peut ni savoir qui est entré ni retirer l'accès à quelqu'un.
+//
+// Le panneau dit franchement ce que devient le mot de passe unique : il ne disparaît pas,
+// il devient un accès de SECOURS dont l'usage est consigné. Le taire laisserait croire
+// qu'on l'a supprimé, et personne ne penserait à le changer.
+$comptes = Uptimeez\Db::all('SELECT * FROM comptes ORDER BY actif DESC, identifiant ASC');
+$connexions = Uptimeez\Db::all('SELECT c.*, k.identifiant AS ident_compte FROM connexions c
+                                LEFT JOIN comptes k ON k.id = c.compte_id
+                                ORDER BY c.ts DESC LIMIT 40');
+$voieLisible = [
+    'mot_de_passe' => t('Identifiant et mot de passe'),
+    'jeton_pont'   => t('Lien depuis le tableau de bord'),
+    'secours'      => t('Mot de passe de secours de l\'instance'),
+];
+?>
+<?= Ui::accOpen('comptes', 'users', t('Comptes et connexions'),
+      t('qui peut entrer, et qui est entré')) ?>
+<?= Ui::accBody() ?>
+  <p class="hint"><?= te('Tant qu\'aucun compte n\'existe, l\'accès se fait par le seul mot de passe de l\'instance. Dès le premier compte créé, l\'écran de connexion demande un identifiant, et ce mot de passe devient un accès de secours : il fonctionne toujours, pour le cas où le courriel ou le tableau de bord seraient indisponibles, et chacun de ses usages est consigné ci-dessous.') ?></p>
+
+  <?php if ($comptes): ?>
+    <div class="table-scroll mt"><table class="tbl">
+      <thead><tr><th><?= te('Identifiant') ?></th><th><?= te('Nom') ?></th><th><?= te('Adresse') ?></th>
+        <th><?= te('Dernier accès') ?></th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($comptes as $c): ?>
+        <tr<?= (int)$c['actif'] === 1 ? '' : ' class="muted"' ?>>
+          <td class="small"><?= e((string)$c['identifiant']) ?><?= (int)$c['actif'] === 1 ? '' : ' · ' . te('désactivé') ?></td>
+          <td class="small"><?= e((string)($c['nom'] ?? '—')) ?></td>
+          <td class="tiny muted"><?= e((string)($c['courriel'] ?? '—')) ?></td>
+          <td class="tiny muted"><?= $c['dernier_acces_le'] ? e(date('d/m/Y H:i', strtotime((string)$c['dernier_acces_le']))) : te('jamais') ?></td>
+          <td class="num">
+            <?php if ((int)$c['actif'] === 1): ?>
+              <?php // UN COMPTE SE DÉSACTIVE, IL NE SE SUPPRIME PAS : le journal le
+                    // référence, et effacer la ligne rendrait illisible la trace de ce
+                    // qu'il a fait — exactement ce qu'on voulait obtenir en créant des comptes. ?>
+              <form method="post" style="display:inline">
+                <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
+                <input type="hidden" name="action" value="compte_desactiver">
+                <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+                <button class="btn btn-sm btn-ghost"><?= te('Désactiver') ?></button>
+              </form>
+            <?php endif; ?>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table></div>
+  <?php endif; ?>
+
+  <div class="section-title"><?= te('Ajouter un compte') ?></div>
+  <form method="post" class="grid2">
+    <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
+    <input type="hidden" name="action" value="compte_creer">
+    <div class="field"><label for="c-ident"><?= te('Identifiant') ?></label>
+      <input id="c-ident" type="text" name="identifiant" required autocomplete="off"></div>
+    <div class="field"><label for="c-mdp"><?= te('Mot de passe') ?></label>
+      <input id="c-mdp" type="password" name="mot_de_passe" required
+             minlength="<?= (int)Uptimeez\Compte::MDP_MIN ?>" autocomplete="new-password"></div>
+    <div class="field"><label for="c-nom"><?= te('Nom') ?></label>
+      <input id="c-nom" type="text" name="nom" autocomplete="off"></div>
+    <div class="field"><label for="c-mail"><?= te('Adresse (pour « mot de passe oublié »)') ?></label>
+      <input id="c-mail" type="email" name="courriel" autocomplete="off"></div>
+    <div><button class="btn btn-primary"><?= te('Créer le compte') ?></button></div>
+  </form>
+
+  <?php
+  // SANS TRACE, AJOUTER DES COMPTES NE CHANGE PRESQUE RIEN. Et les ÉCHECS comptent autant
+  // que les succès : une série d'échecs sur un identifiant valide est le seul signal qui
+  // distingue une tentative d'intrusion d'un mot de passe oublié.
+  ?>
+  <div class="section-title"><?= te('Dernières connexions') ?></div>
+  <?php if (!$connexions): ?>
+    <p class="hint"><?= te('Aucune connexion consignée pour l\'instant.') ?></p>
+  <?php else: ?>
+    <div class="table-scroll"><table class="tbl">
+      <thead><tr><th><?= te('Date') ?></th><th><?= te('Qui') ?></th><th><?= te('Par quel moyen') ?></th>
+        <th><?= te('Résultat') ?></th><th><?= te('Adresse IP') ?></th></tr></thead>
+      <tbody>
+      <?php foreach ($connexions as $x): ?>
+        <tr>
+          <td class="small nowrap"><?= e(date('d/m/Y H:i', strtotime((string)$x['ts']))) ?></td>
+          <td class="small"><?= e((string)($x['ident_compte'] ?? $x['identifiant'] ?? '—')) ?></td>
+          <td class="tiny muted"><?= e($voieLisible[(string)$x['voie']] ?? (string)$x['voie']) ?></td>
+          <td class="small <?= (int)$x['reussie'] === 1 ? 'v-ok' : 'v-bad' ?>">
+            <?= (int)$x['reussie'] === 1 ? te('entré') : te('refusé') ?></td>
+          <td class="tiny muted"><?= e((string)($x['ip'] ?? '—')) ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table></div>
+  <?php endif; ?>
+<?= Ui::accClose() ?>
+
 <?= Ui::accOpen('tests', 'wrench', t('Tester les canaux et la détection'), t('utile après chaque changement')) ?>
 <?= Ui::accBody() ?>
   <div class="row" style="gap:8px;flex-wrap:wrap">
