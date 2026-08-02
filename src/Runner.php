@@ -34,6 +34,40 @@ final class Runner
     public const CONFIRMATION_SEC = 30;
 
     /**
+     * LES RÈGLES DE DÉTECTION, DANS L'ORDRE OÙ ELLES SONT CONSULTÉES.
+     *
+     * L'ordre compte, et c'est pour ça qu'il est écrit ici plutôt que dispersé dans le
+     * corps d'evaluate(). Plusieurs règles peuvent parler d'une même passe : un site en
+     * 500 dont la feuille de style a aussi disparu produit deux verdicts, et c'est le
+     * premier de la liste, à gravité égale, qui donne son titre à l'alerte.
+     *
+     * Le principe du classement : la CAUSE avant ses CONSÉQUENCES. Le code HTTP ouvre,
+     * parce qu'une erreur serveur explique tout ce qu'on trouvera ensuite. La lenteur
+     * ferme, parce qu'elle n'explique rien. Annoncer « CSS dégradé » sur un site qui rend
+     * 500 enverrait chercher un problème de style là où l'application est tombée.
+     *
+     * CE QUI N'EST PAS DANS CETTE LISTE, ET POURQUOI. La couche réseau est consultée AVANT,
+     * séparément : elle ne répond pas à « qu'est-ce qui ne va pas » mais à « a-t-on seulement
+     * une réponse à examiner ». Quand elle parle, il n'y a rien à analyser, et le collecteur
+     * rend son verdict sans consulter personne d'autre. En faire une entrée de la liste
+     * obligerait à inventer une notion de règle bloquante, c'est-à-dire à rendre les
+     * vingt-quatre autres plus compliquées pour le cas d'une seule.
+     *
+     * Changer l'ordre se fait en déplaçant une ligne, et un test le prouve.
+     */
+    public const REGLES = [
+        \Uptimeez\Regle\CodeHttp::class,
+        \Uptimeez\Regle\BaseDeDonnees::class,
+        \Uptimeez\Regle\ChaineDePreuve::class,
+        \Uptimeez\Regle\ChaineInterdite::class,
+        \Uptimeez\Regle\ReponseJson::class,
+        \Uptimeez\Regle\Certificat::class,
+        \Uptimeez\Regle\FeuillesDeStyle::class,
+        \Uptimeez\Regle\Indexabilite::class,
+        \Uptimeez\Regle\Lenteur::class,
+    ];
+
+    /**
      * Une analyse CSS télécharge toutes les feuilles de la page : c'est la sonde
      * la plus coûteuse. On en limite le nombre par passe pour qu'une minute de
      * cron reste une minute de cron, même avec 300 sites. Les sondes non
@@ -490,19 +524,21 @@ final class Runner
             return self::verdict($findings, $details, $events, $res);
         }
 
-        // ---- 2. Code HTTP -------------------------------------------------
-        // SEPTIÈME EXTRACTION, LE 2026-08-02 : src/Regle/CodeHttp.php, huit causes.
-        // Huit et non une seule, parce qu'un 404, un 403 et un 500 ne se corrigent ni par
-        // la même personne ni au même endroit, et parce que le rapport mensuel compte les
-        // pannes par nature.
-        if ($v = (new \Uptimeez\Regle\CodeHttp())->evaluer($contexte)) {
-            $findings[] = $v->enTableau();
-        }
+        // ====================================================================
+        // LES DÉTECTEURS D'ABORD, LES RÈGLES ENSUITE — SPRINT A3, LE 2026-08-02
+        // ====================================================================
+        //
+        // Trois détecteurs coûtent une connexion réseau ou une lecture en base, et chacun
+        // ne tourne que sous sa propre condition. Ils sont donc rassemblés ICI, avant la
+        // boucle, parce que c'est le collecteur qui a le droit d'aller chercher ce que les
+        // règles n'ont pas le droit de demander.
+        //
+        // POURQUOI CE N'EST PAS UN DÉTAIL D'ORGANISATION. Tant que chaque règle était
+        // appelée à côté de son détecteur, l'ordre des verdicts était l'ordre du texte, et
+        // le déplacer voulait dire déplacer aussi des appels réseau. On ne pouvait donc pas
+        // changer l'ordre sans risquer de changer ce qu'on mesure. Séparés, l'ordre des
+        // règles devient une DONNÉE, celle de self::REGLES, et rien d'autre ne bouge avec.
 
-        // ---- 3. Base de données (signatures + chaîne de preuve) -----------
-        // HUITIÈME EXTRACTION, LE 2026-08-02 : src/Regle/BaseDeDonnees.php. L'audit reste
-        // ici : il lit la sonde entière, y compris des réglages que la règle n'a pas à
-        // connaître. La règle reçoit son résultat et décide, comme pour le certificat.
         if ((int)$mon['check_db'] === 1 && $res->body !== '') {
             $auditBase = Database::audit($res, $mon);
 
@@ -510,50 +546,14 @@ final class Runner
                 $details['db'] = $auditBase;
             }
 
-            $v = (new \Uptimeez\Regle\BaseDeDonnees())
-                ->evaluer($contexte->avecDetecteur(\Uptimeez\Regle\BaseDeDonnees::DETECTEUR, $auditBase));
-
-            if ($v) {
-                $findings[] = $v->enTableau();
-            }
+            $contexte = $contexte->avecDetecteur(\Uptimeez\Regle\BaseDeDonnees::DETECTEUR, $auditBase);
         }
 
-        // ---- 4. Chaîne attendue / interdite -------------------------------
-        //
-        // PREMIÈRE RÈGLE EXTRAITE, LE 2026-08-02. La chaîne de preuve vit désormais dans
-        // src/Regle/ChaineDePreuve.php, avec son propre test. Le collecteur ne fait plus
-        // que l'appeler et remettre son verdict au format qu'il connaît, ce qui permet
-        // d'extraire les vingt-trois autres UNE PAR UNE sans jamais laisser le moteur à
-        // moitié converti.
-        if ($v = (new \Uptimeez\Regle\ChaineDePreuve())->evaluer($contexte)) {
-            $findings[] = $v->enTableau();
-        }
-        // DEUXIÈME RÈGLE EXTRAITE, LE 2026-08-02 : src/Regle/ChaineInterdite.php.
-        if ($v = (new \Uptimeez\Regle\ChaineInterdite())->evaluer($contexte)) {
-            $findings[] = $v->enTableau();
-        }
-
-        // ---- 5. API JSON ---------------------------------------------------
-        // TROISIÈME EXTRACTION, LE 2026-08-02 : src/Regle/ReponseJson.php. Elle emporte
-        // TROIS verdicts d'un coup (JSON_INVALID, JSON_PATH, JSON_VALUE) parce qu'ils
-        // forment une seule chaîne de décision : sans décodage il n'y a pas de champ à
-        // chercher, sans champ il n'y a pas de valeur à comparer.
-        if ($v = (new \Uptimeez\Regle\ReponseJson())->evaluer($contexte)) {
-            $findings[] = $v->enTableau();
-        }
-
-        // ---- 6. Certificat SSL --------------------------------------------
-        // QUATRIÈME EXTRACTION, LE 2026-08-02 : src/Regle/Certificat.php, trois verdicts.
-        //
-        // Ce qui restait ici s'est réduit à la question « où trouver les faits ». Une
-        // inspection TLS coûte une connexion, on ne la refait donc pas à chaque passe :
-        // au-delà de six heures, ou sur demande d'un humain, on rouvre la connexion ;
-        // en deçà, on relit les colonnes écrites la dernière fois.
-        //
-        // Les deux chemins produisent DÉSORMAIS LA MÊME FORME, et c'est tout l'intérêt.
-        // Ils portaient chacun leur copie des verdicts, et la copie en cache avait déjà
-        // divergé : elle ne savait pas dire « invalide ». Un certificat au mauvais nom
-        // d'hôte redevenait donc muet pendant six heures.
+        // Une inspection TLS coûte une connexion : on ne la refait pas à chaque passe.
+        // Au-delà de six heures, ou sur demande d'un humain, on rouvre ; en deçà, on relit
+        // les colonnes. LES DEUX CHEMINS PRODUISENT LA MÊME FORME, et c'est tout l'intérêt :
+        // ils portaient chacun leur copie des verdicts, et celle du cache avait divergé au
+        // point de ne plus savoir dire « invalide ».
         if ($https && (int)$mon['check_ssl'] === 1) {
             $perime = !$mon['ssl_checked_at'] || strtotime((string)$mon['ssl_checked_at']) < time() - 21600;
 
@@ -561,9 +561,9 @@ final class Runner
                 $faitsCert = Ssl::inspect(host_of($mon['url']), self::portOf($mon['url']), (int)$mon['timeout_sec']);
                 $details['ssl'] = $faitsCert;
             } else {
-                // La base ne retient que le compte à rebours. On ne prétend donc pas
-                // savoir si le certificat est valide : on dit ce qu'on sait, et la règle
-                // se taira sur le reste plutôt que d'inventer.
+                // La base ne retient que le compte à rebours. On ne prétend donc pas savoir
+                // si le certificat est valide : on dit ce qu'on sait, et la règle se taira
+                // sur le reste plutôt que d'inventer.
                 $faitsCert = [
                     'checked'    => true,
                     'valid'      => true,
@@ -574,21 +574,17 @@ final class Runner
                 ];
             }
 
-            $v = (new \Uptimeez\Regle\Certificat())
-                ->evaluer($contexte->avecDetecteur(\Uptimeez\Regle\Certificat::DETECTEUR, $faitsCert));
-
-            if ($v) {
-                $findings[] = $v->enTableau();
-            }
+            $contexte = $contexte->avecDetecteur(\Uptimeez\Regle\Certificat::DETECTEUR, $faitsCert);
         }
 
-        // ---- 7. Feuilles de style -----------------------------------------
         $htmlOk = $res->status >= 200 && $res->status < 300 && $res->isHtml();
+
         if ((int)$mon['check_css'] === 1 && $htmlOk) {
             $cadence = max((int)$mon['interval_sec'], 900);
             $stale   = !$mon['css_checked_at'] || strtotime((string)$mon['css_checked_at']) < time() - $cadence;
             $budget  = $manual || self::$cssAudits < self::CSS_AUDITS_PER_PASS;
             if ($stale && $budget) self::$cssAudits++;
+
             if (($stale && $budget) || $manual) {
                 $baseline = jdec($mon['css_baseline'] ?? null);
                 $css = Css::audit($mon['url'], $res->body, $res, $baseline, [
@@ -598,10 +594,9 @@ final class Runner
                     'ua'       => $mon['user_agent'] ?: null,
                 ]);
                 $details['css'] = $css;
-                // Vitesse ressentie : même page, mêmes ressources déjà
-                // téléchargées, donc aucune requête de plus sauf un HEAD sur
-                // l'image du haut de page, qui est le seul poids introuvable
-                // dans le HTML.
+                // Vitesse ressentie : même page, mêmes ressources déjà téléchargées, donc
+                // aucune requête de plus sauf un HEAD sur l'image du haut de page, qui est
+                // le seul poids introuvable dans le HTML.
                 $details['vitals'] = Vitals::analyse($mon['url'], $res->body,
                     ($css['metrics'] ?? []) + ['css_text' => (string)($css['css_text'] ?? '')],
                     $res, [
@@ -610,19 +605,19 @@ final class Runner
                         'ua'       => $mon['user_agent'] ?: null,
                         'insecure' => (bool)$mon['ignore_ssl_errors'],
                     ]);
-                // L'inventaire logiciel se lit dans le HTML déjà reçu : aucune
-                // requête de plus, et la veille de sécurité s'appuie dessus.
+                // L'inventaire logiciel se lit dans le HTML déjà reçu : aucune requête de
+                // plus, et la veille de sécurité s'appuie dessus.
                 if (!empty($mon['site_id'])) {
                     $cms = $mon['site_cms']
                         ?? Db::val('SELECT cms FROM sites WHERE id = ?', [(int)$mon['site_id']]);
                     $details['stack'] = Vuln::record((int)$mon['id'], (int)$mon['site_id'],
                                                      $res->body, $cms !== null ? (string)$cms : null);
                 }
-                // L'analyse fraîche : les messages sortent de l'audit qu'on vient de
-                // faire, et il n'y a donc pas de date à rappeler, c'est maintenant.
+                // L'analyse fraîche : les messages sortent de l'audit qu'on vient de faire,
+                // et il n'y a donc pas de date à rappeler, c'est maintenant.
                 $etatCss = [
-                    'state'     => $css['state'],
-                    'messages'  => $css['messages'] ?? [],
+                    'state'      => $css['state'],
+                    'messages'   => $css['messages'] ?? [],
                     'analyse_le' => null,
                 ];
 
@@ -630,11 +625,10 @@ final class Runner
                     $events[] = ['kind' => 'css_changed', 'message' => t('Les fichiers CSS ont changé, sans doute un déploiement.')];
                 }
             } else {
-                // ENTRE DEUX ANALYSES, LE DERNIER VERDICT RESTE VALABLE. Sans cela une
-                // mise en page cassée « guérirait » toute seule à la vérification
-                // suivante alors que rien n'a été corrigé. La date est rappelée, parce
-                // qu'un défaut constaté il y a six heures ne se lit pas comme un défaut
-                // constaté à l'instant.
+                // ENTRE DEUX ANALYSES, LE DERNIER VERDICT RESTE VALABLE. Sans cela une mise
+                // en page cassée « guérirait » toute seule à la vérification suivante alors
+                // que rien n'a été corrigé. La date est rappelée, parce qu'un défaut
+                // constaté il y a six heures ne se lit pas comme un défaut de l'instant.
                 $etatCss = [
                     'state'      => (string) ($mon['css_state'] ?? 'ok'),
                     'messages'   => jdec($mon['css_detail'] ?? null)['messages'] ?? [],
@@ -642,30 +636,18 @@ final class Runner
                 ];
             }
 
-            // NEUVIÈME EXTRACTION, LE 2026-08-02 : src/Regle/FeuillesDeStyle.php. Les deux
-            // provenances portaient chacune leur copie des verdicts, comme le certificat,
-            // et comme lui elles avaient divergé : deux messages cités d'un côté, trois de
-            // l'autre, et un texte de repli d'un seul côté. Elles traversent la même règle.
-            $v = (new \Uptimeez\Regle\FeuillesDeStyle())
-                ->evaluer($contexte->avecDetecteur(\Uptimeez\Regle\FeuillesDeStyle::DETECTEUR, $etatCss));
+            $contexte = $contexte->avecDetecteur(\Uptimeez\Regle\FeuillesDeStyle::DETECTEUR, $etatCss);
+        }
 
-            if ($v) {
+        // ---- Les règles, dans l'ordre déclaré par self::REGLES --------------
+        //
+        // C'est tout ce qui reste de trois cent quarante lignes et seize niveaux
+        // d'imbrication. Chaque règle reçoit le même contexte, rend un verdict ou se tait,
+        // et n'a aucun moyen d'influencer les suivantes.
+        foreach (self::REGLES as $classe) {
+            if ($v = (new $classe())->evaluer($contexte)) {
                 $findings[] = $v->enTableau();
             }
-        }
-
-        // ---- 8. Indexabilité (utile en agence : un noindex oublié) --------
-        // SIXIÈME EXTRACTION, LE 2026-08-02 : src/Regle/Indexabilite.php. La condition
-        // « ai-je une page HTML analysable » est partie dans le contexte, où les quatre
-        // règles du CSS viendront la chercher au lieu d'en faire cinq copies.
-        if ($v = (new \Uptimeez\Regle\Indexabilite())->evaluer($contexte)) {
-            $findings[] = $v->enTableau();
-        }
-
-        // ---- 9. Lenteur ----------------------------------------------------
-        // CINQUIÈME EXTRACTION, LE 2026-08-02 : src/Regle/Lenteur.php.
-        if ($v = (new \Uptimeez\Regle\Lenteur())->evaluer($contexte)) {
-            $findings[] = $v->enTableau();
         }
 
         // ---- 10. Mot surveillé (mise à jour de page) ----------------------

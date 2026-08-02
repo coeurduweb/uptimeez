@@ -3676,6 +3676,84 @@ check('une réponse en erreur n\'est pas analysée',
         ->avecDetecteur(Uptimeez\Regle\FeuillesDeStyle::DETECTEUR,
             ['state' => 'broken', 'messages' => ['x']])), null);
 
+section('Sprint A3 : l\'ordre des règles est une donnée, pas la mise en page du code');
+// ---------------------------------------------------------------------------
+// L'ACQUIS : evaluate() est une boucle sur self::REGLES. Tant que chaque règle était
+// appelée à côté du détecteur qui la nourrit, l'ordre des verdicts était l'ordre du
+// TEXTE, et le déplacer voulait dire déplacer aussi des appels réseau : on ne pouvait
+// donc pas changer l'ordre sans risquer de changer ce qu'on mesure.
+//
+// CE CONTRÔLE DÉRIVE SON ATTENTE DE LA CONSTANTE, il ne la recopie pas. C'est ce qui en
+// fait une preuve : déplacer une ligne dans self::REGLES déplace l'attente avec elle, et
+// si la boucle cessait d'honorer l'ordre déclaré, le contrôle tomberait. Un test qui
+// écrirait « HTTP_5XX en premier » en dur passerait au vert même si la constante ne
+// servait plus à rien.
+
+$registre = Uptimeez\Runner::REGLES;
+
+check('le registre n\'est pas vide', count($registre) >= 9, true);
+check('aucune règle déclarée deux fois', count($registre), count(array_unique($registre)));
+
+// Toute règle du dossier est déclarée, sauf la couche réseau, qui est consultée avant la
+// boucle : elle ne dit pas « ce qui ne va pas » mais « a-t-on une réponse à examiner ».
+// Sans ce contrôle, écrire une règle et oublier de l'inscrire la rendrait inerte, et rien
+// ne le dirait puisque son propre test unitaire, lui, resterait vert.
+$surLeDisque = [];
+foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) {
+    $classe = 'Uptimeez\\Regle\\' . basename($f, '.php');
+    if (class_exists($classe) && (new ReflectionClass($classe))->implementsInterface(Uptimeez\Regle\Regle::class)) {
+        $surLeDisque[] = $classe;
+    }
+}
+$attendues = array_values(array_diff($surLeDisque, [Uptimeez\Regle\CoucheReseau::class]));
+sort($attendues);
+$declarees = $registre;
+sort($declarees);
+check('toute règle écrite est déclarée au registre, hors couche réseau', $declarees, $attendues);
+
+foreach ($registre as $classe) {
+    check("« " . basename(str_replace('\\', '/', $classe)) . " » respecte le contrat",
+        (new ReflectionClass($classe))->implementsInterface(Uptimeez\Regle\Regle::class), true);
+}
+
+// LA PREUVE PAR LE COMPORTEMENT : une réponse qui déclenche DEUX règles à la fois. Un 500
+// servi lentement fait parler le code HTTP et la lenteur. L'ordre attendu est lu dans la
+// constante, donc déplacer la ligne déplace l'attente.
+$monOrdre = ['id' => 0, 'url' => 'https://ordre.test/', 'expect_status' => '200-299',
+    'slow_ms' => 100, 'check_db' => 0, 'check_ssl' => 0, 'check_css' => 0,
+    'check_noindex' => 0, 'check_content' => 0, 'kind' => 'http', 'timeout_sec' => 10,
+    'expect_string' => '', 'forbid_string' => '', 'watch_string' => '', 'status' => 'up'];
+$resOrdre = new Uptimeez\Response();
+$resOrdre->ok = true; $resOrdre->status = 500; $resOrdre->body = '<html>oups</html>';
+$resOrdre->contentType = 'text/html'; $resOrdre->totalMs = 9000;
+$resOrdre->finalUrl = 'https://ordre.test/';
+
+$rendu = Uptimeez\Runner::evaluate($monOrdre, $resOrdre);
+$causesRendues = array_column($rendu['findings'] ?? [], 'reason');
+
+check('les deux règles ont bien parlé',
+    count(array_intersect(['HTTP_5XX', 'SLOW'], $causesRendues)), 2);
+
+$rang = static fn (string $classe): int => (int) array_search($classe, $registre, true);
+$httpDAbord = $rang(Uptimeez\Regle\CodeHttp::class) < $rang(Uptimeez\Regle\Lenteur::class);
+check('l\'ordre rendu suit l\'ordre déclaré, quel qu\'il soit',
+    array_search('HTTP_5XX', $causesRendues, true) < array_search('SLOW', $causesRendues, true),
+    $httpDAbord);
+
+// LA CAUSE AVANT SES CONSÉQUENCES, et c'est le classement retenu : le code HTTP ouvre
+// parce qu'une erreur serveur explique tout ce qu'on trouvera ensuite, la lenteur ferme
+// parce qu'elle n'explique rien. Annoncer « CSS dégradé » sur un site qui rend 500
+// enverrait chercher un problème de style là où l'application est tombée.
+check('le code HTTP est consulté avant les feuilles de style',
+    $rang(Uptimeez\Regle\CodeHttp::class) < $rang(Uptimeez\Regle\FeuillesDeStyle::class), true);
+check('et la lenteur ferme la marche',
+    $rang(Uptimeez\Regle\Lenteur::class), count($registre) - 1);
+
+// LA COUCHE RÉSEAU RESTE DEHORS, ET C'EST DÉLIBÉRÉ. L'y mettre obligerait à inventer une
+// notion de règle bloquante, donc à compliquer les neuf autres pour le cas d'une seule.
+check('la couche réseau n\'est pas dans la boucle',
+    in_array(Uptimeez\Regle\CoucheReseau::class, $registre, true), false);
+
 section('Confirmation avant alerte : un échec isolé ne réveille personne');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT : une seule passe en échec ouvrait l'incident et déclenchait l'alerte. Les
