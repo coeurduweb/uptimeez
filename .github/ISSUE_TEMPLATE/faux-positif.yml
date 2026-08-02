@@ -1,0 +1,46 @@
+name: A check got it wrong
+description: UptimeEZ reported a problem that was not one, or missed one that was.
+title: "[detection] "
+labels: [detection]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the most useful issue you can open. Five reports like this on 2 August 2026
+        turned out to be five distinct defects, each now covered by a permanent test.
+
+        The one thing that matters below is the **content that produced the verdict**.
+        A signature is written against real output, never against a description of it.
+  - type: dropdown
+    id: sens
+    attributes:
+      label: Which way round
+      options:
+        - It reported a problem that did not exist
+        - It missed a problem that did exist
+    validations: {required: true}
+  - type: input
+    id: cause
+    attributes:
+      label: Cause shown by UptimeEZ
+      description: The code in the alert, e.g. CSS_BROKEN, DB_DOWN, STRING_MISSING, SLOW.
+      placeholder: CSS_BROKEN
+  - type: textarea
+    id: contenu
+    attributes:
+      label: What the site actually served
+      description: >
+        The HTML, the stylesheet, or the response that led to the verdict. Trim it to what
+        matters, but paste the real thing rather than retyping it.
+      render: text
+    validations: {required: true}
+  - type: textarea
+    id: attendu
+    attributes:
+      label: What the right verdict would have been, and why
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes:
+      label: Version and PHP
+      placeholder: "1.4.0, PHP 8.2, SQLite"

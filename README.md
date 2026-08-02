@@ -652,6 +652,9 @@ Issues and pull requests welcome, particularly these:
 House rules: no dependency, no build step, French for the source strings (they are the msgids), a test for
 anything that could regress, and comments that explain *why* rather than restate the code.
 
+→ **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to run the eight test suites, and
+**[SECURITY.md](SECURITY.md)** if what you found should not be posted in public.
+
 ## Licence
 
 MIT. Use it, sell services around it, fork it.

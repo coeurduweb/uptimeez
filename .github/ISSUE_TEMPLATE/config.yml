@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/coeurduweb/uptimeez/security/policy
+    about: Do not open a public issue. Write to contactez@coeurduweb.com instead.
+  - name: Official site, hosted plans and live demo
+    url: https://uptimeez.com/
+    about: Try it without installing anything.

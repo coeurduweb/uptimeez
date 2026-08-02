@@ -671,6 +671,9 @@ Les règles de la maison : aucune dépendance, aucune compilation, le français 
 les clés de traduction), un test pour tout ce qui peut régresser, et des commentaires qui expliquent *pourquoi*
 plutôt que de répéter le code.
 
+→ **[CONTRIBUTING.md](CONTRIBUTING.md)** pour lancer les huit suites de tests, et
+**[SECURITY.md](SECURITY.md)** si ce que vous avez trouvé ne doit pas être publié.
+
 ## Licence
 
 MIT. Utilisez-le, vendez des services autour, forkez-le.

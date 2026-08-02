@@ -1,0 +1,26 @@
+name: Feature request
+description: Something UptimeEZ should do and does not.
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Worth knowing before you write: this tool has **no dependencies and no build step**, and
+        runs on plain shared hosting. That rules out anything needing a headless browser, a queue
+        worker or a package manager, however useful it would be. A refusal will come with a reason.
+  - type: textarea
+    id: probleme
+    attributes:
+      label: The problem, not the solution
+      description: What goes wrong today, and how often. What you do about it now.
+    validations: {required: true}
+  - type: textarea
+    id: solution
+    attributes:
+      label: What you would like it to do
+  - type: input
+    id: parc
+    attributes:
+      label: How many sites do you watch
+      description: The answer changes the design more than anything else in this form.
