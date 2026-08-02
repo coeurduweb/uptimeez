@@ -33,7 +33,7 @@ where someone is representing UptimeEZ.
 
 ## Enforcement
 
-Report to **contactez@coeurduweb.com**. Reports are handled privately; the reporter's identity is
+Report to **support(@)uptimeEZ.com**. Reports are handled privately; the reporter's identity is
 not disclosed to the person reported without their agreement.
 
 Responses run from a private word, through an edit or removal of the content with a public reason,
