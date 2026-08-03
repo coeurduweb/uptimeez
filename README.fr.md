@@ -62,10 +62,13 @@ sur chaque page qu'il vérifie, sans vous demander d'en configurer une seule.
 | **Est-ce rapide pour le visiteur ?** | Temps de réponse du serveur en millisecondes, fichiers qui bloquent l'affichage avec leur poids exact, image du haut de page et son poids, images sans dimensions, polices sans `font-display`, scripts tiers. Et les vrais LCP, INP et CLS avec une clé gratuite du Chrome UX Report | Une image de bandeau en chargement différé, 400 Ko de CSS bloquant, une page qui saute pendant le chargement |
 | **Est-ce que ça va casser bientôt ?** | Expiration du certificat (inspection TLS en deux passes), expiration du domaine par RDAP, failles publiées sur les versions lues dans le HTML, et un battement dead-man pour les tâches qui doivent tourner | Un certificat expiré un samedi, un domaine que personne n'a renouvelé, une extension avec un avis de trois jours, une sauvegarde arrêtée en silence |
 
-**Cinq types de sondes**, chacune avec ses réglages : une **page**, une **API JSON** (chemin du champ, valeur
+**Sept types de sondes**, chacune avec ses réglages : une **page**, une **API JSON** (chemin du champ, valeur
 attendue, en-têtes, corps, n'importe quelle méthode), un **fichier** (une ressource qui doit rester joignable et
-inchangée), un **mot-clé** (un texte qui doit apparaître, ou ne jamais apparaître) et un **battement** (votre
-script appelle UptimeEZ quand il a fini ; c'est le silence qui alerte).
+inchangée), un **mot-clé** (un texte qui doit apparaître, ou ne jamais apparaître), un **battement** (votre
+script appelle UptimeEZ quand il a fini ; c'est le silence qui alerte), un **port TCP** (ouvert ou fermé, et il
+dit franchement qu'un port ouvert ne prouve rien du service derrière) et un **enregistrement DNS** (un type, et au
+besoin la valeur qui doit y rester : un `A` qui pointe ailleurs répond parfaitement, donc rien d'autre dans ce
+moteur ne le verrait).
 
 Et ce qu'il fait de tout ça : les pannes qui partagent une IP deviennent **une seule** alerte, les seuils se
 règlent sur le p95 mesuré, chaque décision est consignée dans un journal lisible, et l'écran d'accueil transforme
