@@ -97,10 +97,6 @@ final class Contexte
         return (string) ($this->sonde['url'] ?? '');
     }
 
-    public function estEnHttps(): bool
-    {
-        return str_starts_with(strtolower($this->url()), 'https://');
-    }
 
     /**
      * A-t-on sous la main une page HTML qu'on puisse analyser ?
