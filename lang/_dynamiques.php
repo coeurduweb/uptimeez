@@ -133,6 +133,15 @@ return [
     '(analyse du {date})',
     'Page en noindex : {detail}',
     'Temps de réponse élevé : {seconds} s',
+
+    // --- Sondes réseau (Regle\Port, Regle\Dns), ajoutées le 2026-08-04 ---
+    // Elles vivent ici pour la même raison que les autres verdicts : la phrase source est
+    // stockée en base et traduite à la LECTURE par verdict_text(), donc aucun appel à t()
+    // ne l'entoure dans le code, donc l'audit de traduction ne peut pas la trouver seul.
+    'Port {port} fermé sur {host} : {reason}',
+    'rien n\'écoute',
+    'Aucun enregistrement {type} pour {name}',
+    'L\'enregistrement {type} de {name} ne contient plus « {expected} » : {found}',
     'Les fichiers CSS ont changé, sans doute un déploiement.',
     'refusé',
 

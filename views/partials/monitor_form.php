@@ -197,7 +197,8 @@ $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
     <span class="acc-title"><?= te('Type de sonde, API et requête') ?></span>
     <span class="acc-note"><?= e(match ($v('kind', 'page')) {
         'api' => t('API JSON'), 'asset' => t('fichier'),
-        'keyword' => t('mot-clé'), default => t('page web') }) ?></span>
+        'keyword' => t('mot-clé'), 'tcp' => t('port TCP'), 'dns' => t('enregistrement DNS'),
+        'heartbeat' => t('battement'), default => t('page web') }) ?></span>
     <span class="chev"><?= Ui::icon('chevron', 16) ?></span>
   </summary>
   <div class="acc-body">
@@ -209,10 +210,39 @@ $cur = (int)($mon['interval_sec'] ?? $d['interval_sec'] ?? 300);
             <select id="<?= $uid ?>-kind" name="kind">
               <?php foreach (['page' => 'Page web', 'api' => 'API / JSON',
                               'asset' => 'Fichier (sitemap, robots…)', 'keyword' => t('Mot-clé seul'),
-                              'heartbeat' => t('Battement (le site nous appelle)')] as $k => $l): ?>
+                              'heartbeat' => t('Battement (le site nous appelle)'),
+                              'tcp' => t('Port TCP'), 'dns' => t('Enregistrement DNS')] as $k => $l): ?>
                 <option value="<?= $k ?>" <?= $v('kind', 'page') === $k ? 'selected' : '' ?>><?= e($l) ?></option>
               <?php endforeach; ?>
             </select>
+          </div>
+          <?php /* LES TROIS CHAMPS DES SONDES RÉSEAU. Ils restent visibles quel que soit le
+                   type choisi, et c'est un choix : les masquer demanderait du JavaScript pour
+                   une économie de trois lignes, et un champ masqué qui garde sa valeur est la
+                   première cause de « j'ai changé le type et il surveille encore l'ancien ».
+                   Le collecteur, lui, ne lit « port » que sur une sonde tcp. */ ?>
+          <div class="field">
+            <label for="<?= $uid ?>-port"><?= te('Port TCP') ?></label>
+            <input id="<?= $uid ?>-port" type="number" name="port" min="1" max="65535"
+                   value="<?= e((string)($v('port', '') ?? '')) ?>" placeholder="25, 3306, 6379…">
+            <span class="hint"><?= te('Pour une sonde « Port TCP ». Un port ouvert ne prouve pas que le service répond correctement : rien n\'est lu après la connexion.') ?></span>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="<?= $uid ?>-dnstype"><?= te('Type DNS') ?></label>
+              <select id="<?= $uid ?>-dnstype" name="dns_type">
+                <option value="">—</option>
+                <?php foreach (\Uptimeez\Check\Dns::TYPES as $t): ?>
+                  <option value="<?= $t ?>" <?= strtoupper((string)($v('dns_type', '') ?? '')) === $t ? 'selected' : '' ?>><?= $t ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="field">
+              <label for="<?= $uid ?>-dnsexpect"><?= te('Valeur DNS attendue') ?></label>
+              <input id="<?= $uid ?>-dnsexpect" type="text" name="dns_expect"
+                     value="<?= e((string)($v('dns_expect', '') ?? '')) ?>" placeholder="203.0.113.10">
+              <span class="hint"><?= te('Facultatif. Cherchée DANS la réponse, donc « mx.exemple.fr » convient pour « 10 mx.exemple.fr ».') ?></span>
+            </div>
           </div>
           <div class="field">
             <label for="<?= $uid ?>-method"><?= te('Méthode') ?></label>

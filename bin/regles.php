@@ -57,9 +57,18 @@ $attendues = array_map(
     static fn (string $classe): string => substr($classe, strrpos($classe, '\\') + 1),
     Runner::REGLES
 );
-// La couche réseau ne figure pas au registre : elle répond « y a-t-il une réponse à
-// examiner », pas « qu'est-ce qui est cassé ». Elle a son test comme les autres.
+// TROIS RÈGLES HORS REGISTRE, ET CHACUNE POUR UNE RAISON DIFFÉRENTE.
+//
+// La couche réseau répond « y a-t-il une réponse à examiner », pas « qu'est-ce qui est
+// cassé » : elle précède la boucle et l'arrête.
+//
+// Le port et le DNS ne parlent pas HTTP : le collecteur les appelle directement, sans faire
+// traverser les dix autres règles à une sonde qui n'attend pas de page. Elles ont donc leur
+// test comme les autres, et ce fichier l'exige : une règle hors registre est justement celle
+// qu'on oublierait de tester, puisque rien ne la liste.
 $attendues[] = 'CoucheReseau';
+$attendues[] = 'Port';
+$attendues[] = 'Dns';
 
 $sansTest = array_values(array_diff($attendues, $testees));
 $sansRegle = array_values(array_diff($testees, $attendues));

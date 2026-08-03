@@ -3843,10 +3843,20 @@ $registre = Uptimeez\Runner::REGLES;
 check('le registre n\'est pas vide', count($registre) >= 9, true);
 check('aucune règle déclarée deux fois', count($registre), count(array_unique($registre)));
 
-// Toute règle du dossier est déclarée, sauf la couche réseau, qui est consultée avant la
-// boucle : elle ne dit pas « ce qui ne va pas » mais « a-t-on une réponse à examiner ».
+// Toute règle du dossier est déclarée, sauf TROIS, et chacune a son motif écrit ici même.
 // Sans ce contrôle, écrire une règle et oublier de l'inscrire la rendrait inerte, et rien
 // ne le dirait puisque son propre test unitaire, lui, resterait vert.
+//
+//   - CoucheReseau est consultée AVANT la boucle : elle ne dit pas « ce qui ne va pas » mais
+//     « a-t-on une réponse à examiner », et son verdict arrête tout le reste.
+//   - Port et Dns ne parlent pas HTTP. Le collecteur les appelle directement, sur les sondes
+//     de type « tcp » et « dns », sans leur faire traverser dix règles qui n'ont rien à dire
+//     d'un port. Les inscrire au registre les ferait au contraire évaluer sur CHAQUE page, où
+//     leur détecteur est absent : elles se tairaient, donc le défaut serait invisible, mais
+//     dix règles s'exécuteraient pour rien à chaque passe.
+//
+// LA LISTE DES EXCEPTIONS EST ÉCRITE ICI ET NULLE PART AILLEURS : une quatrième règle hors
+// registre devra être ajoutée à cette ligne, ce qui force à écrire pourquoi.
 $surLeDisque = [];
 foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) {
     $classe = 'Uptimeez\\Regle\\' . basename($f, '.php');
@@ -3854,7 +3864,11 @@ foreach (glob(UPTIMEEZ_ROOT . '/src/Regle/*.php') ?: [] as $f) {
         $surLeDisque[] = $classe;
     }
 }
-$attendues = array_values(array_diff($surLeDisque, [Uptimeez\Regle\CoucheReseau::class]));
+$attendues = array_values(array_diff($surLeDisque, [
+    Uptimeez\Regle\CoucheReseau::class,
+    Uptimeez\Regle\Port::class,
+    Uptimeez\Regle\Dns::class,
+]));
 sort($attendues);
 $declarees = $registre;
 sort($declarees);

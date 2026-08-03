@@ -221,7 +221,13 @@ final class Db
             site_id {$int} DEFAULT NULL,
             name {$str(190)} NOT NULL,
             url {$txt} NOT NULL,
-            kind {$str(20)} NOT NULL DEFAULT 'page',      /* page | api | asset | keyword */
+            kind {$str(20)} NOT NULL DEFAULT 'page',      /* page | api | asset | keyword | heartbeat | tcp | dns */
+            /* SONDES TCP ET DNS, ajoutées le 2026-08-04. Trois colonnes et non une table :
+               ce sont des sondes comme les autres, avec leurs incidents, leurs alertes et
+               leur historique. Une table à part aurait dupliqué tout ça pour deux champs. */
+            port {$int} DEFAULT NULL,                    /* sonde tcp : le port à joindre */
+            dns_type {$str(8)} DEFAULT NULL,             /* sonde dns : A, MX, TXT… */
+            dns_expect {$str(255)} DEFAULT NULL,         /* sonde dns : valeur attendue, facultative */
             role {$str(20)} NOT NULL DEFAULT 'secondary',  /* primary | secondary */
             method {$str(10)} NOT NULL DEFAULT 'GET',
             request_body {$txt},

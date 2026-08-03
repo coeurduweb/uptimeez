@@ -404,6 +404,22 @@ final class Runner
             $id = (int)$mon['id'];
             // Une sonde battement ne s'interroge pas : c'est elle qui nous appelle.
             if (($mon['kind'] ?? '') === 'heartbeat') continue;
+
+            // LES SONDES TCP ET DNS NE SONT PAS DES REQUÊTES HTTP, donc elles ne rejoignent
+            // pas le lot parallèle. Elles passent en revanche par le MÊME verdict et la MÊME
+            // persistance : incidents, corrélation, alertes, escalade et statistiques
+            // suivent sans une ligne de plus. C'est tout l'inverse de Heartbeat::sweep(),
+            // qui recopie quarante lignes de persistance et dont la divergence est la forme
+            // exacte du défaut qui avait produit deux verdicts de certificat contradictoires.
+            if (in_array($mon['kind'] ?? '', ['tcp', 'dns'], true)) {
+                if (!$manual && self::isPaused($mon)) {
+                    self::persistPaused($mon);
+                    $out[] = ['monitor_id' => $id, 'state' => 'paused', 'reason' => null, 'message' => 'En pause'];
+                    continue;
+                }
+                $out[] = self::sonderReseau($mon, $manual) + ['monitor_id' => $id];
+                continue;
+            }
             if (!$manual && self::isPaused($mon)) {
                 self::persistPaused($mon);
                 $out[] = ['monitor_id' => $id, 'state' => 'paused', 'reason' => null, 'message' => 'En pause'];
@@ -768,6 +784,77 @@ final class Runner
     // =====================================================================
     // Persistance + moteur d'incidents
     // =====================================================================
+
+    /**
+     * Une sonde qui ne parle pas HTTP : un port, ou un enregistrement DNS.
+     *
+     * ------------------------------------------------------------------------------
+     * CE QU'ELLE FABRIQUE, ET CE QU'ELLE NE FABRIQUE PAS
+     * ------------------------------------------------------------------------------
+     *
+     * Elle construit une Response, mais elle n'invente PAS un code 200. Le statut reste à
+     * zéro, parce qu'il n'y a pas eu de réponse HTTP, et prétendre le contraire ferait
+     * afficher « HTTP 200 » sur la fiche d'un port. Ce qui est rempli est ce qui a été
+     * réellement mesuré : la durée. Le reste des colonnes de mesure restera vide, et c'est
+     * la vérité de ce qu'on sait d'un port.
+     *
+     * LES AUTRES RÈGLES NE SONT PAS APPELÉES, et c'est délibéré. La garde de couche réseau
+     * conclurait « pas de réponse » sur une sonde qui n'en attend pas, et la règle du code
+     * HTTP dirait « code inattendu : 0 ». Une sonde de port a UNE question ; lui faire
+     * traverser dix règles qui n'ont rien à en dire produirait deux verdicts pour un fait.
+     *
+     * @return array<string,mixed> le verdict, dans la même forme que celui d'evaluate()
+     */
+    private static function sonderReseau(array $mon, bool $manual): array
+    {
+        $res = new Response();
+        $res->url = (string) $mon['url'];
+        $res->finalUrl = (string) $mon['url'];
+
+        $hote = (string) (parse_url((string) $mon['url'], PHP_URL_HOST) ?: trim((string) $mon['url']));
+        $details = [];
+
+        if (($mon['kind'] ?? '') === 'tcp') {
+            $port = (int) ($mon['port'] ?? 0);
+            $sonde = Check\Port::probe($hote, $port, max(1, (int) ($mon['timeout_sec'] ?? 10)));
+            $sonde['host'] = $hote;
+            $sonde['port'] = $port;
+            $details['port'] = $sonde;
+            $detecteur = Regle\Port::DETECTEUR;
+        } else {
+            $type = (string) ($mon['dns_type'] ?? 'A');
+            $sonde = Check\Dns::probe($hote, $type);
+            $sonde['name'] = $hote;
+            $sonde['type'] = strtoupper($type);
+            $details['dns'] = $sonde;
+            $detecteur = Regle\Dns::DETECTEUR;
+        }
+
+        // La durée mesurée est la seule métrique honnête ici, et elle sert le graphique de
+        // la fiche comme celle d'une page : un port qui met deux secondes à accepter dit
+        // quelque chose, même si ce n'est pas un verdict.
+        $res->totalMs = (int) ($sonde['ms'] ?? 0);
+        $res->connectMs = $res->totalMs;
+        $res->ok = ($sonde['checked'] ?? false) === true;
+
+        $contexte = new Regle\Contexte($mon, $res, [$detecteur => $sonde], $manual,
+                                       isset($mon['status']) ? (string) $mon['status'] : null);
+        $regle = ($mon['kind'] ?? '') === 'tcp' ? new Regle\Port() : new Regle\Dns();
+        $findings = [];
+
+        if ($v = $regle->evaluer($contexte)) {
+            $findings[] = $v->enTableau();
+        }
+
+        // Les exceptions posées par l'exploitant s'appliquent comme partout ailleurs : une
+        // sonde de port n'échappe pas à « je sais, c'est normal chez cet hébergeur ».
+        $findings = Exceptions::filtrer((int)($mon["id"] ?? 0), $findings);
+
+        $verdict = self::verdict($findings, $details, [], $res);
+        self::persist($mon, $res, $verdict, 1);
+
+        return $verdict;
+    }
 
     private static function persist(array $mon, Response $res, array $verdict, int $attempts): void
     {

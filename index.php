@@ -313,7 +313,21 @@ function handle_post(): ?array
             $data = [
                 'name'            => str_cut(trim((string)($_POST['name'] ?? '')) ?: host_of($url), 180),
                 'url'             => $url,
-                'kind'            => in_array($_POST['kind'] ?? '', ['page', 'api', 'asset', 'keyword'], true) ? $_POST['kind'] : 'page',
+                // « tcp » et « dns » rejoignent la liste blanche le 2026-08-04. « heartbeat »
+                // n'y est TOUJOURS PAS, et ce n'est pas un oubli : une sonde de battement se
+                // crée par son propre écran, qui tire le jeton et rend l'URL à appeler. La
+                // choisir ici produirait une sonde qui attend un signal qu'aucun script
+                // n'enverra jamais, faute de connaître l'adresse.
+                'kind'            => in_array($_POST['kind'] ?? '', ['page', 'api', 'asset', 'keyword', 'tcp', 'dns'], true) ? $_POST['kind'] : 'page',
+                // LE PORT EST BORNÉ ET NULLABLE. Zéro n'est pas un port : le stocker ferait
+                // une sonde tcp qui échoue toujours, avec un message parlant du port 0.
+                'port'            => ($p = (int)($_POST['port'] ?? 0)) >= 1 && $p <= 65535 ? $p : null,
+                // Le type DNS est pris dans la liste de ce que le détecteur sait interroger,
+                // et pas dans ce que l'utilisateur a tapé : un type inconnu rendrait une
+                // sonde qui se tait pour toujours, donc verte à tort.
+                'dns_type'        => in_array(strtoupper((string)($_POST['dns_type'] ?? '')), \Uptimeez\Check\Dns::TYPES, true)
+                                     ? strtoupper((string)$_POST['dns_type']) : null,
+                'dns_expect'      => str_cut(trim((string)($_POST['dns_expect'] ?? '')), 255) ?: null,
                 'method'          => in_array(strtoupper((string)($_POST['method'] ?? 'GET')), ['GET', 'POST', 'HEAD', 'PUT'], true) ? strtoupper((string)$_POST['method']) : 'GET',
                 'request_body'    => trim((string)($_POST['request_body'] ?? '')) ?: null,
                 'interval_sec'    => max(30, min(86400, (int)($_POST['interval_sec'] ?? 300))),
