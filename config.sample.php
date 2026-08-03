@@ -84,6 +84,18 @@ return [
         ],
         'webhook' => ['enabled' => false, 'url' => ''],  // POST JSON générique
         // Anti-spam
+        // ESCALADE : prévenir un SECOND destinataire quand personne n'a acquitté.
+        //
+        // À zéro, rien ne change : c'est un mécanisme d'astreinte, et une escalade
+        // involontaire réveille quelqu'un qui n'avait rien demandé. Elle ne concerne que
+        // les pannes réelles, jamais les états « à surveiller » : escaladeur une lenteur
+        // vers une seconde équipe à trois heures du matin est exactement le bruit que ce
+        // produit refuse de produire.
+        //
+        // Les canaux d'escalade sont une LISTE SÉPARÉE : envoyer la même alerte deux fois
+        // sur le même canal ne prévient personne de plus. Vide = tous les canaux actifs.
+        'escalate_after_min' => 0,    // 0 = pas d'escalade
+        'escalate_channels'  => '',   // ex: 'mail,webhook' ; vide = tous les canaux actifs
         'resend_after_min'  => 60,    // rappel si toujours HS
         'notify_recovery'   => true,
         'notify_degraded'   => true,  // lenteur / SSL bientôt expiré / contenu modifié

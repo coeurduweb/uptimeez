@@ -2910,6 +2910,65 @@ check('resend 0 : une aggravation part quand même',   $partirait(true,  0, 1), 
 check('resend 60 : rien avant l\'heure',              $partirait(false, 60, 3599), false);
 check('resend 60 : rappel après l\'heure',            $partirait(false, 60, 3600), true);
 
+// ---------------------------------------------------------------------------
+// L'ESCALADE : PASSER LA MAIN, ET NE LE FAIRE QU'UNE FOIS.
+//
+// Ajoutée le 2026-08-03. Elle n'est pas un rappel plus insistant : le rappel répète la
+// même alerte aux mêmes personnes, l'escalade change de destinataire. Quatre conditions
+// la gouvernent, et chacune vient d'un défaut connu ailleurs :
+//
+//   - une seule fois par incident, sinon une astreinte reçoit une alerte par minute ;
+//   - les pannes seulement, parce qu'une lenteur ne réveille pas une seconde équipe ;
+//   - l'acquittement l'annule, sinon le bouton « je m'en occupe » ne veut rien dire ;
+//   - le délai part de l'OUVERTURE de l'incident et non de la dernière alerte, sinon une
+//     panne rappelée toutes les heures n'escaladerait jamais.
+//
+// La logique est recopiée ici plutôt qu'appelée, pour la même raison que le rappel juste
+// au-dessus : Runner::escalade() lit la base, et ce fichier ne veut pas d'une base.
+$escaladerait = static function (int $apres, string $severite, ?string $ack, ?string $dejaEscalade,
+                                 ?string $fin, int $depuisSec): bool {
+    if ($apres <= 0) return false;
+    if ($severite !== 'down' || $ack !== null || $dejaEscalade !== null || $fin !== null) return false;
+    return $depuisSec >= $apres * 60;
+};
+
+check('escalade 0 : jamais, même après une journée',
+    $escaladerait(0, 'down', null, null, null, 86400), false);
+check('escalade 30 : rien avant les trente minutes',
+    $escaladerait(30, 'down', null, null, null, 1799), false);
+check('escalade 30 : elle part à la trentième minute',
+    $escaladerait(30, 'down', null, null, null, 1800), true);
+check('une lenteur n\'escalade pas, quelle que soit sa durée',
+    $escaladerait(30, 'degraded', null, null, null, 86400), false);
+check('un incident acquitté n\'escalade plus : quelqu\'un s\'en occupe',
+    $escaladerait(30, 'down', '2026-08-03 10:00:00', null, null, 86400), false);
+check('une escalade déjà partie ne repart pas à la passe suivante',
+    $escaladerait(30, 'down', null, '2026-08-03 10:30:00', null, 86400), false);
+check('un incident résolu n\'escalade pas',
+    $escaladerait(30, 'down', null, null, '2026-08-03 10:05:00', 86400), false);
+
+// LES CANAUX DE L'ESCALADE. Vide veut dire « tous les canaux actifs » : une escalade
+// configurée à moitié qui n'envoie rien serait pire qu'aucune, puisqu'on compte dessus.
+// Une liste nommée est INTERSECTÉE avec les canaux actifs, jamais additionnée : nommer un
+// canal éteint ne le rallume pas.
+$canauxEscalade = static function (string $reglage, array $actifs): array {
+    $voulus = array_values(array_filter(array_map('trim', explode(',', $reglage))));
+    return $voulus === [] ? $actifs : array_values(array_intersect($actifs, $voulus));
+};
+
+check('réglage vide : tous les canaux actifs',
+    $canauxEscalade('', ['discord', 'mail']), ['discord', 'mail']);
+check('réglage nommé : l\'intersection avec les canaux actifs',
+    $canauxEscalade('mail,webhook', ['discord', 'mail']), ['mail']);
+check('nommer un canal éteint ne le rallume pas',
+    $canauxEscalade('webhook', ['discord', 'mail']), []);
+check('la casse et les espaces du réglage ne changent rien',
+    $canauxEscalade(' mail , discord ', ['discord', 'mail']), ['discord', 'mail']);
+
+// LA COLONNE EXISTE, ET C'EST ELLE QUI PORTE L'ÉTAT « déjà escaladé ».
+check('la table des incidents porte escalated_at',
+    str_contains((string)file_get_contents(__DIR__ . '/../src/Db.php'), 'escalated_at'), true);
+
 section('Faux positifs du détecteur CSS, tous relevés sur le parc réel');
 // ---------------------------------------------------------------------------
 // Quatre défauts trouvés le 2026-08-02 en vérifiant, à la demande du propriétaire, si les

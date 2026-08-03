@@ -371,7 +371,12 @@ final class Db
             checks_failed {$int} NOT NULL DEFAULT 1,
             ack_at {$ts} DEFAULT NULL,
             last_notified_at {$ts} DEFAULT NULL,
-            notify_count {$int} NOT NULL DEFAULT 0
+            notify_count {$int} NOT NULL DEFAULT 0,
+            /* L'escalade est partie : une seule fois par incident, et jamais deux.
+               La colonne EST l'état : sans elle, un incident non acquitté qui traverse
+               plusieurs passes réescaladerait à chaque tour, ce qui est le contraire du
+               but. Voir Notify\Notifier::sendEscalation(). */
+            escalated_at {$ts} DEFAULT NULL
         ){$eng}";
 
         $tables['events'] = "CREATE TABLE IF NOT EXISTS events (

@@ -222,11 +222,20 @@ $mk = function (array $over) use (&$mk): int {
 // 3. Scénarios de panne
 // =========================================================================
 title('Détection des anomalies');
+// LES TROIS CAS CSS ATTENDENT « DÉGRADÉ » DEPUIS LE 2026-08-03, ET C'EST UNE CORRECTION
+// DU TEST, PAS DU PRODUIT.
+//
+// Ils exigeaient « hors service ». Le plafond de gravité, décidé après un relevé où treize
+// sites étaient annoncés hors service en servant leurs pages, interdit à une cause
+// d'apparence de sortir en « down » : « CSS_ » plafonne à « degraded » dans Verdict::pour().
+// Le produit a donc changé de contrat le 2 août et cette suite est restée sur l'ancien,
+// rouge sur cinq contrôles pendant deux jours. Une suite rouge en permanence n'est plus lue,
+// et c'est exactement ce qui est arrivé.
 $cases = [
     ['ok',        '/ok.html',        'up',       null,          []],
-    ['css404',    '/css404.html',    'down',     'CSS_BROKEN',  []],
-    ['cssmime',   '/cssmime.html',   'down',     'CSS_BROKEN',  []],
-    ['csshidden', '/csshidden.html', 'down',     'CSS_BROKEN',  []],
+    ['css404',    '/css404.html',    'degraded', 'CSS_BROKEN',  []],
+    ['cssmime',   '/cssmime.html',   'degraded', 'CSS_BROKEN',  []],
+    ['csshidden', '/csshidden.html', 'degraded', 'CSS_BROKEN',  []],
     ['cssnone',   '/cssnone.html',   'degraded', 'CSS_DEGRADED',[]],
     ['dberror',   '/dberror.php',    'down',     'DB_DOWN',     []],
     ['phpfatal',  '/phpfatal.php',   'down',     'DB_DOWN',     []],
@@ -268,11 +277,13 @@ ok('référence CSS apprise sur un état sain', ($base['css_bytes'] ?? 0) > 2000
 Db::update('monitors', ['url' => "$BASE/cssthin.html", 'css_checked_at' => null], 'id = :i', ['i' => $b]);
 Runner::runOne($b);
 $m = Db::one('SELECT status, reason_code, css_detail FROM monitors WHERE id = ?', [$b]);
-ok('chute de CSS détectée', $m['status'] === 'down' && $m['reason_code'] === 'CSS_BROKEN',
+// « degraded » et non « down », pour la raison écrite plus haut : une mise en page ruinée
+// est un vrai défaut et le visiteur obtient sa page.
+ok('chute de CSS détectée', $m['status'] === 'degraded' && $m['reason_code'] === 'CSS_BROKEN',
     str_cut(implode(' ', jdec($m['css_detail'])['messages'] ?? []), 90));
 Runner::runOne($b);
 $m2 = Db::one('SELECT status, reason_code FROM monitors WHERE id = ?', [$b]);
-ok('verdict CSS conservé entre deux analyses', $m2['status'] === 'down' && $m2['reason_code'] === 'CSS_BROKEN',
+ok('verdict CSS conservé entre deux analyses', $m2['status'] === 'degraded' && $m2['reason_code'] === 'CSS_BROKEN',
     $m2['status'] . ' / ' . $m2['reason_code']);
 
 // --- Chaîne de contrôle --------------------------------------------------
@@ -403,14 +414,27 @@ $msg = (string)Db::val("SELECT message FROM events WHERE kind = 'grouped_alert' 
 ok('le message nomme le serveur fautif', str_contains($msg, '203.0.113.10'), str_cut($msg, 60));
 
 // Deux sites seulement : pas de regroupement, chacun son alerte.
+//
+// DEUX PASSES ET NON UNE, DEPUIS LA CONFIRMATION AVANT ALERTE. Un premier échec ne réveille
+// plus personne : la sonde est replanifiée à trente secondes et l'incident ne s'ouvre qu'à la
+// deuxième observation. Ce contrôle attendait une notification après une seule passe, donc il
+// est resté rouge depuis que cette règle existe, en annonçant « 0 notification(s) » comme si
+// le regroupement avait tout avalé. On remet les sondes « à échéance » entre les deux passes,
+// parce que la première a justement décalé leur prochain contrôle.
 Db::q("DELETE FROM notifications");
 Db::q("DELETE FROM incidents WHERE monitor_id IN (" . implode(',', array_map('intval', $grpSites)) . ")");
-Db::q("UPDATE monitors SET status = 'up', next_check_at = ? WHERE id IN ("
+Db::q("UPDATE monitors SET status = 'up', consecutive_fail = 0, next_check_at = ? WHERE id IN ("
     . implode(',', array_map('intval', array_slice($grpSites, 0, 2))) . ")", [now()]);
 Db::q("UPDATE monitors SET enabled = 0 WHERE id IN ("
     . implode(',', array_map('intval', array_slice($grpSites, 2))) . ")");
 Runner::runDue(30, 60);
-ok('en dessous du seuil : alertes individuelles',
+$apresPremiere = (int)Db::val('SELECT COUNT(*) FROM notifications');
+ok('un premier échec ne réveille personne', $apresPremiere === 0, $apresPremiere . ' notification(s)');
+
+Db::q("UPDATE monitors SET next_check_at = ? WHERE id IN ("
+    . implode(',', array_map('intval', array_slice($grpSites, 0, 2))) . ")", [now()]);
+Runner::runDue(30, 60);
+ok('en dessous du seuil : alertes individuelles à la confirmation',
     (int)Db::val('SELECT COUNT(*) FROM notifications') === 2,
     Db::val('SELECT COUNT(*) FROM notifications') . ' notification(s)');
 

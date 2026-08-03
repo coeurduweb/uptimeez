@@ -71,6 +71,101 @@ final class Notifier
     }
 
     /**
+     * L'escalade : personne n'a acquitté, on prévient quelqu'un d'autre.
+     *
+     * ------------------------------------------------------------------------------
+     * CE QUE L'ESCALADE EST, ET CE QU'ELLE N'EST PAS
+     * ------------------------------------------------------------------------------
+     *
+     * Ce n'est pas un rappel. Le rappel répète la même alerte aux mêmes personnes, et son
+     * seul effet quand personne ne regarde est d'allonger un fil que personne ne lit.
+     * L'escalade change de DESTINATAIRE : elle part sur une liste de canaux distincte,
+     * après un délai, et une seule fois. C'est la différence entre insister et passer la
+     * main.
+     *
+     * ------------------------------------------------------------------------------
+     * TROIS CONDITIONS, ET CHACUNE A COÛTÉ QUELQUE CHOSE AILLEURS
+     * ------------------------------------------------------------------------------
+     *
+     * 1. UNE SEULE FOIS PAR INCIDENT. La colonne « escalated_at » porte cet état. Sans
+     *    elle, un incident non acquitté réescaladerait à chaque passe du collecteur, et
+     *    l'astreinte recevrait une alerte par minute : le mécanisme censé faire réagir
+     *    quelqu'un deviendrait la raison de couper ses notifications.
+     *
+     * 2. LES PANNES SEULEMENT. Un état « à surveiller » ne réveille pas une seconde
+     *    équipe. Une lenteur ou un certificat qui expire dans dix jours n'a jamais justifié
+     *    de sortir quelqu'un du lit, et l'escalader ferait perdre à l'escalade le seul
+     *    crédit qui la rend utile.
+     *
+     * 3. L'ACQUITTEMENT ANNULE. Si quelqu'un a dit « je m'en occupe », l'escalade n'a plus
+     *    d'objet. C'est aussi la seule façon honnête de fermer la boucle : le bouton
+     *    d'acquittement existait déjà et ne servait qu'à taire les rappels.
+     *
+     * ------------------------------------------------------------------------------
+     * POURQUOI ELLE PASSE LES HEURES CALMES
+     * ------------------------------------------------------------------------------
+     *
+     * Elle part avec l'urgence « critical », comme toute panne réelle. Une escalade
+     * retenue jusqu'à sept heures du matin n'est pas une escalade, c'est un rapport.
+     *
+     * @param array<string,mixed> $mon
+     * @param array<string,mixed> $incident
+     * @return bool vrai si au moins un canal a reçu l'alerte
+     */
+    public static function sendEscalation(array $mon, array $incident): bool
+    {
+        $canaux = self::escalationChannelsFor($mon);
+
+        if ($canaux === []) {
+            // Aucun canal : on le DIT dans le journal plutôt que de laisser croire que
+            // l'escalade a eu lieu. Une astreinte configurée à moitié est pire qu'aucune,
+            // parce qu'on compte dessus.
+            self::log($mon, 'escalade', 'down', false,
+                t('Aucun canal d\'escalade utilisable : rien n\'a été envoyé.'));
+
+            return false;
+        }
+
+        $depuis = max(0, time() - strtotime((string) $incident['started_at']));
+
+        $titre = '🚨 ' . t('ESCALADE : personne n\'a acquitté') . ' : ' . $mon['name'];
+        $lignes = [
+            [t('Cause'), self::reasonLabel($incident['reason_code'])],
+            [t('Détail'), str_cut((string) $incident['message'], 300)],
+            ['URL', $mon['url']],
+            [t('Hors service depuis'), human_duration($depuis)],
+            [t('Alertes déjà envoyées'), (string) (int) $incident['notify_count']],
+        ];
+
+        $envoyes = self::dispatchVers($canaux, $mon, 'down', $titre, $lignes);
+
+        return $envoyes > 0;
+    }
+
+    /**
+     * Les canaux de l'escalade : une liste distincte, sinon tous les canaux actifs.
+     *
+     * ENVOYER LA MÊME ALERTE DEUX FOIS SUR LE MÊME CANAL NE PRÉVIENT PERSONNE DE PLUS,
+     * mais on ne peut pas non plus deviner qui est d'astreinte. Le réglage vide retombe
+     * donc sur les canaux actifs, ce qui rend l'escalade utile dès qu'on l'active, sans
+     * exiger un second paramétrage complet.
+     *
+     * @param array<string,mixed> $mon
+     * @return array<int,string>
+     */
+    public static function escalationChannelsFor(array $mon): array
+    {
+        $voulus = array_values(array_filter(array_map('trim',
+            explode(',', (string) Config::get('notify.escalate_channels', '')))));
+
+        if ($voulus === []) {
+            return self::channelsFor($mon);
+        }
+
+        return array_values(array_intersect(self::channelsFor($mon), $voulus));
+    }
+
+    /**
      * Alerte groupée : plusieurs sites tombés en même temps sur la même
      * infrastructure. Un seul message, qui nomme le serveur et liste les sites.
      *
@@ -171,9 +266,25 @@ final class Notifier
         }
         if ($urgency === 'warn' && !Config::get('notify.notify_degraded', true)) return 0;
 
-        $channels = self::channelsFor($mon);
+        return self::dispatchVers(self::channelsFor($mon), $mon, $sev, $title, $lines);
+    }
+
+    /**
+     * L'envoi sur une liste de canaux IMPOSÉE, sans repasser par la politique d'envoi.
+     *
+     * Extrait de dispatch() le 2026-08-03 pour l'escalade, qui doit choisir ses propres
+     * destinataires. Les heures calmes et le réglage « prévenir sur état à surveiller »
+     * restent dans dispatch() : ce sont des décisions sur l'OPPORTUNITÉ d'alerter, et
+     * l'escalade les a déjà prises quand elle arrive ici.
+     *
+     * @param array<int,string>   $canaux
+     * @param array<string,mixed> $mon
+     * @param array<int,array{0:string,1:string}> $lines
+     */
+    private static function dispatchVers(array $canaux, array $mon, string $sev, string $title, array $lines): int
+    {
         $ok = 0;
-        foreach ($channels as $ch) {
+        foreach ($canaux as $ch) {
             $res = match ($ch) {
                 'discord' => Discord::send($title, $lines, $sev, $mon),
                 'slack'   => Slack::send($title, $lines, $sev, $mon),

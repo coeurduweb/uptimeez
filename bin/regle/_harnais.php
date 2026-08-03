@@ -7,7 +7,7 @@
  * POURQUOI UN FICHIER PAR RÈGLE, ET NON UNE SECTION DANS LE SELFTEST
  * ------------------------------------------------------------------------------
  *
- * Le selftest fait 1 139 contrôles et met plusieurs secondes. Quand on modifie une règle,
+ * Le selftest fait 1 151 contrôles et met plusieurs secondes. Quand on modifie une règle,
  * on veut relancer CETTE règle, en moins d'une seconde, et lire dix lignes plutôt que
  * mille. Un fichier par règle donne exactement ça :
  *
@@ -41,6 +41,8 @@
  * parc. Chaque fichier commence donc par ses cas nuls.
  */
 declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
 require __DIR__ . '/../../src/bootstrap.php';
 
@@ -132,7 +134,7 @@ function titre(string $s): void
  * Le bilan, et le code de sortie qui va avec.
  *
  * Un test qui échoue doit faire échouer le déploiement : bin/regles.php s'appuie sur ce
- * code, et bin/deployer.sh sur le sien.
+ * code.
  */
 function bilan(string $regle): never
 {

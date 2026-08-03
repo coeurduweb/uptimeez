@@ -529,6 +529,17 @@ function handle_post(): ?array
                         ],
                     ],
                     'resend_after_min' => max(0, (int)($_POST['resend_after'] ?? 60)),
+                    // L'escalade est bornée comme le rappel : au-delà de vingt-quatre heures
+                    // ce n'est plus une astreinte, et un champ libre laisserait passer un
+                    // chiffre qui la désactive sans le dire.
+                    'escalate_after_min' => max(0, min(1440, (int)($_POST['escalate_after'] ?? 0))),
+                    // Les canaux sont filtrés sur les quatre qui existent : une faute de
+                    // frappe donnerait une liste où aucun canal ne correspond, donc une
+                    // escalade silencieuse, c'est-à-dire le pire des deux mondes.
+                    'escalate_channels' => implode(',', array_values(array_intersect(
+                        ['discord', 'slack', 'mail', 'webhook'],
+                        array_map('trim', explode(',', strtolower((string)($_POST['escalate_channels'] ?? ''))))
+                    ))),
                     'notify_recovery'  => isset($_POST['notify_recovery']),
                     'notify_degraded'  => isset($_POST['notify_degraded']),
                     // Une plage impossible désactivait les heures calmes en

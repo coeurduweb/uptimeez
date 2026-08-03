@@ -194,6 +194,21 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
             </div>
           </div>
           <div class="field">
+            <label for="escalade"><?= te('Escalade si personne n\'acquitte') ?></label><?php /* Le libellé dit la condition, pas le mécanisme : « escalade après 30 minutes » ferait croire à un rappel plus insistant. */ ?><?= hint('Prévient une SECONDE liste de canaux, une seule fois, et seulement sur une panne réelle. Acquitter l\'annule. À zéro, rien ne part.') ?>
+            <div class="field-inline">
+              <input id="escalade" type="number" name="escalate_after" min="0" max="1440"
+                     value="<?= (int)Config::get('notify.escalate_after_min', 0) ?>">
+              <span class="unit"><?= te('minutes (0 = jamais)') ?></span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="escalade_canaux"><?= te('Canaux de l\'escalade') ?></label>
+            <input id="escalade_canaux" type="text" name="escalate_channels" style="max-width:260px"
+                   value="<?= e((string)Config::get('notify.escalate_channels', '')) ?>"
+                   placeholder="mail, webhook">
+            <span class="hint"><?= te('Vide = tous les canaux actifs. Envoyer la même alerte deux fois sur le même canal ne prévient personne de plus.') ?></span>
+          </div>
+          <div class="field">
             <label for="quiet"><?= te('Heures calmes') ?></label><?= hint('Pendant cette plage, les alertes « à surveiller » sont retenues et regroupées. Une vraie panne passe toujours : on ne dort pas sur un site hors service.') ?>
             <input id="quiet" type="text" name="quiet_hours" value="<?= e((string)Config::get('notify.quiet_hours', '')) ?>"
                    placeholder="23:00-07:00" style="max-width:200px">

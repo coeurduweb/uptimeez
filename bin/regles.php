@@ -14,6 +14,8 @@
  */
 declare(strict_types=1);
 
+if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
+
 require __DIR__ . '/../src/bootstrap.php';
 
 use Uptimeez\Runner;

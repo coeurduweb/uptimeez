@@ -1046,6 +1046,50 @@ final class Runner
             $inc = Db::one('SELECT * FROM incidents WHERE id = ?', [(int)$open['id']]);
             if ($inc && !$inc['ack_at']) Notifier::sendIncident($mon, $inc, $escalated ? 'aggrave' : 'rappel');
         }
+
+        self::escalade($mon, (int)$open['id']);
+    }
+
+    /**
+     * L'escalade : personne n'a acquitté, on passe la main.
+     *
+     * ELLE COMPTE DEPUIS L'OUVERTURE DE L'INCIDENT, pas depuis la dernière alerte, et c'est
+     * la différence qui la rend utile. Le rappel repart à zéro chaque fois qu'il part, donc
+     * une panne rappelée toutes les heures n'escaladerait jamais si l'escalade suivait le
+     * même compteur : elle attendrait indéfiniment un silence qui n'arrive pas.
+     *
+     * ELLE NE PART QU'UNE FOIS, et la colonne « escalated_at » est cet état. Elle est écrite
+     * même quand aucun canal n'a répondu : sinon chaque passe réessaierait, et une astreinte
+     * mal configurée produirait une alerte par minute. Le journal, lui, garde la trace de
+     * l'échec, ce qui est l'endroit où on va chercher pourquoi personne n'a été prévenu.
+     */
+    private static function escalade(array $mon, int $incidentId): void
+    {
+        $apres = (int)Config::get('notify.escalate_after_min', 0);
+
+        if ($apres <= 0) {
+            return;
+        }
+
+        $inc = Db::one('SELECT * FROM incidents WHERE id = ?', [$incidentId]);
+
+        if (!$inc
+            || $inc['severity'] !== 'down'   // une lenteur ne réveille pas une seconde équipe
+            || $inc['ack_at']                // quelqu'un s'en occupe : l'escalade n'a plus d'objet
+            || $inc['escalated_at']          // déjà partie, et elle ne part qu'une fois
+            || $inc['ended_at']) {           // résolu entre-temps
+            return;
+        }
+
+        $debut = strtotime((string)$inc['started_at']);
+
+        if ($debut <= 0 || time() - $debut < $apres * 60) {
+            return;
+        }
+
+        Notifier::sendEscalation($mon, $inc);
+
+        Db::update('incidents', ['escalated_at' => now()], 'id = :__i', ['__i' => $incidentId]);
     }
 
     private static function persistPaused(array $mon): void
