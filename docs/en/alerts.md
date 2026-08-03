@@ -13,11 +13,30 @@ your alerts worth reading.
 |---|---|---|
 | **Discord** | Channel → Settings → Integrations → Webhooks, paste the URL | Fastest to set up. Rich formatting, clickable link to the monitor |
 | **Slack** | Incoming webhook URL | Same |
+| **Telegram** | Bot token from @BotFather, plus the chat id | Two values, not a URL. The chat id is written nowhere in the app: message the bot, then read `chat.id` on `api.telegram.org/bot{token}/getUpdates` |
+| **Microsoft Teams** | Incoming URL | A classic connector or a Power Automate flow, both accepted. A flow answers `202` and shows nothing until its template is wired to a field |
+| **SMS** | Twilio account SID, auth token, sender and recipients | The only channel billed per message. One segment, 155 characters, title and cause. Keep it for escalation |
 | **E-mail** | Recipients, sender | Server `mail()` (fine on o2switch) or direct SMTP with TLS/SSL |
-| **Generic webhook** | Any URL | POSTs JSON. For n8n, Make, Teams, an SMS gateway, your own handler |
+| **Generic webhook** | Any URL | POSTs JSON. For n8n, Make, another SMS gateway, your own handler |
 
 Set the **base URL** of your installation in Settings, otherwise alerts cannot include a clickable link back to
 the monitor.
+
+### Escalation
+
+A reminder repeats the same alert to the same people. **Escalation changes recipient**: after a delay you
+choose, once, an unacknowledged outage goes to a second list of channels. Four rules make it usable rather than
+noisy:
+
+- **once per incident**, otherwise an on-call phone gets one alert a minute and the notifications get muted;
+- **outages only**, because a slow page has never justified waking a second team;
+- **acknowledging cancels it**, which is what the acknowledge button was always for;
+- **the delay counts from the start of the incident**, not from the last alert, otherwise an outage reminded
+  every hour would never escalate.
+
+Set it in Settings → *Escalate if nobody acknowledges*. At zero, nothing is sent. Leave the channel list empty
+and it uses every active channel; name channels and it uses the intersection, because naming a disabled channel
+does not enable it.
 
 Then press **Test** on each channel. A real message goes through the real channel. An untested channel is not a
 channel.

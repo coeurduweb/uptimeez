@@ -13,11 +13,30 @@ existe pour que vos alertes vaillent la peine d'être lues.
 |---|---|---|
 | **Discord** | Salon → Paramètres → Intégrations → Webhooks, collez l'URL | Le plus rapide. Mise en forme riche, lien cliquable vers la sonde |
 | **Slack** | URL de webhook entrant | Idem |
+| **Telegram** | Jeton du robot auprès de @BotFather, plus l'identifiant de la conversation | Deux valeurs et non une URL. L'identifiant n'est écrit nulle part dans l'application : écrivez au robot, puis lisez `chat.id` sur `api.telegram.org/bot{jeton}/getUpdates` |
+| **Microsoft Teams** | URL entrante | Connecteur classique ou flux Power Automate, les deux acceptés. Un flux répond `202` et n'affiche rien tant que son modèle n'est pas relié à un champ |
+| **SMS** | Identifiant Twilio, jeton, expéditeur et destinataires | Le seul canal facturé à l'envoi. Un segment, 155 caractères, titre et cause. À réserver à l'escalade |
 | **E-mail** | Destinataires, expéditeur | `mail()` du serveur (parfait sur o2switch) ou SMTP direct avec TLS/SSL |
-| **Webhook générique** | N'importe quelle URL | Envoie du JSON. Pour n8n, Make, Teams, une passerelle SMS, votre propre traitement |
+| **Webhook générique** | N'importe quelle URL | Envoie du JSON. Pour n8n, Make, une autre passerelle SMS, votre propre traitement |
 
 Renseignez l'**adresse de l'installation** dans les réglages, sinon les alertes ne peuvent pas contenir de lien
 cliquable vers la sonde concernée.
+
+### L'escalade
+
+Un rappel répète la même alerte aux mêmes personnes. **L'escalade change de destinataire** : après un délai que
+vous choisissez, une seule fois, une panne non acquittée part vers une seconde liste de canaux. Quatre règles la
+rendent utilisable plutôt que bruyante :
+
+- **une seule fois par incident**, sinon un téléphone d'astreinte reçoit une alerte par minute et coupe ses
+  notifications ;
+- **les pannes seulement**, parce qu'une page lente n'a jamais justifié de réveiller une seconde équipe ;
+- **l'acquittement l'annule**, ce à quoi le bouton d'acquittement a toujours servi ;
+- **le délai compte depuis l'ouverture de l'incident**, pas depuis la dernière alerte, sinon une panne rappelée
+  toutes les heures n'escaladerait jamais.
+
+Réglages → *Escalade si personne n'acquitte*. À zéro, rien ne part. Une liste de canaux vide utilise tous les
+canaux actifs ; une liste nommée en prend l'intersection, parce que nommer un canal éteint ne le rallume pas.
 
 Puis appuyez sur **Tester** pour chaque canal. Un vrai message part par le vrai canal. Un canal non testé n'est pas
 un canal.
