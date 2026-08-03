@@ -399,7 +399,7 @@ exactly what the symbol now says.
 
 | | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement only | ❌ | ❌ | ⚠️ write a synthetic script |
+| Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement: DOM elements compared | ❌ | ❌ | ⚠️ write a synthetic script |
 | Browser-console errors reconstructed | ✅ | ❌ | ⚠️ in script logs | ❌ | ❌ | ❌ | ⚠️ in script logs |
 | Before / after picture of the broken page | ✅ silhouette | ❌ | ⚠️ screenshot in a script | ⚠️ screenshot | ❌ | ❌ | ⚠️ screenshot |
 | Software inventory of each site, versions included | ✅ from the HTML already fetched | ❌ | ❌ | ⚠️ with an agent | ❌ | ✅ with an agent | ⚠️ with an agent |
