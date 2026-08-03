@@ -24,6 +24,51 @@ Nothing else. The installer checks all of it and tells you what is missing befor
 
 ---
 
+## Three ways in, and which one is the reference
+
+| | When it fits | What it costs |
+|---|---|---|
+| **`install.php` in a browser** | The reference. Shared hosting, FTP, no shell needed | Nothing. It shows the environment checklist and explains what is missing |
+| **`php bin/installer.php`** | Over SSH, or when you set up several instances, or when you would rather not expose an admin URL while installing | A shell |
+| **`docker compose up -d`** | Your own machine, and you prefer one command to a file transfer | Docker, which the product otherwise never needs |
+
+The first is the one this document describes and the one the screenshots come from. The other two exist for
+specific situations and change nothing about the product: no build step, no package manager, no dependency to
+resolve, whichever you pick.
+
+### The command-line installer
+
+```bash
+php bin/installer.php --verifier                 # check the environment, write nothing
+php bin/installer.php                            # interactive: it asks for what it needs
+UPTIMEEZ_MOT_DE_PASSE=… php bin/installer.php --url=https://monitoring.example.com
+php bin/installer.php --mysql --db-nom=uptimeez --db-user=uptimeez
+```
+
+It runs exactly the same environment checks as the web installer, refuses to overwrite an existing
+`config.php` for the same reason (rewriting it redefines the access password), and ends by printing the cron
+line with the right PHP path for this machine. Passing the password through the environment keeps it out of your
+shell history.
+
+### Docker, which is optional and stays optional
+
+```bash
+docker compose up -d          # then open http://localhost:8080/install.php
+PORT=8090 docker compose up -d # if 8080 is taken
+```
+
+Two services, and the second is the one people forget: `web` serves the pages, `planificateur` runs one pass a
+minute. A single container serving pages would give you an installation that opens, shows everything green, and
+monitors nothing, which is the most misleading state this product has. The scheduler is a visible service whose
+stopping shows up in `docker compose ps`, and its output goes to `docker compose logs planificateur` rather
+than to a file nobody reads.
+
+One named volume holds the database **and** the configuration, through `UPTIMEEZ_CONFIG`. Without that, the
+configuration would be written inside the image and lost on the first rebuild: the installation would start
+over with an intact database and a forgotten password.
+
+---
+
 ## Standard installation
 
 ```bash

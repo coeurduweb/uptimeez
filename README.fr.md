@@ -518,6 +518,13 @@ UptimeEZ choisit lui-même les sondes dues : une seule passe par minute couvre t
 secondes à un jour. Pas d'accès à crontab ? L'écran **Réglages** vous donne une URL à appeler depuis n'importe
 quel service externe.
 
+**Deux autres voies, et la première ci-dessus reste la référence.** `php bin/installer.php` fait la même chose
+en SSH, avec les mêmes contrôles d'environnement, et imprime la ligne de cron avec le bon chemin de PHP pour
+cette machine. `docker compose up -d` construit une image facultative pour qui a son propre serveur et préfère
+une commande à un transfert de fichiers : deux services, parce qu'un conteneur qui ne sert que des pages ne
+surveillerait rien. Aucune des deux n'ajoute de dépendance au produit, et c'est pour ça que ce sont des options
+et non des prérequis.
+
 **Envie de visiter d'abord ? Il y a un mode démonstration.** Il construit un parc de 13 sites sur des domaines
 reconnaissables, 30 jours d'historique, et les quatre pannes emblématiques : mise en page cassée, base de
 données morte, ralentissement, `noindex` oublié.

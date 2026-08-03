@@ -1,0 +1,8 @@
+# Ce qui n'a rien à faire dans l'image : les données d'une instance, sa configuration, et
+# le dossier de travail de git. Copier data/ ferait partir la base d'une installation dans
+# une image, donc les adresses surveillées et l'historique d'un client.
+data/
+config.php
+.git/
+.github/
+docs/img/

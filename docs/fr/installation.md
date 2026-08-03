@@ -25,6 +25,51 @@ Rien d'autre. L'installeur vérifie tout cela et vous dit ce qui manque avant d'
 
 ---
 
+## Trois voies d'entrée, et laquelle fait référence
+
+| | Quand elle convient | Ce qu'elle coûte |
+|---|---|---|
+| **`install.php` dans un navigateur** | La référence. Mutualisé, FTP, aucun shell nécessaire | Rien. Elle montre la liste des contrôles et explique ce qui manque |
+| **`php bin/installer.php`** | En SSH, pour poser plusieurs instances, ou pour ne pas exposer une adresse d'administration le temps de l'installation | Un shell |
+| **`docker compose up -d`** | Votre machine, et vous préférez une commande à un transfert de fichiers | Docker, dont le produit n'a par ailleurs jamais besoin |
+
+La première est celle que ce document décrit et d'où viennent les captures. Les deux autres existent pour des
+cas précis et ne changent rien au produit : aucune étape de compilation, aucun gestionnaire de paquets, aucune
+dépendance à résoudre, quelle que soit la voie.
+
+### L'installeur en ligne de commande
+
+```bash
+php bin/installer.php --verifier                 # contrôle l'environnement, n'écrit rien
+php bin/installer.php                            # interactif : il demande ce qu'il faut
+UPTIMEEZ_MOT_DE_PASSE=… php bin/installer.php --url=https://surveillance.exemple.fr
+php bin/installer.php --mysql --db-nom=uptimeez --db-user=uptimeez
+```
+
+Il fait exactement les mêmes contrôles d'environnement que l'installeur web, refuse d'écraser un `config.php`
+existant pour la même raison (le réécrire redéfinit le mot de passe d'accès), et finit par imprimer la ligne de
+cron avec le bon chemin de PHP pour cette machine. Passer le mot de passe par l'environnement le garde hors de
+l'historique du shell.
+
+### Docker, facultatif et qui le reste
+
+```bash
+docker compose up -d          # puis http://localhost:8080/install.php
+PORT=8090 docker compose up -d # si le 8080 est déjà pris
+```
+
+Deux services, et le second est celui qu'on oublie : `web` sert les pages, `planificateur` fait une passe par
+minute. Un seul conteneur qui sert des pages donnerait une installation qui s'ouvre, qui affiche tout en vert et
+qui ne surveille rien, c'est-à-dire l'état le plus trompeur de ce produit. Le planificateur est un service
+visible dont l'arrêt se voit dans `docker compose ps`, et sa sortie part dans
+`docker compose logs planificateur` plutôt que dans un fichier que personne ne lit.
+
+Un seul volume nommé porte la base **et** la configuration, par `UPTIMEEZ_CONFIG`. Sans lui, la configuration
+serait écrite dans l'image, donc perdue à la première reconstruction : l'installation repartirait de zéro avec
+une base intacte et un mot de passe oublié.
+
+---
+
 ## Installation classique
 
 ```bash

@@ -503,6 +503,12 @@ cd uptimeez
 UptimeEZ picks the monitors that are due itself, so a single per-minute pass covers every interval from 30
 seconds to a day. No crontab access? The settings screen hands you a URL to call from any external scheduler.
 
+**Two other ways in, and the first one above stays the reference.** `php bin/installer.php` does the same thing
+over SSH, with the same environment checks, and prints the cron line with the right PHP path for that machine.
+`docker compose up -d` builds an optional image for people who have their own server and prefer one command to a
+file transfer: two services, because a container that only serves pages would monitor nothing. Neither adds a
+dependency to the product, which is why they are options rather than requirements.
+
 **Want to look around first? There is a demo mode.** It builds a 13-site portfolio on recognisable domains,
 30 days of history, and the four flagship failures: broken layout, dead database, slowdown, forgotten
 `noindex`.

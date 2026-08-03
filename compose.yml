@@ -1,0 +1,66 @@
+# UptimeEZ par Docker : deux services, et le second est celui qu'on oublie.
+#
+# ------------------------------------------------------------------------------
+#   docker compose up -d
+#   puis http://localhost:8080/install.php
+# ------------------------------------------------------------------------------
+#
+# POURQUOI DEUX SERVICES ET NON UN. Un conteneur qui ne sert que des pages donne une
+# installation qui s'ouvre, qui affiche tout en vert, et qui ne surveille rien : c'est
+# l'état le plus trompeur du produit. La planification est donc un service à part, visible
+# dans « docker compose ps », dont l'arrêt se voit.
+#
+# La boucle tient en une ligne et remplace un démon cron à dessein : ses messages partent sur
+# la sortie standard, donc « docker compose logs planificateur » montre ce qui se passe. Un
+# cron dans un conteneur écrit dans un fichier que personne ne lit, et son silence ressemble
+# à un fonctionnement normal.
+
+services:
+  web:
+    build: .
+    ports:
+      # LE PORT SE CHANGE SANS TOUCHER À CE FICHIER : « PORT=8090 docker compose up -d ».
+      # Le 8080 est déjà pris sur beaucoup de machines de développement, et l'erreur de
+      # Docker dans ce cas parle de « endpoint » et de « networking », ce qui envoie
+      # chercher un problème de réseau là où il faut juste un autre numéro.
+      - "${PORT:-8080}:80"
+    volumes:
+      # UN SEUL VOLUME, ET LA CONFIGURATION Y VIT AUSSI. C'est ce que règle
+      # UPTIMEEZ_CONFIG ci-dessous : sans lui, config.php serait écrit à la racine de
+      # l'image, donc perdu à la première reconstruction, et l'installation recommencerait
+      # à zéro en silence, base intacte et mot de passe oublié.
+      - donnees:/var/www/html/data
+    environment:
+      UPTIMEEZ_CONFIG: /var/www/html/data/config.php
+      # Le fuseau décide de l'heure écrite dans les incidents et les rapports : par défaut
+      # celui de l'image est UTC, et un rapport client décalé de deux heures est un rapport
+      # qu'on relit trois fois.
+      TZ: ${TZ:-Europe/Paris}
+    # LE FICHIER DOIT EXISTER, MÊME VIDE, AVANT QUE L'INSTALLEUR NE L'OUVRE.
+    # UPTIMEEZ_CONFIG ne se replie jamais sur le config.php de la racine, et c'est voulu :
+    # un repli ferait servir la base et les secrets d'une autre instance. On le crée donc
+    # au démarrage, sans rien écraser s'il est déjà là.
+    command: >
+      sh -c '[ -f /var/www/html/data/config.php ] || printf "<?php return [];\n" > /var/www/html/data/config.php;
+             chown -R www-data:www-data /var/www/html/data;
+             exec apache2-foreground'
+    restart: unless-stopped
+
+  planificateur:
+    build: .
+    depends_on:
+      - web
+    volumes:
+      - donnees:/var/www/html/data
+    environment:
+      UPTIMEEZ_CONFIG: /var/www/html/data/config.php
+      TZ: ${TZ:-Europe/Paris}
+    # UNE PASSE PAR MINUTE, ET LE MOTEUR CHOISIT LES SONDES DUES : c'est la même règle que
+    # la ligne de crontab de la documentation, et le même intervalle quelles que soient les
+    # cadences configurées.
+    command: >
+      sh -c 'while true; do php /var/www/html/cron.php || true; sleep 60; done'
+    restart: unless-stopped
+
+volumes:
+  donnees:
