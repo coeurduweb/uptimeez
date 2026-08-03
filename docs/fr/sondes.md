@@ -7,7 +7,7 @@ préoccupante : sauf qu'une sonde en pause ne dégrade jamais un site qui va bie
 
 ---
 
-## Les cinq types
+## Les sept types
 
 | Type | Ce qu'il fait | À utiliser pour |
 |---|---|---|
@@ -16,6 +16,33 @@ préoccupante : sauf qu'une sonde en pause ne dégrade jamais un site qui va bie
 | **Fichier** | Récupère un fichier précis et vérifie qu'il est bien servi | Un PDF, un flux, un script critique |
 | **Mot-clé** | Une page, mais on ne s'intéresse qu'à la présence ou l'absence d'un texte | Contrôle léger sur une page lourde |
 | **Battement** | Attend d'être appelé. **C'est le silence qui alerte** | Tâches cron, sauvegardes, imports nocturnes |
+| **Port TCP** | Ouvre une connexion et la referme. Ouvert ou fermé, pas d'état intermédiaire | Mail, base de données, Redis, tout ce qui écoute sans servir de pages |
+| **Enregistrement DNS** | Interroge un type d'enregistrement, et vérifie au besoin que la valeur y est encore | Un MX que personne ne surveille, un TXT qui signe votre courrier, un A qui ne doit pas bouger |
+
+### Le port TCP, et ce qu'il ne prouve pas
+
+Il se connecte et raccroche. Rien n'est lu après la connexion, donc un port ouvert dit que
+quelque chose écoute et **rien sur le fonctionnement du service derrière** : un SMTP qui accepte
+la connexion et refuse tous les messages répond « ouvert ». C'est la limite du contrôle et non
+un défaut à corriger, parce qu'y ajouter un dialogue par protocole ferait de ce moteur autre
+chose que ce qu'il est.
+
+Il n'y a **délibérément pas de ping ICMP**, et le motif traverse tout ce produit : un ping
+répond quand le service est mort, donc il fabrique de la fausse tranquillité. Un port fermé,
+lui, est un fait exploitable : ou le processus n'écoute plus, ou un pare-feu s'est mis entre
+les deux.
+
+### L'enregistrement DNS, et le seul cas qui le justifie
+
+« Aucune réponse » est une panne qu'on finirait par voir. Le cas qui vaut la sonde est l'autre :
+**un enregistrement qui répond, avec une autre valeur**. Un `A` qui pointe ailleurs répond
+parfaitement, donc aucune sonde de page ne le verra, et le site s'affichera très bien depuis la
+nouvelle adresse.
+
+La valeur attendue est cherchée **dans** la réponse et non comparée à l'identique, parce qu'un
+enregistrement rend plusieurs champs selon son type : `mx.exemple.fr` convient donc pour
+`10 mx.exemple.fr`. Exiger l'égalité obligerait à recopier une syntaxe qu'on n'a aucune raison
+de connaître, et la première alerte serait un faux positif sur un espace.
 
 ### Le battement, en détail
 

@@ -7,7 +7,7 @@ worst monitor : except that a paused monitor never drags a healthy site down.
 
 ---
 
-## The five types
+## The seven types
 
 | Type | What it does | Use it for |
 |---|---|---|
@@ -16,6 +16,31 @@ worst monitor : except that a paused monitor never drags a healthy site down.
 | **Asset** | Fetches a specific file and checks it is served correctly | A PDF, a feed, a critical script |
 | **Keyword** | A page, but only interested in the presence or absence of a text | Cheap check on a heavy page |
 | **Heartbeat** | Waits to be called. **Silence raises the alert** | Cron jobs, backups, nightly imports |
+| **TCP port** | Opens a connection and closes it. Open or closed, no middle state | Mail, database, Redis, anything that listens without serving pages |
+| **DNS record** | Looks up a record type, and optionally checks the value is still there | An MX nobody watches, a TXT that signs your mail, an A that must not move |
+
+### The TCP port, and what it does not prove
+
+It connects and hangs up. Nothing is read after the connection, so an open port says
+something is listening and **nothing about whether the service behind it works**: an SMTP that
+accepts the connection and refuses every message answers "open". That is the limit of the
+check rather than a defect to fix, because adding a per-protocol dialogue would make this
+engine something else.
+
+There is deliberately **no ICMP ping**, and the reason is the same one that runs through this
+whole product: a ping answers while the service is dead, so it manufactures false calm. A
+closed port is an actionable fact, either the process stopped listening or a firewall moved.
+
+### The DNS record, and the one case that justifies it
+
+"No answer" is an outage you would eventually notice. The case worth the monitor is the other
+one: **a record that answers, with a different value**. An `A` pointing somewhere else answers
+perfectly, so no page check will ever see it, and the site will load fine from the new address.
+
+The expected value is searched **inside** the answer rather than compared for equality, because
+a record returns several fields depending on its type: `mx.example.com` therefore matches
+`10 mx.example.com`. Requiring equality would mean copying a syntax you have no reason to know,
+and the first alert would be a false positive over a space.
 
 ### The heartbeat, in detail
 
