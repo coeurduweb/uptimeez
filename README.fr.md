@@ -410,7 +410,7 @@ documentation ne mentionne pas, ce qui est exactement ce que le symbole dit dés
 
 | | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration seulement | ❌ | ❌ | ⚠️ à scripter |
+| Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration : éléments du DOM comparés | ❌ | ❌ | ⚠️ à scripter |
 | Erreurs de console reconstituées | ✅ | ❌ | ⚠️ dans les logs du script | ❌ | ❌ | ❌ | ⚠️ dans les logs |
 | Image avant / après de la page cassée | ✅ silhouette | ❌ | ⚠️ capture dans un script | ⚠️ capture | ❌ | ❌ | ⚠️ capture |
 | Inventaire logiciel de chaque site, versions comprises | ✅ depuis le HTML déjà reçu | ❌ | ❌ | ⚠️ avec un agent | ❌ | ✅ avec un agent | ⚠️ avec un agent |
@@ -453,6 +453,11 @@ qui se vérifie et n'a pas besoin d'être rejugé chaque trimestre. Et les **pag
 gèrent 11 langues, même si son tableau de bord d'exploitation est anglophone : la ligne dit maintenant de
 quels écrans elle parle. Un outil de supervision qui exagère ce qu'il détecte se disqualifie tout seul ;
 sous-estimer ce qu'un concurrent donne gratuitement revient au même.
+
+**La ligne de la défiguration chez Site24x7 dit maintenant ce qu'il compare,** lu dans sa documentation le
+3 août 2026 : la sonde récupère le DOM et compare les éléments critiques, `img`, `script`, `anchor`, `link` et
+`iframe`, à chaque passage. C'est une vraie capacité, et ce n'est pas la même chose que vérifier qu'une feuille
+de style s'est réellement chargée : le ⚠️ reste, et la case cesse d'être une expédition en deux mots.
 
 **Deux corrections que nous devons à Checkly,** trouvées le 3 août 2026 en lisant son index de
 documentation plutôt que ses pages commerciales. Les sondes de battement y sont un type de contrôle de

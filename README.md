@@ -442,6 +442,11 @@ And UptimeRobot's **status pages** support 11 languages even though its operator
 that row now says whose screens it is counting. A monitoring tool that overstates what it detects disqualifies
 itself; the same goes for understating what a competitor gives away.
 
+**Site24x7's defacement row now says what it compares,** read in its own documentation on 3 August 2026: the
+monitor fetches the DOM and compares the critical elements, `img`, `script`, `anchor`, `link` and `iframe`, on
+every poll. That is a real capability and it is not the same as checking that a stylesheet actually loaded, so
+the ⚠️ stays and the cell stops being a one-word dismissal.
+
 **Two corrections we owe Checkly,** found on 3 August 2026 by reading its documentation index rather than
 its marketing pages. Heartbeat monitors are a first-class check type there, documented as "Ensure your
 automated processes are running as expected", so that row was a ⚠️ and is now a ✅. And its Web Vitals are not
