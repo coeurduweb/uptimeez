@@ -4195,6 +4195,65 @@ foreach (['README.md', 'README.fr.md'] as $fichier) {
     check("$fichier : pas de liste de mots-clés en pied de page", $bourrages, []);
 }
 
+// ---------------------------------------------------------------------------
+// LES DEUX TABLEAUX COMPARATIFS DOIVENT DIRE LA MÊME CHOSE, SYMBOLE PAR SYMBOLE.
+//
+// Le 2026-08-03, une correction sur Site24x7 est partie à moitié : la case anglaise a changé,
+// la française non, et le commit est passé parce que j'ai lu la ligne verte du selftest et pas
+// la trace d'erreur au-dessus. Rien ne comparait les deux tableaux, donc rien ne pouvait le
+// dire. C'est la troisième divergence entre supports de la journée.
+//
+// CE QUI EST COMPARÉ, ET CE QUI NE L'EST PAS. Les symboles, cellule par cellule : ils sont la
+// donnée, et ils ne se traduisent pas. Le texte qui les accompagne, lui, DOIT différer d'une
+// langue à l'autre, donc il n'est pas comparé. Le nombre de lignes et de colonnes non plus
+// n'est pas négociable : une ligne ajoutée d'un côté seulement est le début du même défaut.
+$grandTableau = static function (string $fichier): array {
+    $texte = (string) @file_get_contents(UPTIMEEZ_ROOT . '/' . $fichier);
+    $lignes = [];
+    $dansLeTableau = false;
+
+    foreach (explode("\n", $texte) as $ligne) {
+        $ligne = trim($ligne);
+
+        if (str_starts_with($ligne, '| | **UptimeEZ**')) { $dansLeTableau = true; continue; }
+        if ($dansLeTableau && ($ligne === '' || !str_starts_with($ligne, '|'))) break;
+        if (!$dansLeTableau || str_starts_with($ligne, '|---')) continue;
+
+        $cases = array_map('trim', explode('|', trim($ligne, '|')));
+        // Les symboles de chaque case, dans l'ordre, et rien d'autre.
+        $lignes[] = array_map(
+            static fn (string $case): string => implode('', preg_split('~~u',
+                (string) preg_replace('~[^✅❌⚠️]~u', '', $case), -1, PREG_SPLIT_NO_EMPTY) ?: []),
+            $cases
+        );
+    }
+
+    return $lignes;
+};
+
+$tabEn = $grandTableau('README.md');
+$tabFr = $grandTableau('README.fr.md');
+
+check('le tableau comparatif anglais a bien été trouvé', count($tabEn) > 20, true);
+check('les deux tableaux comparatifs ont le même nombre de lignes', count($tabFr), count($tabEn));
+
+$divergences = [];
+foreach ($tabEn as $i => $ligneEn) {
+    $ligneFr = $tabFr[$i] ?? null;
+    if ($ligneFr === null) { $divergences[] = 'ligne ' . ($i + 1) . ' absente en français'; continue; }
+    if (count($ligneFr) !== count($ligneEn)) {
+        $divergences[] = 'ligne ' . ($i + 1) . ' : ' . count($ligneEn) . ' colonnes en anglais, ' . count($ligneFr) . ' en français';
+        continue;
+    }
+    foreach ($ligneEn as $j => $symbolesEn) {
+        if (($ligneFr[$j] ?? '') !== $symbolesEn) {
+            $divergences[] = 'ligne ' . ($i + 1) . ', colonne ' . ($j + 1)
+                . ' : « ' . $symbolesEn . ' » en anglais, « ' . ($ligneFr[$j] ?? '') . ' » en français';
+        }
+    }
+}
+check('les symboles des deux tableaux comparatifs concordent', $divergences, []);
+
 section('Les faux positifs du 2026-08-02, comme jeu d\'essai permanent');
 // ---------------------------------------------------------------------------
 // Ce jour-là, 43 des 47 sondes non vertes d'un parc réel étaient FAUSSES, dont treize
