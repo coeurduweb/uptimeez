@@ -82,6 +82,16 @@ return [
             'transport' => 'mail',
             'smtp' => ['host' => '', 'port' => 587, 'user' => '', 'pass' => '', 'secure' => 'tls'],
         ],
+        // Telegram demande DEUX valeurs et non une URL : le jeton du robot (@BotFather) et
+        // l'identifiant de la conversation, qui n'est écrit nulle part dans l'interface et se
+        // lit sur api.telegram.org/bot{jeton}/getUpdates après avoir écrit au robot.
+        'telegram' => ['enabled' => false, 'token' => '', 'chat_id' => ''],
+        // Teams : connecteur classique OU flux Power Automate, les deux formes d'URL sont
+        // acceptées, la charge utile porte de quoi satisfaire l'une et l'autre.
+        'teams'   => ['enabled' => false, 'webhook' => ''],
+        // SMS par Twilio, le seul canal facturé à l'envoi : message court, et destiné à
+        // l'escalade plutôt qu'aux alertes ordinaires.
+        'sms'     => ['enabled' => false, 'sid' => '', 'token' => '', 'from' => '', 'to' => ''],
         'webhook' => ['enabled' => false, 'url' => ''],  // POST JSON générique
         // Anti-spam
         // ESCALADE : prévenir un SECOND destinataire quand personne n'a acquitté.

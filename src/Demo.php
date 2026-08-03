@@ -105,7 +105,9 @@ final class Demo
         Config::set('app.demo', true);
         // Aucun canal ne doit émettre. La configuration est la première barrière,
         // les expéditeurs eux-mêmes sont la seconde (voir Demo::silenced()).
-        foreach (['discord', 'slack', 'mail', 'webhook'] as $ch) {
+        // La liste vient du registre des canaux : un canal ajouté sans passer ici
+        // enverrait de vrais messages depuis la démonstration publique.
+        foreach (array_keys(\Uptimeez\Notify\Notifier::CANAUX) as $ch) {
             Config::set('notify.' . $ch . '.enabled', false);
         }
     }

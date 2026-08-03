@@ -9,6 +9,7 @@ use Uptimeez\Auth;
 use Uptimeez\Config;
 use Uptimeez\Db;
 use Uptimeez\Demo;
+use Uptimeez\Notify\Notifier;
 use Uptimeez\Ui;
 
 $csrf      = Auth::csrf();
@@ -24,7 +25,9 @@ $baseUrl   = (string)Config::get('app.base_url', '');
 $cronKey   = Demo::hide((string)Config::get('app.cron_key', ''));
 $token     = Demo::hide((string)Config::get('app.public_token', ''));
 $cronOk    = $lastRun && strtotime((string)$lastRun) > time() - 900;
-$channels  = ['discord' => 'Discord', 'slack' => 'Slack', 'mail' => 'E-mail', 'webhook' => 'Webhook'];
+// Les libellés viennent du registre : une liste recopiée ici cesserait d'être vraie au
+// premier canal ajouté, et c'est arrivé six fois avant le 2026-08-03.
+$channels  = array_map(static fn (array $d): string => $d['libelle'], Notifier::CANAUX);
 $activeCh  = [];
 foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[] = $l;
 ?>
@@ -109,6 +112,79 @@ foreach ($channels as $k => $l) if (Config::get("notify.$k.enabled")) $activeCh[
         </div>
       </fieldset>
     </div>
+
+    <div class="form-cols">
+      <fieldset>
+        <legend><?= te('Telegram') ?></legend>
+        <label class="switchrow"><input type="checkbox" name="telegram_enabled" <?= Config::get('notify.telegram.enabled') ? 'checked' : '' ?>>
+          <span class="sw-text"><span class="sw-title"><?= te('Envoyer les alertes sur Telegram') ?></span></span></label>
+        <div class="field">
+          <label for="tgt"><?= te('Jeton du robot') ?></label>
+          <input id="tgt" type="text" name="telegram_token" value="<?= e(Demo::hide((string)Config::get('notify.telegram.token', ''))) ?>"
+                 placeholder="123456:ABC-DEF…" spellcheck="false">
+          <span class="hint"><?= te('Créez un robot auprès de @BotFather : il rend le jeton.') ?></span>
+        </div>
+        <div class="field">
+          <label for="tgc"><?= te('Identifiant de la conversation') ?></label>
+          <input id="tgc" type="text" name="telegram_chat" value="<?= e(Demo::hide((string)Config::get('notify.telegram.chat_id', ''))) ?>"
+                 placeholder="-1001234567890" spellcheck="false">
+          <?php /* Ce chiffre n'est écrit nulle part dans Telegram : sans cette phrase, la
+                   configuration passe de deux minutes à une demi-heure de recherche. */ ?>
+          <span class="hint"><?= te('Écrivez un message au robot, puis lisez « chat.id » sur api.telegram.org/bot{jeton}/getUpdates.') ?></span>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend><?= te('Microsoft Teams') ?></legend>
+        <label class="switchrow"><input type="checkbox" name="teams_enabled" <?= Config::get('notify.teams.enabled') ? 'checked' : '' ?>>
+          <span class="sw-text"><span class="sw-title"><?= te('Envoyer les alertes sur Teams') ?></span></span></label>
+        <div class="field">
+          <label for="tmw"><?= te('URL entrante') ?></label>
+          <input id="tmw" type="text" name="teams_webhook" value="<?= e(Demo::hide((string)Config::get('notify.teams.webhook', ''))) ?>"
+                 <?php /* UN SEUL msgid ET NON TROIS MORCEAUX : la première version assemblait
+                          « …office.com/… » + te('ou') + « …logic.azure.com/… », ce qu'un
+                          traducteur ne peut pas réordonner, et le contrôle « aucun msgid coupé
+                          en morceaux » l'a refusé sur-le-champ. */ ?>
+                 placeholder="<?= te('https://…webhook.office.com/… ou https://…logic.azure.com/…') ?>" spellcheck="false">
+          <span class="hint"><?= te('Connecteur classique ou flux Power Automate : les deux formes sont acceptées. Un flux répond « 202 accepté » sans rien afficher tant que son modèle n\'est pas relié à un champ.') ?></span>
+        </div>
+      </fieldset>
+    </div>
+
+    <fieldset>
+      <legend><?= te('SMS') ?></legend>
+      <label class="switchrow"><input type="checkbox" name="sms_enabled" <?= Config::get('notify.sms.enabled') ? 'checked' : '' ?>>
+        <span class="sw-text"><span class="sw-title"><?= te('Envoyer les alertes par SMS') ?></span>
+          <?php /* Le seul canal facturé à l'unité : le dire ici évite un relevé de compte
+                   surprenant après une semaine de certificats qui expirent. */ ?>
+          <span class="hint"><?= te('Seul canal payant à l\'envoi. Message court, titre et cause seulement. Réservez-le à l\'escalade plutôt qu\'aux alertes ordinaires.') ?></span></span></label>
+      <div class="form-cols">
+        <div>
+          <div class="field">
+            <label for="smssid"><?= te('Identifiant de compte (SID)') ?></label>
+            <input id="smssid" type="text" name="sms_sid" value="<?= e(Demo::hide((string)Config::get('notify.sms.sid', ''))) ?>"
+                   placeholder="AC…" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="smstok"><?= te('Jeton d\'authentification') ?></label>
+            <input id="smstok" type="password" name="sms_token" value="" autocomplete="new-password"
+                   placeholder="<?= te('inchangé si laissé vide') ?>">
+          </div>
+        </div>
+        <div>
+          <div class="field">
+            <label for="smsfrom"><?= te('Numéro expéditeur') ?></label>
+            <input id="smsfrom" type="text" name="sms_from" value="<?= e(Demo::hide((string)Config::get('notify.sms.from', ''))) ?>"
+                   placeholder="+33…" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="smsto"><?= te('Numéros destinataires') ?></label>
+            <input id="smsto" type="text" name="sms_to" value="<?= e(Demo::hide((string)Config::get('notify.sms.to', ''))) ?>"
+                   placeholder="+33…, +33…" spellcheck="false">
+            <span class="hint"><?= te('Séparés par des virgules. Un envoi par numéro, donc un SMS facturé par numéro.') ?></span>
+          </div>
+        </div>
+      </div>
+    </fieldset>
 
     <fieldset>
       <legend><?= te('E-mail') ?></legend>

@@ -285,18 +285,61 @@ final class Notifier
     {
         $ok = 0;
         foreach ($canaux as $ch) {
-            $res = match ($ch) {
-                'discord' => Discord::send($title, $lines, $sev, $mon),
-                'slack'   => Slack::send($title, $lines, $sev, $mon),
-                'mail'    => Mail::send($title, $lines, $sev, $mon),
-                'webhook' => Webhook::send($title, $lines, $sev, $mon),
-                default   => ['ok' => false, 'info' => t('Canal inconnu')],
-            };
+            // La classe vient du registre : un canal ajouté à CANAUX est envoyé sans qu'on
+            // touche ici, et un canal inconnu est journalisé au lieu d'être ignoré.
+            $classe = self::CANAUX[$ch]['classe'] ?? null;
+            $res = $classe === null
+                ? ['ok' => false, 'info' => t('Canal inconnu')]
+                : $classe::send($title, $lines, $sev, $mon);
             if (!empty($res['ok'])) $ok++;
             self::log($mon, $ch, $sev, (bool)($res['ok'] ?? false), (string)($res['info'] ?? ''));
         }
         return $ok;
     }
+
+    /**
+     * LE REGISTRE DES CANAUX : une seule déclaration, là où il y en avait six.
+     *
+     * ------------------------------------------------------------------------------
+     * POURQUOI CETTE CONSTANTE EXISTE
+     * ------------------------------------------------------------------------------
+     *
+     * Avant le 2026-08-03, la liste des canaux était écrite en dur dans six endroits : ici
+     * deux fois, dans le sélecteur de l'écran des réglages, dans l'enregistrement de ces
+     * réglages, dans le bouton de test, et dans le verrou de la démonstration publique.
+     * Ajouter Telegram demandait donc six modifications dont aucune ne signalait l'oubli
+     * des cinq autres, et l'oubli le plus probable est le verrou de la démonstration :
+     * un canal qui échapperait à Demo::silenced() enverrait de vrais messages depuis une
+     * installation publique dont le mot de passe est écrit dans la documentation.
+     *
+     * « requis » NE DIT PAS « CONFIGURÉ », IL DIT « UTILISABLE ». Un canal activé dont
+     * l'URL est vide n'enverra rien : le déclarer utilisable ferait compter un envoi qui
+     * n'a pas eu lieu, et l'écran annoncerait une alerte partie. Chaque clé listée doit
+     * donc porter une valeur non vide, et c'est la seule condition.
+     *
+     * L'ORDRE EST CELUI DE L'AFFICHAGE, et il n'est pas alphabétique : les deux canaux
+     * historiques d'abord, les trois ajoutés ensuite, le courriel et le webhook générique
+     * en dernier parce que ce sont les recours plutôt que les choix.
+     *
+     * @var array<string, array{classe: class-string, libelle: string, requis: array<int, string>}>
+     */
+    public const CANAUX = [
+        'discord'  => ['classe' => Discord::class,  'libelle' => 'Discord',
+                       'requis' => ['notify.discord.webhook']],
+        'slack'    => ['classe' => Slack::class,    'libelle' => 'Slack',
+                       'requis' => ['notify.slack.webhook']],
+        'telegram' => ['classe' => Telegram::class, 'libelle' => 'Telegram',
+                       'requis' => ['notify.telegram.token', 'notify.telegram.chat_id']],
+        'teams'    => ['classe' => Teams::class,    'libelle' => 'Microsoft Teams',
+                       'requis' => ['notify.teams.webhook']],
+        'sms'      => ['classe' => Sms::class,      'libelle' => 'SMS',
+                       'requis' => ['notify.sms.sid', 'notify.sms.token',
+                                    'notify.sms.from', 'notify.sms.to']],
+        'mail'     => ['classe' => Mail::class,     'libelle' => 'E-mail',
+                       'requis' => ['notify.mail.to']],
+        'webhook'  => ['classe' => Webhook::class,  'libelle' => 'Webhook',
+                       'requis' => ['notify.webhook.url']],
+    ];
 
     /** Canaux retenus : réglage de la sonde sinon canaux globaux actifs. */
     public static function channelsFor(array $mon): array
@@ -305,14 +348,25 @@ final class Notifier
         $wanted = $perMon !== '' ? array_filter(array_map('trim', explode(',', $perMon))) : null;
 
         $out = [];
-        foreach (['discord', 'slack', 'mail', 'webhook'] as $ch) {
+        foreach (self::CANAUX as $ch => $def) {
             if (!Config::get("notify.$ch.enabled", false)) continue;
             if ($wanted !== null && !in_array($ch, $wanted, true)) continue;
-            if ($ch === 'mail' ? trim((string)Config::get('notify.mail.to', '')) === ''
-                               : trim((string)Config::get("notify.$ch." . ($ch === 'webhook' ? 'url' : 'webhook'), '')) === '') continue;
+            if (!self::utilisable($ch)) continue;
             $out[] = $ch;
         }
         return $out;
+    }
+
+    /** Un canal est utilisable quand tous ses réglages requis portent une valeur. */
+    public static function utilisable(string $canal): bool
+    {
+        foreach (self::CANAUX[$canal]['requis'] ?? [] as $cle) {
+            if (trim((string) Config::get($cle, '')) === '') {
+                return false;
+            }
+        }
+
+        return isset(self::CANAUX[$canal]);
     }
 
     public static function inQuietHours(): bool
@@ -446,13 +500,13 @@ final class Notifier
             [t('Message'), t('Ceci est un test envoyé depuis {app}.')],
             [t('Date'), date('d/m/Y H:i:s')],
         ];
-        $res = match ($channel) {
-            'discord' => Discord::send('✅ Test UptimeEZ', $lines, 'up', $mon),
-            'slack'   => Slack::send('✅ Test UptimeEZ', $lines, 'up', $mon),
-            'mail'    => Mail::send('✅ Test UptimeEZ', $lines, 'up', $mon),
-            'webhook' => Webhook::send('✅ Test UptimeEZ', $lines, 'up', $mon),
-            default   => ['ok' => false, 'info' => t('Canal inconnu')],
-        };
+        // Le registre décide, comme pour l'envoi réel : un canal testable et un canal
+        // envoyable doivent être exactement les mêmes, sinon le bouton de test rassure sur
+        // un chemin que les alertes n'empruntent pas.
+        $classe = self::CANAUX[$channel]['classe'] ?? null;
+        $res = $classe === null
+            ? ['ok' => false, 'info' => t('Canal inconnu')]
+            : $classe::send('✅ Test UptimeEZ', $lines, 'up', $mon);
         self::log($mon, $channel, 'test', (bool)$res['ok'], (string)($res['info'] ?? ''));
         return $res;
     }

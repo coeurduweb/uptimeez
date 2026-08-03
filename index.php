@@ -512,6 +512,28 @@ function handle_post(): ?array
                 ],
                 'notify' => [
                     'discord' => ['enabled' => isset($_POST['discord_enabled']), 'webhook' => trim((string)($_POST['discord_webhook'] ?? ''))],
+                    'telegram' => [
+                        'enabled' => isset($_POST['telegram_enabled']),
+                        'token'   => trim((string)($_POST['telegram_token'] ?? '')),
+                        'chat_id' => trim((string)($_POST['telegram_chat'] ?? '')),
+                    ],
+                    'teams' => [
+                        'enabled' => isset($_POST['teams_enabled']),
+                        'webhook' => trim((string)($_POST['teams_webhook'] ?? '')),
+                    ],
+                    // LE JETON SMS SUIT LA MÊME RÈGLE QUE LE MOT DE PASSE SMTP : un champ
+                    // laissé vide veut dire « inchangé », jamais « effacé ». Il est rendu
+                    // vide à l'affichage, donc enregistrer les réglages sans le retaper
+                    // couperait le canal sans que personne comprenne pourquoi.
+                    'sms' => [
+                        'enabled' => isset($_POST['sms_enabled']),
+                        'sid'     => trim((string)($_POST['sms_sid'] ?? '')),
+                        'token'   => trim((string)($_POST['sms_token'] ?? '')) !== ''
+                                     ? trim((string)$_POST['sms_token'])
+                                     : (string)Config::get('notify.sms.token', ''),
+                        'from'    => trim((string)($_POST['sms_from'] ?? '')),
+                        'to'      => trim((string)($_POST['sms_to'] ?? '')),
+                    ],
                     'slack'   => ['enabled' => isset($_POST['slack_enabled']),   'webhook' => trim((string)($_POST['slack_webhook'] ?? ''))],
                     'webhook' => ['enabled' => isset($_POST['webhook_enabled']), 'url' => trim((string)($_POST['webhook_url'] ?? ''))],
                     'mail'    => [
@@ -537,7 +559,7 @@ function handle_post(): ?array
                     // frappe donnerait une liste où aucun canal ne correspond, donc une
                     // escalade silencieuse, c'est-à-dire le pire des deux mondes.
                     'escalate_channels' => implode(',', array_values(array_intersect(
-                        ['discord', 'slack', 'mail', 'webhook'],
+                        array_keys(\Uptimeez\Notify\Notifier::CANAUX),
                         array_map('trim', explode(',', strtolower((string)($_POST['escalate_channels'] ?? ''))))
                     ))),
                     'notify_recovery'  => isset($_POST['notify_recovery']),

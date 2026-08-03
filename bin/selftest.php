@@ -2969,6 +2969,65 @@ check('la casse et les espaces du réglage ne changent rien',
 check('la table des incidents porte escalated_at',
     str_contains((string)file_get_contents(__DIR__ . '/../src/Db.php'), 'escalated_at'), true);
 
+// ---------------------------------------------------------------------------
+// LE REGISTRE DES CANAUX : une seule déclaration, et six endroits qui la lisent.
+//
+// Avant le 2026-08-03, la liste des canaux était écrite en dur six fois. Ajouter Telegram
+// demandait six modifications dont aucune ne signalait l'oubli des cinq autres, et l'oubli
+// le plus coûteux est le verrou de la démonstration publique : un canal qui y échapperait
+// enverrait de vrais messages depuis une installation dont le mot de passe est publié.
+//
+// Ces contrôles gardent le registre COMPLET et COHÉRENT, ce qu'aucun test d'envoi ne fait :
+// un canal dont la classe manque échouerait seulement le jour où quelqu'un l'active.
+$canaux = Uptimeez\Notify\Notifier::CANAUX;
+
+check('les sept canaux sont déclarés', array_keys($canaux),
+    ['discord', 'slack', 'telegram', 'teams', 'sms', 'mail', 'webhook']);
+
+$sansClasse = [];
+$sansRequis = [];
+foreach ($canaux as $cle => $def) {
+    if (!isset($def['classe']) || !class_exists($def['classe'])) $sansClasse[] = $cle;
+    if (($def['requis'] ?? []) === []) $sansRequis[] = $cle;
+}
+check('chaque canal a une classe qui existe', $sansClasse, []);
+check('chaque canal déclare au moins un réglage requis', $sansRequis, []);
+
+// CHAQUE CLASSE RÉPOND AU MÊME CONTRAT. Sans ce contrôle, un canal ajouté avec une
+// signature différente casserait l'envoi de TOUS les autres, puisque la boucle est commune.
+$mauvaiseSignature = [];
+foreach ($canaux as $cle => $def) {
+    $m = new ReflectionMethod($def['classe'], 'send');
+    $types = array_map(static fn (ReflectionParameter $p): string => (string)$p->getType(), $m->getParameters());
+    if (!$m->isStatic() || !$m->isPublic() || $types !== ['string', 'array', 'string', 'array']) {
+        $mauvaiseSignature[] = $cle;
+    }
+}
+check('chaque canal expose send(string, array, string, array) en statique', $mauvaiseSignature, []);
+
+// LE VERROU DE LA DÉMONSTRATION COUVRE LES SEPT. On lit la source de Demo.php : elle doit
+// parcourir le registre et non une liste recopiée, sinon le contrôle ci-dessus passerait
+// alors qu'un canal enverrait pour de vrai depuis la démonstration publique.
+check('le verrou de la démonstration lit le registre',
+    str_contains((string)file_get_contents(__DIR__ . '/../src/Demo.php'), 'Notifier::CANAUX'), true);
+
+// UN CANAL ACTIVÉ MAIS INCOMPLET N'EST PAS UTILISABLE, et la nuance compte : compter un
+// envoi qui n'a pas eu lieu ferait annoncer une alerte partie.
+$avant = ['telegram' => Uptimeez\Config::get('notify.telegram.enabled'),
+          'token' => Uptimeez\Config::get('notify.telegram.token'),
+          'chat' => Uptimeez\Config::get('notify.telegram.chat_id')];
+Uptimeez\Config::set('notify.telegram.enabled', true);
+Uptimeez\Config::set('notify.telegram.token', 'jeton-de-test');
+Uptimeez\Config::set('notify.telegram.chat_id', '');
+check('Telegram sans identifiant de conversation : inutilisable',
+    Uptimeez\Notify\Notifier::utilisable('telegram'), false);
+Uptimeez\Config::set('notify.telegram.chat_id', '-100123');
+check('Telegram avec ses deux valeurs : utilisable',
+    Uptimeez\Notify\Notifier::utilisable('telegram'), true);
+Uptimeez\Config::set('notify.telegram.enabled', $avant['telegram']);
+Uptimeez\Config::set('notify.telegram.token', $avant['token']);
+Uptimeez\Config::set('notify.telegram.chat_id', $avant['chat']);
+
 section('Faux positifs du détecteur CSS, tous relevés sur le parc réel');
 // ---------------------------------------------------------------------------
 // Quatre défauts trouvés le 2026-08-02 en vérifiant, à la demande du propriétaire, si les

@@ -574,7 +574,7 @@ A monitoring tool that lies to you is worse than no monitoring tool. So the dete
 real failures, and the interface is tested in a real browser.
 
 ```
-php bin/selftest.php      1,151 checks   detection logic, offline, no network needed
+php bin/selftest.php      1,158 checks   detection logic, offline, no network needed
 php bin/regles.php        112 checks   one file per rule, each runnable alone in 0.04 s
 php bin/bench.php          74 checks   real failures reproduced end to end (incl. badssl.com)
 php bin/e2e.php           291 checks   full user journey over real HTTP, isolated instance
@@ -588,7 +588,7 @@ php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, 
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**1,998 checks, all green**, plus zero dead code and a complete default catalogue.
+**2,005 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Four suites deserve a word.
 
