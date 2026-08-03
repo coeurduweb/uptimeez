@@ -399,19 +399,19 @@ exactly what the symbol now says.
 
 | | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement: DOM elements compared | ❌ | ❌ | ⚠️ write a synthetic script |
+| Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement: DOM elements compared | ❌ | ⚠️ browser item, script it | ⚠️ scripted or step monitor |
 | Browser-console errors reconstructed | ✅ | ❌ | ⚠️ in script logs | ❌ | ❌ | ❌ | ⚠️ in script logs |
-| Before / after picture of the broken page | ✅ silhouette | ❌ | ⚠️ screenshot in a script | ⚠️ screenshot | ❌ | ❌ | ⚠️ screenshot |
+| Before / after picture of the broken page | ✅ silhouette | ❌ | ⚠️ screenshot in a script | ⚠️ screenshot | ❌ | ⚠️ screenshot in a browser item | ⚠️ screenshot |
 | Software inventory of each site, versions included | ✅ from the HTML already fetched | ❌ | ❌ | ⚠️ with an agent | ❌ | ✅ with an agent | ⚠️ with an agent |
 | Published vulnerability on the detected version | ✅ OSV + wordpress.org | ❌ | ❌ | ⚠️ separate product | ❌ | ⚠️ build it yourself | ⚠️ separate product |
 | Database down behind a 200 | ✅ signatures + proof string | ⚠️ manual keyword | ⚠️ manual assertion | ⚠️ manual keyword | ⚠️ manual keyword | ⚠️ build it yourself | ⚠️ manual assertion |
 | Proof string inferred automatically | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Forgotten `noindex` alert | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
+| Forgotten `noindex` alert | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ scripted or step monitor |
 | Import from a competitor's export | ✅ 5 tools, auto-detected | ❌ | ❌ | ⚠️ CSV of URLs | ⚠️ its own backup | ❌ | ❌ |
 | Says what it could not import, and why | ✅ | n/a | n/a | ❌ | ❌ | n/a | n/a |
 | Bulk add with CMS detection and auto-setup | ✅ paste anything | ⚠️ CSV, no detection | ❌ code-first | ⚠️ CSV | ❌ one by one | ❌ | ❌ |
 | Preview before monitors are created | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Core Web Vitals with the causes explained | ✅ measured + read from the page | ❌ | ⚠️ Web Vitals inside a browser check | ⚠️ score only | ❌ | ❌ | ⚠️ score only |
+| Core Web Vitals with the causes explained | ✅ measured + read from the page | ❌ | ⚠️ Web Vitals inside a browser check | ⚠️ score only | ❌ | ⚠️ performance entries in a browser item | ⚠️ score only |
 | Render-blocking files named, with their weight | ✅ | ❌ | ⚠️ in a report | ❌ | ❌ | ❌ | ⚠️ in a report |
 | Lazy-loaded top-of-page image detected | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Self-tuning slowness threshold | ✅ from p95 | ❌ fixed | ❌ fixed | ❌ fixed | ❌ fixed | ⚠️ build it yourself | ⚠️ baselines, paid tiers |
@@ -422,7 +422,7 @@ exactly what the symbol now says.
 | Undo on the one-click repairs | ✅ ten minutes | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Outages grouped by server IP | ✅ automatic | ❌ | ❌ | ⚠️ dependency config | ❌ | ✅ topology | ⚠️ config |
 | Dead-man heartbeat (cron, backups) | ✅ | ✅ | ✅ | ✅ | ✅ push | ✅ | ⚠️ |
-| Printable client report | ✅ built in | ⚠️ paid plans | ❌ | ✅ | ❌ | ⚠️ | ✅ |
+| Printable client report | ✅ built in | ⚠️ paid plans | ❌ | ✅ | ❌ | ⚠️ scheduled dashboard PDF | ✅ |
 | Monthly report e-mailed to each client on its own | ✅ | ❌ | ❌ | ⚠️ internal only | ❌ | ❌ | ⚠️ internal only |
 | Per-client read-only access, no account to create | ✅ one link | ⚠️ status page only | ❌ | ⚠️ user accounts | ⚠️ status page only | ❌ | ⚠️ user accounts |
 | Client sees only their own sites | ✅ by construction | ❌ | ❌ | ⚠️ role configuration | ❌ | ⚠️ build it yourself | ⚠️ role configuration |
@@ -441,6 +441,13 @@ actual limit instead of a verdict, which is checkable and does not need re-litig
 And UptimeRobot's **status pages** support 11 languages even though its operator dashboard is English-only, so
 that row now says whose screens it is counting. A monitoring tool that overstates what it detects disqualifies
 itself; the same goes for understating what a competitor gives away.
+
+**Three cells owed to Zabbix, and two to New Relic,** read in their own documentation on 3 August 2026.
+Zabbix has a browser item that drives a real browser through WebDriver, captures screenshots and collects
+performance entries, so three ❌ become ⚠️ with that named: layout, the before-and-after picture, and the
+vitals row. Its scheduled reports produce a PDF of a dashboard, which the report row now says instead of a bare
+⚠️. Console errors stay ❌ because its documentation does not mention reading them. And New Relic has a
+codeless step monitor next to its scripted ones, so "write a synthetic script" was only half true.
 
 **Site24x7's defacement row now says what it compares,** read in its own documentation on 3 August 2026: the
 monitor fetches the DOM and compares the critical elements, `img`, `script`, `anchor`, `link` and `iframe`, on

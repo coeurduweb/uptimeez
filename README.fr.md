@@ -410,19 +410,19 @@ documentation ne mentionne pas, ce qui est exactement ce que le symbole dit dés
 
 | | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration : éléments du DOM comparés | ❌ | ❌ | ⚠️ à scripter |
+| Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration : éléments du DOM comparés | ❌ | ⚠️ élément navigateur, à scripter | ⚠️ script ou contrôle par étapes |
 | Erreurs de console reconstituées | ✅ | ❌ | ⚠️ dans les logs du script | ❌ | ❌ | ❌ | ⚠️ dans les logs |
-| Image avant / après de la page cassée | ✅ silhouette | ❌ | ⚠️ capture dans un script | ⚠️ capture | ❌ | ❌ | ⚠️ capture |
+| Image avant / après de la page cassée | ✅ silhouette | ❌ | ⚠️ capture dans un script | ⚠️ capture | ❌ | ⚠️ capture dans un élément navigateur | ⚠️ capture |
 | Inventaire logiciel de chaque site, versions comprises | ✅ depuis le HTML déjà reçu | ❌ | ❌ | ⚠️ avec un agent | ❌ | ✅ avec un agent | ⚠️ avec un agent |
 | Faille publiée sur la version détectée | ✅ OSV + wordpress.org | ❌ | ❌ | ⚠️ produit séparé | ❌ | ⚠️ à construire | ⚠️ produit séparé |
 | Base de données tombée derrière un 200 | ✅ signatures + chaîne de preuve | ⚠️ mot-clé manuel | ⚠️ assertion manuelle | ⚠️ mot-clé manuel | ⚠️ mot-clé manuel | ⚠️ à construire | ⚠️ assertion manuelle |
 | Chaîne de preuve déduite automatiquement | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Alerte sur un `noindex` oublié | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script |
+| Alerte sur un `noindex` oublié | ✅ | ❌ | ⚠️ script | ❌ | ❌ | ❌ | ⚠️ script ou contrôle par étapes |
 | Import depuis l'export d'un concurrent | ✅ 5 outils, reconnus seuls | ❌ | ❌ | ⚠️ CSV d'URLs | ⚠️ sa propre sauvegarde | ❌ | ❌ |
 | Dit ce qu'il n'a pas pu importer, et pourquoi | ✅ | n/a | n/a | ❌ | ❌ | n/a | n/a |
 | Ajout en masse avec détection du CMS | ✅ collez n'importe quoi | ⚠️ CSV, sans détection | ❌ orienté code | ⚠️ CSV | ❌ un par un | ❌ | ❌ |
 | Aperçu avant création des sondes | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Core Web Vitals avec les causes expliquées | ✅ mesuré + lu dans la page | ❌ | ⚠️ Web Vitals dans un contrôle navigateur | ⚠️ score seulement | ❌ | ❌ | ⚠️ score seulement |
+| Core Web Vitals avec les causes expliquées | ✅ mesuré + lu dans la page | ❌ | ⚠️ Web Vitals dans un contrôle navigateur | ⚠️ score seulement | ❌ | ⚠️ entrées de performance dans un élément navigateur | ⚠️ score seulement |
 | Fichiers bloquant le rendu nommés, avec leur poids | ✅ | ❌ | ⚠️ dans un rapport | ❌ | ❌ | ❌ | ⚠️ dans un rapport |
 | Image du haut de page en chargement différé repérée | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Seuil de lenteur auto-ajusté | ✅ sur le p95 | ❌ fixe | ❌ fixe | ❌ fixe | ❌ fixe | ⚠️ à construire | ⚠️ formules payantes |
@@ -433,7 +433,7 @@ documentation ne mentionne pas, ce qui est exactement ce que le symbole dit dés
 | Annulation des réparations en un clic | ✅ dix minutes | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Pannes regroupées par IP de serveur | ✅ automatique | ❌ | ❌ | ⚠️ à configurer | ❌ | ✅ topologie | ⚠️ à configurer |
 | Battement dead-man (cron, sauvegardes) | ✅ | ✅ | ✅ | ✅ | ✅ push | ✅ | ⚠️ |
-| Rapport client imprimable | ✅ intégré | ⚠️ formules payantes | ❌ | ✅ | ❌ | ⚠️ | ✅ |
+| Rapport client imprimable | ✅ intégré | ⚠️ formules payantes | ❌ | ✅ | ❌ | ⚠️ PDF de tableau de bord planifié | ✅ |
 | Rapport mensuel envoyé à chaque client | ✅ | ❌ | ❌ | ⚠️ interne seulement | ❌ | ❌ | ⚠️ interne seulement |
 | Accès client en lecture seule, sans compte à créer | ✅ un lien | ⚠️ page d'état seulement | ❌ | ⚠️ comptes utilisateurs | ⚠️ page d'état seulement | ❌ | ⚠️ comptes utilisateurs |
 | Le client ne voit que ses sites | ✅ par construction | ❌ | ❌ | ⚠️ configuration de rôles | ❌ | ⚠️ à construire | ⚠️ configuration de rôles |
@@ -453,6 +453,13 @@ qui se vérifie et n'a pas besoin d'être rejugé chaque trimestre. Et les **pag
 gèrent 11 langues, même si son tableau de bord d'exploitation est anglophone : la ligne dit maintenant de
 quels écrans elle parle. Un outil de supervision qui exagère ce qu'il détecte se disqualifie tout seul ;
 sous-estimer ce qu'un concurrent donne gratuitement revient au même.
+
+**Trois cases dues à Zabbix, deux à New Relic,** lues dans leur propre documentation le 3 août 2026. Zabbix
+dispose d'un élément navigateur qui pilote un vrai navigateur par WebDriver, prend des captures et collecte des
+entrées de performance : trois ❌ deviennent des ⚠️ en le nommant, la mise en page, l'image avant/après et la
+ligne des vitals. Ses rapports planifiés produisent un PDF de tableau de bord, ce que la ligne du rapport dit
+désormais au lieu d'un ⚠️ nu. Les erreurs de console restent ❌, sa documentation n'en parle pas. Et New Relic
+propose un contrôle par étapes sans code à côté de ses scripts : « à scripter » n'était vrai qu'à moitié.
 
 **La ligne de la défiguration chez Site24x7 dit maintenant ce qu'il compare,** lu dans sa documentation le
 3 août 2026 : la sonde récupère le DOM et compare les éléments critiques, `img`, `script`, `anchor`, `link` et
