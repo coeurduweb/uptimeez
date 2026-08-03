@@ -42,7 +42,7 @@ UptimeEZ was built around three findings from running an agency portfolio on the
 |---|---|
 | **Setup is a tax.** Twenty screens and forty fields before you have monitored anything at all. | You paste a list of domains. It detects the CMS, picks the pages worth following, infers the string that proves the database answers, tunes thresholds from measured p95, then shows a **preview before creating anything**. |
 | **Alerts become noise.** One server goes down, forty e-mails arrive. After a week nobody reads them. | Failures sharing an IP become **one grouped alert**. Thresholds tune themselves, so a naturally slow site never cries wolf. Quiet hours, maintenance windows, acknowledgement, retries before alerting. |
-| **Dashboards show states, not actions.** Green and red dots; you still have to work out what to do. | The home screen is a **to-do list**: cause, why it matters, what to do, the evidence, and the buttons that do it without leaving the page. Every action is undoable. |
+| **Dashboards show states, not actions.** Green and red dots; you still have to work out what to do. | The home screen is a **to-do list**: cause, why it matters, what to do, the evidence, and the buttons that do it without leaving the page. Five of the six repairs are undoable for ten minutes, and the sixth needs no undo. |
 
 > The others show you **states**. UptimeEZ gives you **a list of things to do**, and guesses everything else.
 
@@ -419,7 +419,7 @@ exactly what the symbol now says.
 | Home screen is a to-do list with fixes | ✅ | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard | ❌ dashboard |
 | The broken page shown inside the to-do list | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Whole-portfolio 24 h pulse in one strip | ✅ | ❌ | ❌ | ⚠️ per monitor | ❌ | ⚠️ build it yourself | ⚠️ per app |
-| Undo on every action | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Undo on the one-click repairs | ✅ ten minutes | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Outages grouped by server IP | ✅ automatic | ❌ | ❌ | ⚠️ dependency config | ❌ | ✅ topology | ⚠️ config |
 | Dead-man heartbeat (cron, backups) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
 | Printable client report | ✅ built in | ⚠️ paid plans | ❌ | ✅ | ❌ | ⚠️ | ✅ |
@@ -441,6 +441,14 @@ actual limit instead of a verdict, which is checkable and does not need re-litig
 And UptimeRobot's **status pages** support 11 languages even though its operator dashboard is English-only, so
 that row now says whose screens it is counting. A monitoring tool that overstates what it detects disqualifies
 itself; the same goes for understating what a competitor gives away.
+
+**A correction we owe ourselves, found on 3 August 2026 while verifying our own column.** Two cells said
+"undo on every action" and "every action is undoable". That is not what the code does, and the product's own
+screens contradict it: deleting a monitor is labelled "cannot be undone". What exists is an undo on the
+one-click repairs offered in the to-do list, restoring the monitor's previous values, kept for ten minutes and
+for the last five actions, in `api.php`. Five of the six repairs carry it; acknowledging an alert is the sixth
+and needs none. The page on uptimeez.com had it right, repair by repair, which is how the gap was found.
+Overstating our own product in the row where we are the only ✅ is the worst place to do it.
 
 *Site24x7 was corrected twice in the same afternoon, and the second correction undid the first.* A pricing
 page mentioning "up to 50 resources" led to marking its free tier as sufficient. It is not: the free-forever

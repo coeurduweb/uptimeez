@@ -43,7 +43,7 @@ UptimeEZ est né de trois constats faits en gérant un parc d'agence avec les al
 |---|---|
 | **La configuration est un impôt.** Vingt écrans, quarante champs avant d'avoir surveillé quoi que ce soit. | Vous collez une liste de domaines. Il détecte la technologie, choisit les pages qui valent la peine, déduit la chaîne qui prouve que la base répond, cale les seuils sur le p95 mesuré, puis montre un **aperçu avant de créer quoi que ce soit**. |
 | **Les alertes deviennent du bruit.** Un serveur tombe, quarante e-mails arrivent. Au bout d'une semaine, personne ne les lit. | Les pannes qui partagent une IP deviennent **une seule alerte groupée**. Les seuils s'ajustent seuls : un site lent par nature ne crie pas au loup. Heures calmes, fenêtres de maintenance, prise en compte, relances avant alerte. |
-| **Les tableaux de bord montrent des états, pas des actions.** Des points verts et rouges ; à vous de deviner quoi faire. | L'écran d'accueil est une **liste de tâches** : la cause, pourquoi c'est un problème, quoi faire, la preuve, et les boutons qui le font sans quitter la page. Chaque action est annulable. |
+| **Les tableaux de bord montrent des états, pas des actions.** Des points verts et rouges ; à vous de deviner quoi faire. | L'écran d'accueil est une **liste de tâches** : la cause, pourquoi c'est un problème, quoi faire, la preuve, et les boutons qui le font sans quitter la page. Cinq des six réparations s'annulent pendant dix minutes, la sixième n'en a pas besoin. |
 
 > Les autres montrent **des états**. UptimeEZ donne **une liste de choses à faire**, et devine tout le reste.
 
@@ -430,7 +430,7 @@ documentation ne mentionne pas, ce qui est exactement ce que le symbole dit dés
 | Accueil = liste de tâches avec correctifs | ✅ | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord | ❌ tableau de bord |
 | La page cassée montrée dans la liste de tâches | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Pouls du parc sur 24 h en une seule bande | ✅ | ❌ | ❌ | ⚠️ par sonde | ❌ | ⚠️ à construire | ⚠️ par application |
-| Annulation de chaque action | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Annulation des réparations en un clic | ✅ dix minutes | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Pannes regroupées par IP de serveur | ✅ automatique | ❌ | ❌ | ⚠️ à configurer | ❌ | ✅ topologie | ⚠️ à configurer |
 | Battement dead-man (cron, sauvegardes) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
 | Rapport client imprimable | ✅ intégré | ⚠️ formules payantes | ❌ | ✅ | ❌ | ⚠️ | ✅ |
@@ -453,6 +453,15 @@ qui se vérifie et n'a pas besoin d'être rejugé chaque trimestre. Et les **pag
 gèrent 11 langues, même si son tableau de bord d'exploitation est anglophone : la ligne dit maintenant de
 quels écrans elle parle. Un outil de supervision qui exagère ce qu'il détecte se disqualifie tout seul ;
 sous-estimer ce qu'un concurrent donne gratuitement revient au même.
+
+**Une correction que nous nous devions, trouvée le 3 août 2026 en vérifiant notre propre colonne.** Deux
+cases annonçaient « annulation de chaque action » et « chaque action est annulable ». Ce n'est pas ce que fait
+le code, et les écrans du produit le contredisent : supprimer une sonde porte la mention « action
+irréversible ». Ce qui existe est l'annulation des réparations en un clic proposées par la liste de tâches, qui
+rétablit les valeurs précédentes de la sonde, gardée dix minutes et pour les cinq dernières actions, dans
+`api.php`. Cinq des six réparations la portent ; acquitter une alerte est la sixième et n'en a pas besoin. La
+page d'uptimeez.com était juste, réparation par réparation, et c'est comme ça que l'écart a été trouvé.
+Surestimer son propre produit dans la ligne où l'on est le seul ✅ est le pire endroit pour le faire.
 
 *Site24x7 a été corrigé deux fois le même après-midi, et la seconde correction a annulé la première.* Une page
 tarifaire mentionnant « jusqu'à 50 ressources » m'a fait marquer son offre gratuite comme suffisante. Elle ne
