@@ -422,7 +422,7 @@ documentation ne mentionne pas, ce qui est exactement ce que le symbole dit dés
 | Dit ce qu'il n'a pas pu importer, et pourquoi | ✅ | n/a | n/a | ❌ | ❌ | n/a | n/a |
 | Ajout en masse avec détection du CMS | ✅ collez n'importe quoi | ⚠️ CSV, sans détection | ❌ orienté code | ⚠️ CSV | ❌ un par un | ❌ | ❌ |
 | Aperçu avant création des sondes | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Core Web Vitals avec les causes expliquées | ✅ mesuré + lu dans la page | ❌ | ⚠️ score Lighthouse seulement | ⚠️ score seulement | ❌ | ❌ | ⚠️ score seulement |
+| Core Web Vitals avec les causes expliquées | ✅ mesuré + lu dans la page | ❌ | ⚠️ Web Vitals dans un contrôle navigateur | ⚠️ score seulement | ❌ | ❌ | ⚠️ score seulement |
 | Fichiers bloquant le rendu nommés, avec leur poids | ✅ | ❌ | ⚠️ dans un rapport | ❌ | ❌ | ❌ | ⚠️ dans un rapport |
 | Image du haut de page en chargement différé repérée | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Seuil de lenteur auto-ajusté | ✅ sur le p95 | ❌ fixe | ❌ fixe | ❌ fixe | ❌ fixe | ⚠️ à construire | ⚠️ formules payantes |
@@ -432,7 +432,7 @@ documentation ne mentionne pas, ce qui est exactement ce que le symbole dit dés
 | Pouls du parc sur 24 h en une seule bande | ✅ | ❌ | ❌ | ⚠️ par sonde | ❌ | ⚠️ à construire | ⚠️ par application |
 | Annulation des réparations en un clic | ✅ dix minutes | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Pannes regroupées par IP de serveur | ✅ automatique | ❌ | ❌ | ⚠️ à configurer | ❌ | ✅ topologie | ⚠️ à configurer |
-| Battement dead-man (cron, sauvegardes) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
+| Battement dead-man (cron, sauvegardes) | ✅ | ✅ | ✅ | ✅ | ✅ push | ✅ | ⚠️ |
 | Rapport client imprimable | ✅ intégré | ⚠️ formules payantes | ❌ | ✅ | ❌ | ⚠️ | ✅ |
 | Rapport mensuel envoyé à chaque client | ✅ | ❌ | ❌ | ⚠️ interne seulement | ❌ | ❌ | ⚠️ interne seulement |
 | Accès client en lecture seule, sans compte à créer | ✅ un lien | ⚠️ page d'état seulement | ❌ | ⚠️ comptes utilisateurs | ⚠️ page d'état seulement | ❌ | ⚠️ comptes utilisateurs |
@@ -453,6 +453,13 @@ qui se vérifie et n'a pas besoin d'être rejugé chaque trimestre. Et les **pag
 gèrent 11 langues, même si son tableau de bord d'exploitation est anglophone : la ligne dit maintenant de
 quels écrans elle parle. Un outil de supervision qui exagère ce qu'il détecte se disqualifie tout seul ;
 sous-estimer ce qu'un concurrent donne gratuitement revient au même.
+
+**Deux corrections que nous devons à Checkly,** trouvées le 3 août 2026 en lisant son index de
+documentation plutôt que ses pages commerciales. Les sondes de battement y sont un type de contrôle de
+première classe, documenté par « Ensure your automated processes are running as expected » : cette ligne
+portait un ⚠️, elle porte un ✅. Et ses Web Vitals ne sont pas un score Lighthouse : la documentation dit
+« Performance & Web Vitals: Web Vitals for browser checks », donc la case le dit. Le ⚠️ reste, parce qu'il
+faut toujours un contrôle navigateur pour les obtenir, c'est-à-dire un script.
 
 **Une correction que nous nous devions, trouvée le 3 août 2026 en vérifiant notre propre colonne.** Deux
 cases annonçaient « annulation de chaque action » et « chaque action est annulable ». Ce n'est pas ce que fait

@@ -411,7 +411,7 @@ exactly what the symbol now says.
 | Says what it could not import, and why | ✅ | n/a | n/a | ❌ | ❌ | n/a | n/a |
 | Bulk add with CMS detection and auto-setup | ✅ paste anything | ⚠️ CSV, no detection | ❌ code-first | ⚠️ CSV | ❌ one by one | ❌ | ❌ |
 | Preview before monitors are created | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Core Web Vitals with the causes explained | ✅ measured + read from the page | ❌ | ⚠️ Lighthouse score only | ⚠️ score only | ❌ | ❌ | ⚠️ score only |
+| Core Web Vitals with the causes explained | ✅ measured + read from the page | ❌ | ⚠️ Web Vitals inside a browser check | ⚠️ score only | ❌ | ❌ | ⚠️ score only |
 | Render-blocking files named, with their weight | ✅ | ❌ | ⚠️ in a report | ❌ | ❌ | ❌ | ⚠️ in a report |
 | Lazy-loaded top-of-page image detected | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Self-tuning slowness threshold | ✅ from p95 | ❌ fixed | ❌ fixed | ❌ fixed | ❌ fixed | ⚠️ build it yourself | ⚠️ baselines, paid tiers |
@@ -421,7 +421,7 @@ exactly what the symbol now says.
 | Whole-portfolio 24 h pulse in one strip | ✅ | ❌ | ❌ | ⚠️ per monitor | ❌ | ⚠️ build it yourself | ⚠️ per app |
 | Undo on the one-click repairs | ✅ ten minutes | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Outages grouped by server IP | ✅ automatic | ❌ | ❌ | ⚠️ dependency config | ❌ | ✅ topology | ⚠️ config |
-| Dead-man heartbeat (cron, backups) | ✅ | ✅ | ⚠️ | ✅ | ✅ push | ✅ | ⚠️ |
+| Dead-man heartbeat (cron, backups) | ✅ | ✅ | ✅ | ✅ | ✅ push | ✅ | ⚠️ |
 | Printable client report | ✅ built in | ⚠️ paid plans | ❌ | ✅ | ❌ | ⚠️ | ✅ |
 | Monthly report e-mailed to each client on its own | ✅ | ❌ | ❌ | ⚠️ internal only | ❌ | ❌ | ⚠️ internal only |
 | Per-client read-only access, no account to create | ✅ one link | ⚠️ status page only | ❌ | ⚠️ user accounts | ⚠️ status page only | ❌ | ⚠️ user accounts |
@@ -441,6 +441,12 @@ actual limit instead of a verdict, which is checkable and does not need re-litig
 And UptimeRobot's **status pages** support 11 languages even though its operator dashboard is English-only, so
 that row now says whose screens it is counting. A monitoring tool that overstates what it detects disqualifies
 itself; the same goes for understating what a competitor gives away.
+
+**Two corrections we owe Checkly,** found on 3 August 2026 by reading its documentation index rather than
+its marketing pages. Heartbeat monitors are a first-class check type there, documented as "Ensure your
+automated processes are running as expected", so that row was a ⚠️ and is now a ✅. And its Web Vitals are not
+a Lighthouse score: the documentation has "Performance & Web Vitals: Web Vitals for browser checks", so the
+cell says what it is. The ⚠️ stays, because it still takes a browser check to get them, which is a script.
 
 **A correction we owe ourselves, found on 3 August 2026 while verifying our own column.** Two cells said
 "undo on every action" and "every action is undoable". That is not what the code does, and the product's own
