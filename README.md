@@ -381,6 +381,22 @@ Feature comparison against the tools people actually evaluate. This reflects **o
 standard plans, as of July 2026**: no scripting, no plug-ins, no add-ons. Found a mistake? Open a pull
 request; the table lives in this file.
 
+**What the three symbols claim, because that matters more than the ticks.** The table had none of this
+written down until 3 August 2026, which made every cell say more than we can support.
+
+| | Means |
+|---|---|
+| ✅ | Announced by the vendor and available out of the box, on a standard plan. |
+| ⚠️ | Possible, with the condition named in the cell: a script to write, an agent to install, a paid tier, or configuration work. |
+| ❌ | **Not announced in the vendor's own documentation** for a standard plan. It is not a claim that the thing is impossible, nor that no add-on exists. If you can show a documented feature we marked ❌, that is a correction we want. |
+
+**The Uptime Kuma column was re-verified on 3 August 2026** against its own README, which is the whole
+advantage of comparing yourself to open source: there is one source and it is public. It announces ten monitor
+types including keyword and JSON query, push monitors for dead-man checks, certificate information, multiple
+status pages, multi-language screens, more than ninety notification services, and it requires Node 20.4 or
+newer, or Docker. Every ❌ in its column corresponds to something its documentation does not mention, which is
+exactly what the symbol now says.
+
 | | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | Broken layout / CSS detection | ✅ automatic | ❌ | ⚠️ write a browser script | ⚠️ defacement only | ❌ | ❌ | ⚠️ write a synthetic script |

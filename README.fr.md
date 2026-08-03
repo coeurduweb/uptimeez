@@ -392,6 +392,22 @@ Comparatif des fonctions face aux outils que l'on évalue réellement. Il reflè
 des formules standard, en juillet 2026** : sans script, sans extension, sans module payant. Une erreur ?
 Ouvrez une pull request, le tableau est dans ce fichier.
 
+**Ce que les trois symboles affirment, et ça compte plus que les coches.** Rien de tout ceci n'était écrit
+avant le 3 août 2026, ce qui faisait dire à chaque case plus que ce que nous pouvons soutenir.
+
+| | Signifie |
+|---|---|
+| ✅ | Annoncé par l'éditeur et disponible tel quel, sur une formule standard. |
+| ⚠️ | Possible, à la condition nommée dans la case : un script à écrire, un agent à installer, une formule payante, ou du paramétrage. |
+| ❌ | **Non annoncé dans la documentation de l'éditeur** pour une formule standard. Ce n'est pas affirmer que la chose est impossible, ni qu'aucun module ne l'ajoute. Si vous pouvez montrer une fonction documentée que nous avons marquée ❌, c'est une correction que nous voulons. |
+
+**La colonne Uptime Kuma a été revérifiée le 3 août 2026** à partir de son propre README, ce qui est tout
+l'avantage de se comparer à un logiciel libre : la source est unique et publique. Il annonce dix types de
+sondes dont le mot-clé et la requête JSON, des sondes « push » pour les tâches muettes, les informations de
+certificat, plusieurs pages d'état, des écrans multilingues, plus de quatre-vingt-dix services de
+notification, et il exige Node 20.4 ou plus récent, ou Docker. Chaque ❌ de sa colonne correspond à ce que sa
+documentation ne mentionne pas, ce qui est exactement ce que le symbole dit désormais.
+
 | | **UptimeEZ** | UptimeRobot | Checkly | Site24x7 | Uptime Kuma | Zabbix | New Relic |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | Détection de mise en page cassée (CSS) | ✅ automatique | ❌ | ⚠️ à scripter | ⚠️ défiguration seulement | ❌ | ❌ | ⚠️ à scripter |
