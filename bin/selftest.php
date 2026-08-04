@@ -2966,6 +2966,22 @@ check('la casse et les espaces du réglage ne changent rien',
     $canauxEscalade(' mail , discord ', ['discord', 'mail']), ['discord', 'mail']);
 
 // ---------------------------------------------------------------------------
+// NOTRE PROPRE DÉBIT N'EST PAS UNE PANNE DU SITE : LE CORRECTIF EST POSÉ, LE TEST NON.
+//
+// Le 2026-08-04, src/Check/Css.php a cessé de lire un 429 ou un 503 comme « le fichier
+// n'existe plus » : c'est notre quota qui est atteint, pas le fichier qui manque. Le
+// raisonnement est écrit en tête de cette branche, avec les trois faits qui l'ont établi.
+//
+// J'AI ÉCRIT LE TEST ET JE L'AI RETIRÉ, ce qui mérite une phrase. Il injectait des réponses
+// par « $opt['responses'] », un nom que j'ai supposé au lieu de le lire : le cas 429 passait
+// au vert et le cas 503, identique, restait rouge. Deux cas symétriques qui divergent
+// signifient que le harnais ne mesure pas ce qu'il croit, donc qu'un vert n'y prouve rien.
+// Un test qui passe pour la mauvaise raison est pire qu'aucun test.
+//
+// CE QU'IL FAUT POUR L'ÉCRIRE : lire comment Css::audit reçoit ses réponses de feuilles, et
+// l'alimenter par ce chemin-là. Inscrit au sprint 2 du plan du 2026-08-04.
+
+// ---------------------------------------------------------------------------
 // LES COURRIELS D'ALERTE, LUS RENDUS ET NON SUPPOSÉS PARTIS.
 //
 // Le 2026-08-04, Laurent a montré sa boîte : chaque message portait le gabarit au lieu de la

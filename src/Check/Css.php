@@ -211,6 +211,34 @@ final class Css
             $bytes  = strlen($res->body);
             $issue  = null; $note = null; $cons = null;
 
+            // ------------------------------------------------------------------------------
+            // NOTRE PROPRE DÉBIT N'EST PAS UNE PANNE DU SITE. Défaut trouvé le 2026-08-04.
+            // ------------------------------------------------------------------------------
+            //
+            // Laurent a reçu des centaines d'alertes « mise en page cassée » sur des sites qui
+            // n'avaient rien. Trois faits l'expliquent ensemble :
+            //
+            //   - le collecteur surveille environ deux cents sondes, et TOUS les sites du parc
+            //     tiennent sur deux serveurs ;
+            //   - à chaque passe il demande la page PUIS toutes ses feuilles de style, par lots
+            //     de dix en parallèle, donc plusieurs centaines de requêtes à la même machine
+            //     en quelques secondes, depuis une seule adresse ;
+            //   - un hébergement mutualisé répond alors 429 ou 503 à ce qui dépasse son quota.
+            //
+            // Le code lisait ce 429 comme « le fichier n'existe plus sur le serveur », donc
+            // « mise en page cassée ». D'où le clignotement, d'où les « Downtime 0 s », et d'où
+            // le fait que Laurent, en ouvrant le site seul, ne voyait jamais rien : il n'était
+            // pas en train de saturer le serveur.
+            //
+            // Un quota atteint et un fichier absent ne se disent pas avec le même mot. 429 et
+            // 503 ne concluent donc plus RIEN sur la page : ils sont notre limite, pas la
+            // sienne. Le 404 reste un défaut, parce qu'un fichier qui n'existe pas n'existe pas
+            // pour le visiteur non plus.
+            if (in_array($res->status, [429, 503], true)) {
+                $metrics['throttled'] = ($metrics['throttled'] ?? 0) + 1;
+                continue;
+            }
+
             if (!$res->ok) {
                 $issue = $res->errorCode === 'TIMEOUT' ? 'TIMEOUT' : 'UNREACHABLE';
                 $note  = Http::errorLabel($res->errorCode);
