@@ -2965,6 +2965,62 @@ check('nommer un canal éteint ne le rallume pas',
 check('la casse et les espaces du réglage ne changent rien',
     $canauxEscalade(' mail , discord ', ['discord', 'mail']), ['discord', 'mail']);
 
+// ---------------------------------------------------------------------------
+// LES COURRIELS D'ALERTE, LUS RENDUS ET NON SUPPOSÉS PARTIS.
+//
+// Le 2026-08-04, Laurent a montré sa boîte : chaque message portait le gabarit au lieu de la
+// valeur, « Mise en page cassée : {detail} », « Temps de réponse élevé : {seconds} s ». Des
+// centaines de courriels illisibles sur la seule ligne qui explique quoi faire.
+//
+// AUCUN TEST NE POUVAIT LE VOIR : ils vérifiaient qu'un envoi partait, jamais ce qu'il
+// contenait. C'est la même famille de défaut que le double verdict de certificat, deux chemins
+// pour un rendu dont un seul était juste, et la même leçon : ce qui n'est pas lu n'est pas
+// testé.
+$incidentTest = [
+    'message' => 'Temps de réponse élevé : {seconds} s',
+    'message_vars' => jenc(['seconds' => '4,19']),
+    'reason_code' => 'SLOW',
+];
+check('le détail d\'un courriel substitue ses variables',
+    Uptimeez\Notify\Notifier::detailIncident($incidentTest), 'Temps de réponse élevé : 4,19 s');
+check('et il ne reste aucune accolade dans le rendu',
+    (int) preg_match('~[{}]~', Uptimeez\Notify\Notifier::detailIncident($incidentTest)), 0);
+
+// Les variables peuvent arriver déjà décodées selon l'appelant : les deux formes doivent
+// rendre la même phrase, sinon le courriel dépend de qui l'a demandé.
+check('un tableau de variables déjà décodé marche aussi',
+    Uptimeez\Notify\Notifier::detailIncident(
+        ['message' => 'Port {port} fermé sur {host} : {reason}',
+         'message_vars' => ['port' => '25', 'host' => 'mail.exemple.fr', 'reason' => 'refusé']]),
+    'Port 25 fermé sur mail.exemple.fr : refusé');
+
+check('sans variables, la phrase source sort telle quelle',
+    Uptimeez\Notify\Notifier::detailIncident(['message' => 'Page introuvable (404)']),
+    'Page introuvable (404)');
+
+// LA PORTE DES CAUSES D'APPARENCE. Arbitrage de Laurent : une remarque dans l'outil, pas un
+// courriel. Le contrôle porte sur les quatre familles et sur une cause de panne, pour que
+// « tout est silencieux » ne passe pas pour un succès.
+foreach (['CSS_BROKEN' => true, 'CSS_DEGRADED' => true, 'NOINDEX' => true, 'SLOW' => true,
+          'HTTP_5XX' => false, 'DB_DOWN' => false, 'SSL_EXPIRED' => false,
+          'PORT_CLOSED' => false, null => false] as $cause => $silencieuse) {
+    check('cause ' . ($cause === '' ? 'nulle' : (string) $cause) . ' : '
+          . ($silencieuse ? 'pas de courriel' : 'courriel envoyé'),
+        Uptimeez\Notify\Notifier::causeSilencieuse($cause === '' ? null : (string) $cause),
+        $silencieuse);
+}
+
+// LE PLANCHER DU RÉTABLISSEMENT : un incident qui n'a pas duré une passe n'a rien décrit de
+// stable, donc son rétablissement ne s'annonce pas. Les captures portaient « Downtime 0 s »
+// sur presque tous les rétablissements.
+check('le plancher de rétablissement vaut une minute',
+    Uptimeez\Notify\Notifier::PLANCHER_RETABLISSEMENT, 60);
+
+// ET LE RAPPEL EST ÉTEINT PAR DÉFAUT. Le contrôle lit le fichier d'exemple, qui est ce qu'une
+// nouvelle installation reçoit : c'est lui qui décidait de la boîte pleine.
+check('le rappel périodique est éteint dans la configuration d\'exemple',
+    (int) preg_match('~\'resend_after_min\'\s*=>\s*0~', (string) file_get_contents(__DIR__ . '/../config.sample.php')), 1);
+
 // LA COLONNE EXISTE, ET C'EST ELLE QUI PORTE L'ÉTAT « déjà escaladé ».
 check('la table des incidents porte escalated_at',
     str_contains((string)file_get_contents(__DIR__ . '/../src/Db.php'), 'escalated_at'), true);

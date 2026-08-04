@@ -106,7 +106,11 @@ return [
         // sur le même canal ne prévient personne de plus. Vide = tous les canaux actifs.
         'escalate_after_min' => 0,    // 0 = pas d'escalade
         'escalate_channels'  => '',   // ex: 'mail,webhook' ; vide = tous les canaux actifs
-        'resend_after_min'  => 60,    // rappel si toujours HS
+        // LE RAPPEL EST ÉTEINT PAR DÉFAUT DEPUIS LE 2026-08-04, et le motif est une boîte
+        // pleine. À 60 minutes, chaque incident ouvert réémettait toutes les heures : les
+        // captures de Laurent montraient « Consecutive failures 36 » sur des « Still down »
+        // que personne ne lisait plus. Un rappel utile est un rappel qu'on a demandé.
+        'resend_after_min'  => 0,     // 0 = pas de rappel ; le mécanisme reste disponible
         'notify_recovery'   => true,
         'notify_degraded'   => true,  // lenteur / SSL bientôt expiré / contenu modifié
         'quiet_hours'       => '',    // ex: '23:00-07:00' (les CRITIQUES passent quand même)

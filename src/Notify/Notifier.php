@@ -13,6 +13,12 @@ use Uptimeez\Db;
  */
 final class Notifier
 {
+    /**
+     * En dessous, un rétablissement ne s'annonce pas : l'incident n'a pas duré une passe.
+     * Voir sendRecovery() et le plan du 2026-08-04, défaut D4.
+     */
+    public const PLANCHER_RETABLISSEMENT = 60;
+
     public const COLORS = [
         'down'     => 0xE5484D,
         'degraded' => 0xF5A524,
@@ -24,8 +30,72 @@ final class Notifier
     /**
      * @param  'nouveau'|'aggrave'|'rappel'  $nature  ce qui motive CETTE alerte
      */
+    /**
+     * LE DÉTAIL D'UN INCIDENT, VARIABLES SUBSTITUÉES.
+     *
+     * ------------------------------------------------------------------------------
+     * LE DÉFAUT QUE CETTE FONCTION RÉPARE, ET IL DURAIT DEPUIS LE DÉBUT
+     * ------------------------------------------------------------------------------
+     *
+     * Le 2026-08-04, Laurent a montré sa boîte : chaque courriel portait le GABARIT au lieu de
+     * la valeur. « Mise en page cassée : {detail} », « Temps de réponse élevé : {seconds} s »,
+     * « Erreur serveur {code} : le site ne répond plus correctement ». Des centaines de
+     * messages, tous illisibles sur la seule ligne qui explique quoi faire.
+     *
+     * La cause : le message stocké est une phrase SOURCE, et ses variables vivent à côté, dans
+     * « message_vars ». L'écran passe par verdict_text() qui applique les deux ; le courriel
+     * lisait « message » tout seul. Deux chemins pour un même rendu, dont un seul était juste,
+     * et c'est exactement la forme du défaut qui avait produit deux verdicts de certificat
+     * contradictoires en juillet.
+     *
+     * AUCUN TEST NE POUVAIT LE VOIR, parce qu'aucun ne lit un courriel RENDU : ils vérifiaient
+     * qu'un envoi partait, pas ce qu'il contenait. Le contrôle ajouté au selftest refuse
+     * désormais une accolade dans un détail d'incident.
+     *
+     * @param array<string,mixed> $incident
+     */
+    public static function detailIncident(array $incident): string
+    {
+        $vars = $incident['message_vars'] ?? null;
+        $vars = is_array($vars) ? $vars : (is_string($vars) ? (array) jdec($vars) : []);
+
+        return str_cut(t((string) ($incident['message'] ?? ''), $vars), 300);
+    }
+
+    /**
+     * UNE CAUSE D'APPARENCE NE PART PLUS PAR COURRIEL. Arbitrage de Laurent, 2026-08-04.
+     *
+     * ------------------------------------------------------------------------------
+     * POURQUOI CETTE PORTE EXISTE, ET CE QU'ELLE NE FERME PAS
+     * ------------------------------------------------------------------------------
+     *
+     * Ses mots : « à la rigueur on peut avoir une remarque de l'outil sans avoir de mail ». Il
+     * avait ouvert les sites signalés : aucun n'avait de problème de feuille de style. Le
+     * détecteur se trompe donc en masse, et il continuera de se tromper tant que le sprint 2
+     * n'aura pas trouvé pourquoi — mais son erreur cesse d'atteindre une boîte de courriel.
+     *
+     * CE QUI RESTE ENTIER : la sonde garde son état, l'écran garde son avertissement, le
+     * journal garde sa ligne. Une remarque visible dans l'outil n'a jamais réveillé personne à
+     * trois heures du matin, et c'est toute la différence.
+     *
+     * CE QUI N'EST PAS COUVERT ICI : le rétablissement. Un incident d'apparence qui se referme
+     * n'envoie rien non plus, puisque son ouverture n'a rien envoyé. Voir sendRecovery().
+     */
+    public static function causeSilencieuse(?string $cause): bool
+    {
+        return \Uptimeez\Regle\Verdict::estUneApparence($cause);
+    }
+
     public static function sendIncident(array $mon, array $incident, string $nature = 'nouveau'): void
     {
+        // La porte, avant toute construction de message : une cause d'apparence ne part pas.
+        if (self::causeSilencieuse($incident['reason_code'] ?? null)) {
+            self::log($mon, 'silencieux', (string) ($incident['severity'] ?? 'degraded'), false,
+                (string) ($incident['reason_code'] ?? '') . ' · no-mail');
+
+            return;
+        }
+
         $sev   = $incident['severity'] === 'degraded' ? 'degraded' : 'down';
 
         // TROIS NATURES ET NON DEUX, PARCE QUE « PAS NOUVEAU » N'EST PAS « RIEN DE NEUF ».
@@ -53,7 +123,7 @@ final class Notifier
 
         $lines = [
             [t('Cause'), self::reasonLabel($incident['reason_code'])],
-            [t('Détail'), str_cut((string)$incident['message'], 300)],
+            [t('Détail'), self::detailIncident($incident)],
             ['URL', $mon['url']],
             [t('Depuis'), self::when($incident['started_at']) . ' ('
                 . human_duration(max(0, time() - strtotime((string)$incident['started_at']))) . ')'],
@@ -131,7 +201,7 @@ final class Notifier
         $titre = '🚨 ' . t('ESCALADE : personne n\'a acquitté') . ' : ' . $mon['name'];
         $lignes = [
             [t('Cause'), self::reasonLabel($incident['reason_code'])],
-            [t('Détail'), str_cut((string) $incident['message'], 300)],
+            [t('Détail'), self::detailIncident($incident)],
             ['URL', $mon['url']],
             [t('Hors service depuis'), human_duration($depuis)],
             [t('Alertes déjà envoyées'), (string) (int) $incident['notify_count']],
@@ -236,6 +306,28 @@ final class Notifier
     {
         if (!Config::get('notify.notify_recovery', true)) return;
         $dur   = (int)($incident['duration_sec'] ?? 0);
+
+        // D2. Rien n'a été envoyé à l'ouverture, donc rien ne part à la fermeture : un
+        // « RÉTABLI » sans alerte préalable annonce la fin d'un problème dont le lecteur
+        // n'a jamais entendu parler.
+        if (self::causeSilencieuse($incident['reason_code'] ?? null)) {
+            return;
+        }
+
+        // D4. UN INCIDENT DE ZÉRO SECONDE N'A PAS BESOIN D'ÊTRE ANNONCÉ RÉTABLI.
+        //
+        // Les captures du 2026-08-04 portaient « Downtime 0 s » sur presque tous les
+        // rétablissements : le contrôle voit un défaut, la passe suivante ne le voit plus, et
+        // deux courriels partent pour un incident qui n'a jamais duré. Sous ce plancher, le
+        // rétablissement reste dans l'outil et dans le journal.
+        //
+        // Soixante secondes, parce que c'est la cadence minimale d'une passe : en dessous,
+        // l'incident n'a pas survécu à un seul intervalle, donc il n'a rien décrit de stable.
+        if ($dur < self::PLANCHER_RETABLISSEMENT) {
+            self::log($mon, 'silencieux', 'up', false, $dur . 's · no-mail');
+
+            return;
+        }
         $title = '🟢 ' . t('RÉTABLI') . ' : ' . $mon['name'];
         $lines = [
             [t('Indisponibilité'), human_duration($dur)],
