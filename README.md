@@ -434,7 +434,7 @@ exactly what the symbol now says.
 | Runs on plain shared hosting | ✅ PHP only | SaaS | SaaS | SaaS | ❌ Node/Docker | ❌ server | SaaS |
 | Dependencies to install | **none** | n/a | Node + browsers | n/a | Node or Docker | server + DB + agent | agent |
 | Your data stays on your server | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Free tier at 40 sites | **yes, no limit** | yes, 50 monitors / 5 min | no, 10 monitors | no, 5 monitors | yes, no limit | yes, no limit | data allowance only |
+| Free tier at 40 sites | **yes, no limit** | yes, 50 monitors / 5 min | no, 10 monitors | no, 5 monitors | yes, no limit | yes, no limit | yes, 100 GB/month and 500 synthetic checks |
 
 **A correction we owe UptimeRobot,** found while re-checking this table on 2 August 2026 and recorded here
 rather than quietly fixed. The cost row read "paid tier" for UptimeRobot at forty sites. That is wrong: its
@@ -443,6 +443,11 @@ actual limit instead of a verdict, which is checkable and does not need re-litig
 And UptimeRobot's **status pages** support 11 languages even though its operator dashboard is English-only, so
 that row now says whose screens it is counting. A monitoring tool that overstates what it detects disqualifies
 itself; the same goes for understating what a competitor gives away.
+
+**A third cell owed to New Relic,** read on its pricing page on 4 August 2026. Its free tier said "data
+allowance only", which reads as a restriction where the figures are in fact generous: 100 GB of ingest a month,
+500 synthetic checks, unlimited basic users, described as perpetual rather than a trial. Forty sites fit in that
+comfortably, so the row now states what it gives instead of hinting that it gives little.
 
 **Three cells owed to Zabbix, and two to New Relic,** read in their own documentation on 3 August 2026.
 Zabbix has a browser item that drives a real browser through WebDriver, captures screenshots and collects

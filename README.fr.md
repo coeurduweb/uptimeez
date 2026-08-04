@@ -446,7 +446,7 @@ documentation ne mentionne pas, ce qui est exactement ce que le symbole dit dés
 | Tourne sur un mutualisé | ✅ PHP seul | SaaS | SaaS | SaaS | ❌ Node/Docker | ❌ serveur | SaaS |
 | Dépendances à installer | **aucune** | n/a | Node + navigateurs | n/a | Node ou Docker | serveur + base + agent | agent |
 | Vos données restent chez vous | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Offre gratuite à 40 sites | **oui, sans limite** | oui, 50 sondes / 5 min | non, 10 sondes | non, 5 sondes | oui, sans limite | oui, sans limite | quota de données seulement |
+| Offre gratuite à 40 sites | **oui, sans limite** | oui, 50 sondes / 5 min | non, 10 sondes | non, 5 sondes | oui, sans limite | oui, sans limite | oui, 100 Go/mois et 500 contrôles synthétiques |
 
 **Une correction que nous devons à UptimeRobot,** trouvée en revérifiant ce tableau le 2026-08-02 et
 consignée ici plutôt que corrigée en silence. La ligne des coûts annonçait « formule payante » pour
@@ -456,6 +456,12 @@ qui se vérifie et n'a pas besoin d'être rejugé chaque trimestre. Et les **pag
 gèrent 11 langues, même si son tableau de bord d'exploitation est anglophone : la ligne dit maintenant de
 quels écrans elle parle. Un outil de supervision qui exagère ce qu'il détecte se disqualifie tout seul ;
 sous-estimer ce qu'un concurrent donne gratuitement revient au même.
+
+**Une troisième case due à New Relic,** lue sur sa page de tarifs le 4 août 2026. Son offre gratuite était
+annoncée « quota de données seulement », ce qui se lit comme une restriction là où les chiffres sont en réalité
+généreux : 100 Go d'ingestion par mois, 500 contrôles synthétiques, des utilisateurs de base illimités, et une
+gratuité présentée comme perpétuelle et non comme un essai. Quarante sites y tiennent largement, donc la ligne
+dit ce qu'elle donne au lieu de laisser croire qu'elle donne peu.
 
 **Trois cases dues à Zabbix, deux à New Relic,** lues dans leur propre documentation le 3 août 2026. Zabbix
 dispose d'un élément navigateur qui pilote un vrai navigateur par WebDriver, prend des captures et collecte des
