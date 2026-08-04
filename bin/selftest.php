@@ -16,6 +16,10 @@ declare(strict_types=1);
 // qu'une requête HTTP ne charge même pas la configuration.
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
+// Aucune alerte réelle ne part d'une suite : voir Notifier::dispatchVers(). Déclaré AVANT
+// le bootstrap, parce qu'une constante lue plus tard ne protégerait pas ce qui a déjà tourné.
+define('UPTIMEEZ_SUITE', true);
+
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 // LA SUITE FIXE SA LANGUE, ELLE NE L'HÉRITE PAS.

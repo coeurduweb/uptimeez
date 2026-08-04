@@ -375,6 +375,35 @@ final class Notifier
      */
     private static function dispatchVers(array $canaux, array $mon, string $sev, string $title, array $lines): int
     {
+        // ------------------------------------------------------------------------------
+        // UNE SUITE DE TESTS N'ENVOIE JAMAIS DE VRAIE ALERTE. Ajouté le 2026-08-04, après
+        // avoir envoyé deux fausses alertes à Laurent.
+        // ------------------------------------------------------------------------------
+        //
+        // CE QUI S'EST PASSÉ, ET C'EST ENTIÈREMENT DE MON FAIT. J'ai lancé bin/selftest.php en
+        // pointant UPTIMEEZ_CONFIG sur la configuration du parc, pour vérifier que le moteur
+        // allait bien après une mise à jour. Or la suite crée une sonde de battement nommée
+        // « Sauvegarde nocturne », antidate son dernier signal de deux heures, et appelle
+        // Heartbeat::sweep() pour éprouver la détection du silence. Ce sweep a fait ce qu'il
+        // devait : il a ouvert un incident et ENVOYÉ L'ALERTE, par le canal de courriel réel de
+        // l'installation. Deux exécutions, deux courriels, sur une sonde qui n'existe pas.
+        //
+        // La suite nettoie ses fixtures derrière elle : les sondes et les incidents avaient
+        // disparu quand j'ai cherché. Le courriel, lui, était parti. C'est le pire des états,
+        // parce qu'il ne reste aucune trace pour comprendre.
+        //
+        // POURQUOI SILENCIEUX ET NON REFUSÉ. Le README demande de lancer la suite après chaque
+        // mise à jour, sur l'installation qu'on vient de mettre à jour : refuser de tourner
+        // quand un canal est configuré rendrait ce conseil impossible à suivre. On garde donc
+        // tout le chemin, y compris le journal, et seul l'envoi n'a pas lieu.
+        if (defined('UPTIMEEZ_SUITE') && UPTIMEEZ_SUITE) {
+            foreach ($canaux as $ch) {
+                self::log($mon, $ch, $sev, false, 'suite · no-mail');
+            }
+
+            return 0;
+        }
+
         $ok = 0;
         foreach ($canaux as $ch) {
             // La classe vient du registre : un canal ajouté à CANAUX est envoyé sans qu'on

@@ -19,6 +19,10 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 if (PHP_SAPI !== 'cli') exit("À lancer en ligne de commande.\n");
 
+// Aucune alerte réelle ne part d'une suite : voir Notifier::dispatchVers(). Déclaré AVANT
+// le bootstrap, parce qu'une constante lue plus tard ne protégerait pas ce qui a déjà tourné.
+define('UPTIMEEZ_SUITE', true);
+
 $ROOT = dirname(__DIR__);
 $REAL = in_array('--real', $argv, true);
 $pass = 0; $fail = 0; $t0 = microtime(true);

@@ -14,6 +14,19 @@
  */
 declare(strict_types=1);
 
+// CE BANC NE DÉCLARE PAS « UPTIMEEZ_SUITE », ET C'EST VOULU.
+//
+// Le selftest et le parcours de bout en bout le déclarent, pour qu'aucune alerte réelle ne
+// puisse partir d'un test : c'est ce qui a envoyé deux fausses alertes à Laurent le 2026-08-04.
+// Ici, l'inverse est vrai : ce banc EXISTE pour prouver qu'une alerte part, et il la vérifie en
+// s'envoyant à son propre webhook local. La suite qui éprouve l'envoi ne peut pas être celle qui
+// l'interdit.
+//
+// La contrepartie, à savoir : ne pas pointer ce banc sur la configuration d'une installation
+// réelle. Il fabrique ses propres sondes sur un serveur local, donc il n'a aucune raison de
+// lire un config.php de production.
+
+
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use Uptimeez\Config;
