@@ -385,3 +385,35 @@ function str_cut(string $s, int $len = 120): string
     $s = trim(preg_replace('~\s+~u', ' ', $s) ?? $s);
     return mb_strlen($s) > $len ? mb_substr($s, 0, $len - 1) . '…' : $s;
 }
+
+/**
+ * L'adresse d'un fichier d'habillage, avec une empreinte qui change AVEC LUI.
+ *
+ * ------------------------------------------------------------------------------
+ * LE DÉFAUT QUE CETTE FONCTION CORRIGE, ET IL ÉTAIT INVISIBLE
+ * ------------------------------------------------------------------------------
+ *
+ * La feuille de style était appelée « assets/app.css?v=1.0.1 », le chiffre venant de
+ * UPTIMEEZ_VERSION, une constante écrite à la main. Le fichier, lui, a changé des dizaines
+ * de fois sans que la constante bouge. Résultat : tout visiteur ayant déjà chargé la page
+ * gardait l'ancienne feuille, et derrière un cache mutualisé ou un Cloudflare, TOUT le
+ * monde la gardait. On livrait des correctifs d'affichage que personne ne voyait.
+ *
+ * Constaté le 2026-08-06 sur la démonstration publique : une règle CSS ajoutée le jour même,
+ * déployée et vérifiée dans le fichier servi, restait sans effet à l'écran.
+ *
+ * L'empreinte vient donc du fichier : sa date de modification suffit, elle change à chaque
+ * écriture et ne coûte qu'un « stat » que PHP met lui-même en cache. Un fichier absent rend
+ * le chemin nu plutôt qu'une empreinte inventée : mieux vaut un cache mal purgé qu'une
+ * adresse qui ne répond pas.
+ *
+ * La constante de version reste ce qu'elle est, un numéro de produit affiché aux réglages.
+ * Elle n'a jamais eu à faire ce travail.
+ */
+function asset_url(string $relatif): string
+{
+    $chemin = UPTIMEEZ_ROOT . '/' . ltrim($relatif, '/');
+    $stamp  = @filemtime($chemin);
+
+    return $stamp === false ? $relatif : $relatif . '?v=' . dechex($stamp);
+}

@@ -4617,6 +4617,31 @@ check('la confirmation est courte devant un intervalle de 15 min',
 check('une panne réelle est confirmée en une demi-minute, pas au prochain créneau',
     Uptimeez\Runner::CONFIRMATION_SEC < 900, true);
 
+section('L\'empreinte des fichiers d\'habillage change avec eux');
+// ---------------------------------------------------------------------------
+// LE DÉFAUT, TROUVÉ LE 2026-08-06 EN VOULANT VÉRIFIER UNE CORRECTION D'AFFICHAGE. La feuille
+// de style était servie avec « ?v=1.0.1 », valeur de UPTIMEEZ_VERSION, une constante écrite
+// à la main qui n'avait pas bougé depuis des dizaines de modifications du fichier. Derrière
+// un cache mutualisé ou un Cloudflare, personne ne recevait plus les correctifs d'affichage.
+// La règle CSS ajoutée le matin était bien dans le fichier servi et restait invisible.
+$empreinteCss = asset_url('assets/app.css');
+check('l\'adresse porte une empreinte', (bool)preg_match('~^assets/app\.css\?v=[0-9a-f]+$~', $empreinteCss), true);
+check('deux fichiers différents ont deux empreintes différentes',
+    asset_url('assets/app.css') !== asset_url('assets/app.js'), true);
+// La même lecture rend la même valeur : sinon chaque affichage casserait le cache, ce qui
+// est le défaut inverse et coûte à chaque visiteur.
+check('la même feuille rend deux fois la même empreinte',
+    asset_url('assets/app.css'), $empreinteCss);
+// Un fichier absent rend le chemin nu : mieux vaut un cache mal purgé qu'une adresse morte.
+check('un fichier absent ne fabrique pas d\'empreinte',
+    asset_url('assets/nexiste-pas.css'), 'assets/nexiste-pas.css');
+// ET LA VRAIE GARDE : la page ne doit plus appeler ses fichiers avec le numéro de version.
+$gabarit = (string)file_get_contents(__DIR__ . '/../views/layout.php');
+check('le gabarit n\'utilise plus la version du produit pour ses fichiers',
+    (bool)preg_match('~app\.(css|js)\?v=<\?= UPTIMEEZ_VERSION~', $gabarit), false);
+check('et il passe par la fonction qui lit le fichier',
+    substr_count($gabarit, 'asset_url('), 2);
+
 section('La démonstration n\'annonce pas une cadence qu\'elle ne tient pas');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT, RELEVÉ EN LIGNE LE 2026-08-05. Le bandeau promettait « remise à zéro chaque

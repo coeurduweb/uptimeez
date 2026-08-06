@@ -75,7 +75,7 @@ $uiMode  = Ui::mode();
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
 <title><?= ($down > 0 ? '(' . $down . ') ' : '') . e($pageTitle) . ' · ' . e($appName) ?></title>
-<link rel="stylesheet" href="assets/app.css?v=<?= UPTIMEEZ_VERSION ?>">
+<link rel="stylesheet" href="<?= e(asset_url('assets/app.css')) ?>">
 <?php
 /**
  * Le favicon : le sigle du produit, dont la barre qui dépasse porte l'état.
@@ -237,7 +237,7 @@ if (is_file($file)) require $file; else require __DIR__ . '/today.php';
 <script>window.UPTIMEEZ = { csrf: <?= json_encode(Auth::csrf()) ?>, view: <?= json_encode($view) ?>,
   queue: <?= json_encode(array_values((array)($_SESSION['uptimeez_setup_queue'] ?? []))) ?> };</script>
 <?php unset($_SESSION['uptimeez_setup_queue']); ?>
-<script src="assets/app.js?v=<?= UPTIMEEZ_VERSION ?>"></script>
+<script src="<?= e(asset_url('assets/app.js')) ?>"></script>
 <?php endif; ?>
 </body>
 </html>
