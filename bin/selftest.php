@@ -1147,7 +1147,40 @@ check('le courrier porte le mois couvert', str_contains($rhtml, 'février 2026')
 check('le courrier porte le chiffre de disponibilité', str_contains($rhtml, '99,93'), true);
 check('le courrier liste l\'interruption', str_contains($rhtml, 'Erreur serveur') && str_contains($rhtml, '12/02'), true);
 // Contraintes propres au courrier : rien d'externe, rien que les clients ne rendent pas.
-check('aucune ressource distante', (bool)preg_match('~(src|href)=["\']https?://~i', $rhtml), false);
+// AUCUNE IMAGE DISTANTE, et c'est la contrainte qui compte vraiment dans un courrier :
+// un pixel hébergé ailleurs raconte à un tiers quand le client a ouvert son rapport, et
+// beaucoup de messageries bloquent les images distantes, ce qui laisse un cadre vide au
+// milieu d'un document qu'on envoie à un client.
+check('aucune image distante', (bool)preg_match('~src=["\']https?://~i', $rhtml), false);
+
+// CE CONTRÔLE INTERDISAIT AUSSI TOUS LES LIENS, ET IL AVAIT TORT.
+//
+// Il testait « (src|href)=https:// » et tombait donc sur TOUTE installation ayant une
+// adresse publique et un jeton, c'est-à-dire toute installation réelle : le rapport y
+// porte, à dessein, un lien vers la page d'état publique (voir Report::onlineLink()).
+// Reproduit le 2026-08-06 en rejouant cette suite avec la configuration du parc.
+//
+// Une suite dont le résultat dépend de la configuration de la machine ne peut servir de
+// preuve : elle est verte ici, rouge chez l'exploitant, et c'est elle qu'on soupçonne en
+// dernier. Le contrôle pose donc la bonne question, celle qui vaut partout : est-ce
+// qu'un lien SORT de l'instance ?
+$avantBase  = Uptimeez\Config::get('app.base_url', '');
+$avantJeton = Uptimeez\Config::get('app.public_token', '');
+// On FORCE une adresse et un jeton, au lieu de subir ceux de la machine : sans lien dans
+// le rapport, le contrôle passerait au vert sans avoir rien vérifié.
+Uptimeez\Config::set('app.base_url', 'https://supervision.exemple.test');
+Uptimeez\Config::set('app.public_token', 'jeton-de-controle');
+$rhtmlLien = Report::html($rsite, $rdata, '2026-02-01 00:00:00', '2026-02-28 23:59:59');
+check('le rapport porte le lien vers la page d\'état de CETTE instance',
+    str_contains($rhtmlLien, 'https://supervision.exemple.test/index.php?p=status'), true);
+preg_match_all('~href=["\'](https?://[^/"\']+)~i', $rhtmlLien, $mLiens);
+$hotesEtrangers = array_values(array_unique(array_filter(
+    array_map('strtolower', $mLiens[1]),
+    static fn (string $h): bool => $h !== 'https://supervision.exemple.test'
+)));
+check('et aucun lien ne sort de l\'instance', $hotesEtrangers, []);
+Uptimeez\Config::set('app.base_url', $avantBase);
+Uptimeez\Config::set('app.public_token', $avantJeton);
 check('aucun SVG dans le courrier', str_contains($rhtml, '<svg'), false);
 check('styles en ligne uniquement', str_contains($rhtml, '<style'), false);
 check('mise en page par tableaux', str_contains($rhtml, '<table'), true);
