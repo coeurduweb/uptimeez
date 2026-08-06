@@ -462,6 +462,53 @@ ok('404 : la cause est nommée', ($auditCasse['reason'] ?? null) !== null,
 ok('404 : aucun débit refusé compté', (int)($auditCasse['metrics']['throttled'] ?? 0) === 0);
 
 // =========================================================================
+title('Une limite déjà dépassée coupe court aux relances');
+// =========================================================================
+//
+// Les deux décisions du délai croissant sont éprouvées à l'unité dans selftest. Ce qui ne se
+// voit qu'ici, c'est qu'elles sont RELIÉES : que la limite passée au lot arrête vraiment les
+// pauses. Sans ce contrôle, les deux fonctions pourraient être justes et n'être jamais
+// appelées.
+//
+// La cible répond 503, donc elle mérite une relance, donc la passe voudrait attendre. Avec une
+// limite déjà écoulée, elle doit rendre la main tout de suite.
+$monRelance = ['id' => 0, 'url' => "$SITE/indisponible.php", 'kind' => 'page', 'method' => 'GET',
+    'interval_sec' => 300, 'timeout_sec' => 8, 'retries' => 2, 'expect_status' => '200-299',
+    'enabled' => 1, 'check_ssl' => 0, 'check_css' => 0, 'check_db' => 0, 'check_noindex' => 0,
+    'check_content' => 0, 'slow_ms' => 0, 'ssl_warn_days' => 14, 'css_drop_pct' => 35,
+    'expect_string' => '', 'forbid_string' => '', 'watch_string' => '', 'watch_mode' => 'disappear',
+    'watch_state' => 'present', 'content_hash' => null, 'follow_redirects' => 1,
+    'ignore_ssl_errors' => 0, 'user_agent' => null, 'notify_channels' => '', 'paused_until' => null,
+    'maintenance' => '', 'role' => 'primary', 'site_id' => null, 'css_baseline' => null,
+    'css_baseline_locked' => 0, 'silhouette_ref_sig' => null, 'expect_json_path' => null,
+    'expect_json_value' => null, 'request_body' => null, 'request_headers' => null,
+    'port' => null, 'dns_type' => null, 'dns_expect' => null, 'status' => 'up'];
+
+// LE DÉLAI DE BASE EST RÉDUIT POUR CE CONTRÔLE, et ce n'est pas une triche : ce qu'on éprouve
+// est que les pauses ONT LIEU et qu'une limite les coupe, pas leur durée exacte, déjà couverte
+// à l'unité. Aux 1,5 s par défaut, ce seul contrôle ajoutait six secondes à une suite qu'on
+// lance vingt fois par jour.
+$delaiAvant = Uptimeez\Config::get('defaults.retry_delay_ms', 1500);
+Uptimeez\Config::set('defaults.retry_delay_ms', 400);   // 400 ms puis 1 200 ms
+
+// Sans limite : la passe attend ses pauses, donc elle prend au moins le premier délai.
+$avant = microtime(true);
+Uptimeez\Runner::runBatch([$monRelance], true);
+$avecPauses = microtime(true) - $avant;
+
+// Limite déjà écoulée : aucune pause n'est permise.
+$avant = microtime(true);
+Uptimeez\Runner::runBatch([$monRelance], false, microtime(true) - 1);
+$sansPauses = microtime(true) - $avant;
+
+ok('sans limite, les pauses de relance ont bien lieu', $avecPauses >= 1.2,
+   round($avecPauses, 2) . ' s');
+ok('limite dépassée : plus aucune pause', $sansPauses < 0.7, round($sansPauses, 2) . ' s');
+ok('et la différence est celle des pauses, pas du hasard',
+   $avecPauses - $sansPauses >= 0.9, round($avecPauses - $sansPauses, 2) . ' s d\'écart');
+Uptimeez\Config::set('defaults.retry_delay_ms', $delaiAvant);
+
+// =========================================================================
 title('Le corpus propose, et l\'écran qui le lit ne décide rien');
 // =========================================================================
 //

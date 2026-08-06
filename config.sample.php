@@ -51,6 +51,12 @@ return [
         'interval_sec'   => 300,   // 5 min
         'timeout_sec'    => 15,
         'retries'        => 2,     // relances avant de déclarer DOWN (anti faux positif)
+        // DÉLAI DE LA PREMIÈRE RELANCE, et les suivantes croissent : 1, 3 puis 6 fois cette
+        // valeur, soit 1,5 s puis 4,5 s puis 9 s par défaut. Quinze secondes au pire, ce qui
+        // couvre un redémarrage de PHP-FPM ou une purge de cache, là où trois tentatives en
+        // trois secondes tombaient toutes dans la même panne passagère.
+        // Les pauses s'arrêtent net au bord du budget de la passe : mieux vaut une relance en
+        // moins que douze sondes non vérifiées dans la minute.
         'retry_delay_ms' => 1500,
         'ssl_warn_days'  => 14,
         'slow_ms'        => 3000,  // au-delà : "dégradé"

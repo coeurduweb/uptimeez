@@ -4642,6 +4642,44 @@ check('le gabarit n\'utilise plus la version du produit pour ses fichiers',
 check('et il passe par la fonction qui lit le fichier',
     substr_count($gabarit, 'asset_url('), 2);
 
+section('La reprise sur panne : un délai qui croît, borné par le budget de la passe');
+// ---------------------------------------------------------------------------
+// LE BACKLOG DEMANDAIT « +5 s, +15 s, +30 s », ET C'ÉTAIT INAPPLICABLE TEL QUEL. Cinquante
+// secondes de pause, c'est le budget entier d'une passe : les paquets suivants ne seraient pas
+// vérifiés du tout cette minute-là. Une relance qui coûte une panne non détectée ailleurs
+// n'est pas une amélioration, c'est un échange perdant.
+//
+// Ce que le délai plat de 1,5 s manquait, en revanche, est réel : un redémarrage de PHP-FPM ou
+// une purge de cache durent de une à cinq secondes, et trois tentatives en trois secondes
+// tombent toutes dedans. D'où 1, 3, 6 : 1,5 s puis 4,5 s puis 9 s, quinze secondes au pire.
+check('premier tour : le délai de base', Uptimeez\Runner::delaiRelance(0, 1500), 1500);
+check('deuxième tour : trois fois plus', Uptimeez\Runner::delaiRelance(1, 1500), 4500);
+check('troisième tour : six fois', Uptimeez\Runner::delaiRelance(2, 1500), 9000);
+check('au-delà, on ne monte plus', Uptimeez\Runner::delaiRelance(9, 1500), 9000);
+// Le cumul est ce qui compte face au budget : quinze secondes, pas cinquante.
+check('les trois tours cumulés couvrent quinze secondes',
+    array_sum(array_map(fn ($t) => Uptimeez\Runner::delaiRelance($t, 1500), [0, 1, 2])), 15000);
+// Un délai de base à zéro reste à zéro : on n'invente pas une pause que l'exploitant a retirée.
+check('un délai de base nul ne fabrique aucune pause', Uptimeez\Runner::delaiRelance(2, 0), 0);
+
+// LA LIMITE EST UN INSTANT, PAS UNE DURÉE. Le budget d'une passe se consomme aussi par les
+// requêtes : ne compter que les pauses ferait dépasser sans le voir.
+$maintenant = 1000.0;
+check('on attend quand la pause tient dans le budget',
+    Uptimeez\Runner::peutAttendre($maintenant, 4.5, $maintenant + 30), true);
+check('on n\'attend pas quand elle le dépasse',
+    Uptimeez\Runner::peutAttendre($maintenant, 9.0, $maintenant + 5), false);
+check('la borne exacte est acceptée, pas refusée',
+    Uptimeez\Runner::peutAttendre($maintenant, 5.0, $maintenant + 5), true);
+check('sans limite, une vérification manuelle attend : quelqu\'un regarde son écran',
+    Uptimeez\Runner::peutAttendre($maintenant, 60.0, null), true);
+
+// ET LE CONTRAT QUI JUSTIFIE TOUT LE RESTE : la passe passe la limite à ses lots. Sans cette
+// ligne, les deux fonctions ci-dessus seraient justes et inutiles.
+$sourceRunner = (string) file_get_contents(__DIR__ . '/../src/Runner.php');
+check('la passe transmet l\'instant de fin de budget à ses lots',
+    (bool) preg_match('~runBatch\\(\\$batch, false, \\$t0 \\+ \\$budgetSec\\)~', $sourceRunner), true);
+
 section('L\'apprentissage PROPOSE, et ses quatre garde-fous tiennent');
 // ---------------------------------------------------------------------------
 // Le corpus des retours est le rêve de qui veut empoisonner un détecteur : déclarer faux ce

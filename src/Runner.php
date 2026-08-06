@@ -372,7 +372,9 @@ final class Runner
 
         foreach (array_chunk($mons, max(1, $parallel)) as $batch) {
             if (microtime(true) - $t0 > $budgetSec) break;
-            $results = self::runBatch($batch);
+            // La limite est l'instant de fin de budget, pas une durée : les relances doivent
+            // savoir ce qu'il reste, pas ce qu'on avait au départ.
+            $results = self::runBatch($batch, false, $t0 + $budgetSec);
             foreach ($results as $r) {
                 $stats['ran']++;
                 $key = $r['state'] === 'paused' ? 'up' : $r['state'];
@@ -400,7 +402,12 @@ final class Runner
      * Traite un lot de sondes : fetch parallèle, relances, évaluation, persistance.
      * @return array<int,array>
      */
-    public static function runBatch(array $monitors, bool $manual = false): array
+    /**
+     * @param float|null $limiteSec instant (microtime) au-delà duquel aucune pause de relance
+     *                              n'est permise ; null pour une vérification manuelle, où
+     *                              quelqu'un attend devant son écran.
+     */
+    public static function runBatch(array $monitors, bool $manual = false, ?float $limiteSec = null): array
     {
         $out      = [];
         $requests = [];
@@ -451,7 +458,17 @@ final class Runner
                 }
             }
             if (!$retry) break;
-            usleep((int)Config::get('defaults.retry_delay_ms', 1500) * 1000);
+            // LE DÉLAI CROÎT, ET IL S'ARRÊTE AU BORD DU BUDGET. Attendre au-delà ferait
+            // sauter le paquet suivant : la relance d'une sonde instable coûterait alors la
+            // surveillance des douze autres sondes de la minute, ce qui est le pire échange
+            // possible pour un outil dont le métier est de ne rien manquer.
+            $delaiMs = self::delaiRelance($round, (int) Config::get('defaults.retry_delay_ms', 1500));
+
+            if (!self::peutAttendre(microtime(true), $delaiMs / 1000, $limiteSec)) {
+                break;
+            }
+
+            usleep($delaiMs * 1000);
             foreach (Http::fetchMany($retry, (int)Config::get('defaults.max_parallel', 10)) as $key => $res) {
                 $attempts[$key]++;
                 // On garde la meilleure des tentatives : un succès annule l'échec.
@@ -1252,6 +1269,49 @@ final class Runner
             'auth'     => ($mon['auth_user'] ?? '') !== '' ? $mon['auth_user'] . ':' . ($mon['auth_pass'] ?? '') : null,
             'maxBody'  => $mon['kind'] === 'api' ? 500000 : Http::MAX_BODY,
         ];
+    }
+
+    /**
+     * Le délai avant la relance n° $tour, en millisecondes.
+     *
+     * ------------------------------------------------------------------------------
+     * POURQUOI CROISSANT, ET POURQUOI PAS 5, 15, 30
+     * ------------------------------------------------------------------------------
+     *
+     * Le backlog demandait « trois contrôles à +5 s, +15 s, +30 s ». Cinquante secondes de
+     * pause, c'est le budget ENTIER d'une passe : les sondes des paquets suivants ne
+     * seraient pas vérifiées du tout cette minute-là. Une relance qui coûte une panne non
+     * détectée ailleurs n'est pas une amélioration.
+     *
+     * Ce qu'il fallait vraiment couvrir, c'est ce que le délai plat de 1,5 s manquait : un
+     * redémarrage de PHP-FPM ou une purge de cache, qui durent de une à cinq secondes. Un
+     * facteur croissant 1, 3, 6 donne 1,5 s puis 4,5 s puis 9 s, soit quinze secondes en
+     * tout dans le pire des cas, et il couvre cette fenêtre.
+     *
+     * ET LE COÛT NE SE MULTIPLIE PAS PAR SONDE : les relances partent EN LOT, donc une pause
+     * de neuf secondes coûte neuf secondes que la passe entière partage, qu'il y ait une
+     * sonde à relancer ou quarante. C'est ce qui rend un délai croissant tenable ici alors
+     * qu'il serait absurde sonde par sonde.
+     */
+    public static function delaiRelance(int $tour, int $baseMs): int
+    {
+        $facteurs = [1, 3, 6];
+        $facteur  = $facteurs[$tour] ?? end($facteurs);
+
+        return max(0, $baseMs) * $facteur;
+    }
+
+    /**
+     * A-t-on le droit d'attendre ce délai sans manger le temps des autres sondes ?
+     *
+     * LA LIMITE EST UN INSTANT, PAS UNE DURÉE, et c'est ce qui rend la réponse juste : le
+     * budget d'une passe se consomme aussi par les requêtes elles-mêmes, pas seulement par
+     * les pauses. Sans limite (vérification manuelle), on attend : quelqu'un a cliqué et
+     * regarde son écran.
+     */
+    public static function peutAttendre(float $maintenant, float $delaiSec, ?float $limite): bool
+    {
+        return $limite === null || ($maintenant + $delaiSec) <= $limite;
     }
 
     private static function worthRetrying(Response $res): bool
