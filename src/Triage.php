@@ -154,6 +154,14 @@ final class Triage
             }
         }
 
+        // --- L'adresse sortante de CE serveur --------------------------------
+        // Ce n'est pas un défaut chez un client : c'est une autorisation devenue périmée
+        // chez les hébergeurs. Sa place est ici parce que rien n'est encore cassé, et que
+        // tout le sera si personne ne fait la demande.
+        if ($ip = \Uptimeez\AdresseSortante::aSignaler()) {
+            $out[] = $ip;
+        }
+
         // --- Failles publiées sur les versions détectées ----------------------
         // Une faille ne casse pas le site : elle le mettra en danger si personne
         // n'intervient. Sa place est donc ici, pas dans ce qui est déjà arrivé.

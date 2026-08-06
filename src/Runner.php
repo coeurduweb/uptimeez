@@ -361,6 +361,13 @@ final class Runner
         self::resetPassCounters();
         $stats = ['ran' => 0, 'down' => 0, 'degraded' => 0, 'up' => 0, 'seconds' => 0.0];
         $mons  = self::due($limit);
+
+        // L'ADRESSE SORTANTE, UNE FOIS PAR JOUR. Éteinte par défaut, et quand elle est
+        // réglée, relevePrevu() coupe court en une lecture de réglage : le reste du temps
+        // cette ligne ne coûte rien. Elle est AVANT le départ anticipé ci-dessous, parce
+        // qu'une installation sans sonde due garde besoin de savoir si son adresse a changé.
+        AdresseSortante::verifier();
+
         if (!$mons) { $stats['seconds'] = round(microtime(true) - $t0, 2); return $stats; }
 
         // L'ordre décide de ce qui part ENSEMBLE, puisque la découpe en paquets suit la

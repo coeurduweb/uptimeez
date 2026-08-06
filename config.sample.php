@@ -81,6 +81,22 @@ return [
         // intranet ou un préprod sur 192.168.x est un usage légitime. À activer
         // si l'interface est accessible à des tiers.
         'block_private_ranges' => false,
+
+        // SURVEILLER SA PROPRE ADRESSE SORTANTE. Vide = éteint, et c'est le défaut.
+        //
+        // À quoi ça sert : un collecteur qui suit beaucoup de sites finit par être mis en
+        // liste blanche chez les hébergeurs, et cette autorisation porte sur une ADRESSE IP.
+        // Le jour où elle change (migration, changement d'offre, bascule de passerelle), les
+        // listes blanches ne reconnaissent plus personne et RIEN ne le signale : les refus
+        // de l'hébergeur ressemblent alors à des pannes chez vos clients.
+        //
+        // Pourquoi éteint par défaut : connaître son adresse sortante demande de la faire
+        // dire par un tiers, et ce produit n'appelle aucun service extérieur sans qu'on le
+        // lui demande. À vous de nommer le service, le vôtre si vous en avez un.
+        //   exemple : 'https://api.ipify.org'
+        // Un relevé par jour, et un changement produit une remarque à l'écran, pas un
+        // courriel : rien n'est cassé, une autorisation est devenue périmée.
+        'echo_ip_url' => '',
     ],
 
     // --- Notifications -----------------------------------------------------

@@ -4642,6 +4642,66 @@ check('le gabarit n\'utilise plus la version du produit pour ses fichiers',
 check('et il passe par la fonction qui lit le fichier',
     substr_count($gabarit, 'asset_url('), 2);
 
+section('L\'adresse sortante : le dernier arrêt silencieux du parc');
+// ---------------------------------------------------------------------------
+// LE DANGER, écrit au backlog depuis longtemps et sans code : les listes blanches posées chez
+// les hébergeurs portent sur une ADRESSE IP. Le jour où l'adresse sortante change, elles ne
+// reconnaissent plus personne, et rien ne le signale : les refus de l'hébergeur ressemblent à
+// des pannes chez les clients, et on cherche le défaut chez eux pendant des jours.
+$avantUrl = Uptimeez\Config::get(Uptimeez\AdresseSortante::REGLAGE_URL, '');
+
+// 1. ÉTEINT PAR DÉFAUT, et ce n'est pas une précaution mais une décision : connaître son
+// adresse demande de la faire dire par un tiers, et ce produit n'appelle personne sans qu'on
+// le lui demande.
+Uptimeez\Config::set(Uptimeez\AdresseSortante::REGLAGE_URL, '');
+check('sans réglage, rien ne part et rien ne se plaint',
+    Uptimeez\AdresseSortante::verifier()['etat'], 'eteint');
+
+// 2. CE QU'ON ACCEPTE COMME ADRESSE. Un service d'écho peut rendre une page d'erreur ou un
+// portail captif : enregistrer n'importe quoi ferait annoncer un changement d'adresse à chaque
+// incident du service, c'est-à-dire un faux positif sur un contrôle censé n'en produire aucun.
+check('un corps qui EST une adresse', Uptimeez\AdresseSortante::adresseLue('203.0.113.7'), '203.0.113.7');
+check('une adresse dans du JSON', Uptimeez\AdresseSortante::adresseLue('{"ip":"203.0.113.7"}'), '203.0.113.7');
+check('une adresse v6', Uptimeez\AdresseSortante::adresseLue('2001:db8::1'), '2001:db8::1');
+check('des espaces autour', Uptimeez\AdresseSortante::adresseLue("  203.0.113.7\n"), '203.0.113.7');
+check('un portail captif ne donne pas d\'adresse',
+    Uptimeez\AdresseSortante::adresseLue('<html><body>Connectez-vous</body></html>'), null);
+check('un corps vide non plus', Uptimeez\AdresseSortante::adresseLue(''), null);
+check('et une suite de chiffres qui n\'est pas une adresse non plus',
+    Uptimeez\AdresseSortante::adresseLue('999.999.999.999'), null);
+
+// 3. LA CADENCE : une adresse sortante bouge une fois par an, la relever à chaque passe
+// serait une requête par minute pour rien.
+check('jamais relevé : on relève', Uptimeez\AdresseSortante::relevePrevu(null, 1_000_000), true);
+check('relevé il y a une heure : on attend',
+    Uptimeez\AdresseSortante::relevePrevu(date('Y-m-d H:i:s', 1_000_000 - 3600), 1_000_000), false);
+check('relevé il y a deux jours : on relève',
+    Uptimeez\AdresseSortante::relevePrevu(date('Y-m-d H:i:s', 1_000_000 - 172800), 1_000_000), true);
+check('une date illisible vaut « jamais relevé » plutôt que « surtout ne rien faire »',
+    Uptimeez\AdresseSortante::relevePrevu('pas une date', 1_000_000), true);
+
+// 4. LA REMARQUE NE VIT QUE SEPT JOURS, le temps de faire la demande. Une remarque permanente
+// cesse d'être lue, ce qui la rend pire qu'absente.
+Uptimeez\Db::setSetting(Uptimeez\AdresseSortante::CLE_ADRESSE, '203.0.113.9');
+Uptimeez\Db::setSetting('adresse_sortante_changee_le', date('Y-m-d H:i:s', time() - 3600));
+$sig = Uptimeez\AdresseSortante::aSignaler();
+check('un changement récent se signale', is_array($sig) && str_contains((string)$sig['title'], '203.0.113.9'), true);
+check('et il dit ce que ça coûte, pas seulement ce qui a changé',
+    (bool) preg_match('~ne vous reconnaissent plus~', (string) ($sig['why'] ?? '')), true);
+Uptimeez\Db::setSetting('adresse_sortante_changee_le', date('Y-m-d H:i:s', time() - 8 * 86400));
+check('passé sept jours, la remarque s\'efface', Uptimeez\AdresseSortante::aSignaler(), null);
+Uptimeez\Db::q('DELETE FROM settings WHERE k IN (?, ?, ?)',
+    [Uptimeez\AdresseSortante::CLE_ADRESSE, Uptimeez\AdresseSortante::CLE_RELEVE, 'adresse_sortante_changee_le']);
+Uptimeez\Config::set(Uptimeez\AdresseSortante::REGLAGE_URL, $avantUrl);
+
+// 5. ET LE CÂBLAGE, sans quoi tout ce qui précède serait juste et inutile.
+$srcRunner = (string) file_get_contents(__DIR__ . '/../src/Runner.php');
+check('la passe relève l\'adresse', str_contains($srcRunner, 'AdresseSortante::verifier()'), true);
+$srcTriage = (string) file_get_contents(__DIR__ . '/../src/Triage.php');
+check('et « à prévoir » porte la remarque', str_contains($srcTriage, 'AdresseSortante::aSignaler()'), true);
+check('le réglage est documenté dans la configuration d\'exemple',
+    (bool) preg_match('~echo_ip_url~', (string) file_get_contents(__DIR__ . '/../config.sample.php')), true);
+
 section('La reprise sur panne : un délai qui croît, borné par le budget de la passe');
 // ---------------------------------------------------------------------------
 // LE BACKLOG DEMANDAIT « +5 s, +15 s, +30 s », ET C'ÉTAIT INAPPLICABLE TEL QUEL. Cinquante

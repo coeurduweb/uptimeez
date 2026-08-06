@@ -1057,6 +1057,12 @@ return [
     'Envisager de relâcher ce signal, ou de le sortir des alertes : contesté sur {c} contexte(s) indépendant(s), jamais confirmé.' => 'Consider relaxing this check, or taking it out of the alerts: disputed on {c} independent context(s), never confirmed.',
     'Proposition à lire, pas à appliquer : aucun réglage n\'a changé, et aucun ne changera sans votre geste.' => 'A suggestion to read, not to apply: no setting has changed, and none will without your doing it.',
     'Un contexte est un serveur distinct. Trois contextes indépendants sont exigés avant toute proposition, et un même serveur ne compte que pour {n} contestations au plus : cinquante retours d\'un seul hébergeur pèsent moins que trois retours de trois piles différentes.' => 'A context is a distinct server. Three independent contexts are required before any suggestion, and one server counts for at most {n} disputes: fifty reports from a single host weigh less than three reports from three different stacks.',
+    'Adresse sortante changée : {avant} devient {apres}'
+        => 'Outbound address changed: {avant} is now {apres}',
+    'L\'adresse sortante de ce serveur a changé : {ip}'
+        => 'This server\'s outbound address has changed: {ip}',
+    'Les autorisations posées chez les hébergeurs portent sur l\'ancienne adresse : elles ne vous reconnaissent plus. Un refus de leur part ressemblera à une panne chez le client.'
+        => 'The allowances set up with hosting providers point at the old address: they no longer recognise you. A refusal from them will look like an outage at the client.',
     'Taire ce signal ici' => 'Silence this signal here',
     'Tant qu\'aucun compte n\'existe, l\'accès se fait par le seul mot de passe de l\'instance. Dès le premier compte créé, l\'écran de connexion demande un identifiant, et ce mot de passe devient un accès de secours : il fonctionne toujours, pour le cas où le courriel ou le tableau de bord seraient indisponibles, et chacun de ses usages est consigné ci-dessous.' => 'While no account exists, access uses the instance\'s single password. From the first account onwards, the sign-in screen asks for a username, and that password becomes emergency access: it still works, in case email or the dashboard are unavailable, and every use of it is recorded below.',
     'Technologie' => 'Technology',
