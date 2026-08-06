@@ -463,6 +463,20 @@ final class Css
                 // normal de la page, la référence l'enregistrera et on se taira.
                 $soft++;
                 $result['messages'][] = t('Aucune feuille de style détectée sur cette page.');
+                // ET IL FAUT LE DIRE AU COLLECTEUR, SANS QUOI CETTE PHRASE EST UN PIÈGE.
+                //
+                // Le commentaire ci-dessus décrivait une intention que le code ne tenait
+                // pas. La référence n'est mémorisée que sur un état SAIN (voir Runner) ;
+                // cette remarque rendant l'état « dégradé », aucune référence n'était
+                // jamais enregistrée, donc « !$baseline » restait vrai à la passe suivante,
+                // qui reproduisait la remarque. Un état qui se nourrit de lui-même.
+                //
+                // Trouvé le 2026-08-06 sur come-together.fr, une page HTML 4.0 exportée
+                // d'OpenOffice, sans aucune feuille de style et parfaitement fonctionnelle :
+                // elle était annoncée dégradée en permanence depuis son ajout. Le drapeau
+                // autorise le collecteur à mémoriser la référence malgré la remarque, ce
+                // qui fait taire les passes suivantes comme promis.
+                $result['premiere_sans_feuille'] = true;
             }
         }
         // Une référence bâtie par une autre version de l'extracteur ne se compare pas :

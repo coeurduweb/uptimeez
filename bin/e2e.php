@@ -99,6 +99,12 @@ file_put_contents("$tmp/site/trop-de-requetes.php",
   . " header('Content-Type: text/css'); echo '/* rate limited */';");
 file_put_contents("$tmp/site/indisponible.php",
     "<?php http_response_code(503); header('Content-Type: text/css'); echo '/* unavailable */';");
+// UNE PAGE SANS AUCUNE FEUILLE DE STYLE, ni style en ligne : elle existe pour le défaut
+// du 2026-08-06, où une telle page restait dégradée à VIE parce que la remarque de
+// première observation empêchait d'enregistrer la référence qui devait la faire taire.
+file_put_contents("$tmp/site/nue.html",
+    '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Page nue</title></head>'
+  . '<body><p>Un paragraphe, aucune feuille de style.</p></body></html>');
 // La page réclame la feuille normale ET deux feuilles que le serveur refuse par
 // débit. Un visiteur voit la page correctement mise en forme : style.css répond.
 file_put_contents("$tmp/site/debit.html", $page('Accueil',
@@ -466,6 +472,8 @@ ok('plafond par hôte à 1 : aucune réponse en erreur',
    count(array_filter($serie, fn($r) => $r->status === 200)) === 4);
 ok('plafond par hôte à 1 : les clés sont conservées',
    array_keys($serie) === ['a', 'b', 'c', 'd'], implode(',', array_keys($serie)));
+
+
 
 // =========================================================================
 title('Silhouette : la page telle qu\'un visiteur la voit');
@@ -1761,6 +1769,50 @@ if ($REAL) {
         ok('example.com importé', false, 'sonde non créée');
     }
 }
+
+// =========================================================================
+title('Une page sans feuille de style ne reste pas dégradée à vie');
+// =========================================================================
+//
+// LE DÉFAUT, VU SUR LE PARC LE 2026-08-06. Une page HTML sans aucune feuille de style
+// était annoncée dégradée à CHAQUE passe. Le détecteur ne signale pourtant le fait qu'à la
+// première observation, en promettant le silence ensuite « si c'est l'état normal de la
+// page » : mais la référence n'est mémorisée que sur un état sain, et la remarque rendait
+// l'état dégradé. Aucune référence, donc chaque passe redevenait une première fois.
+//
+// selftest éprouve la décision du détecteur. Ce qui ne se voit qu'ICI, c'est la boucle
+// complète : deux passes réelles, avec le collecteur qui écrit en base entre les deux.
+//
+// CE BLOC EST EN FIN DE FICHIER, ET PAS AU MILIEU. Il crée une sonde, donc il décale tout
+// contrôle qui compte les sondes : placé plus haut, il a fait tomber la réactivation en
+// masse. Un test qui casse le voisin mesure le voisin.
+//
+// « check_css » est une case à cocher : sans le champ, save_monitor l'enregistre à zéro et
+// l'audit ne tourne jamais. Première version de ce bloc : css_state vide, deux contrôles
+// rouges, et rien à voir avec le défaut visé.
+// ON SE RECONNECTE, et c'est ce qui manquait. Les blocs des comptes et des accès client
+// terminent en session fermée : le POST partait donc vers l'écran de connexion, rendait un
+// 302 parfaitement normal, et le contrôle lisait « la sonde n'a pas été créée » sans que
+// personne ne pense à l'authentification. Deux essais perdus là-dessus.
+$req('/index.php?p=login', ['password' => $PASS]);
+$tokNue = $csrf();
+$rNue = $req('/index.php?p=monitors', ['csrf' => $tokNue, 'action' => 'save_monitor',
+    'name' => 'Page nue', 'url' => "$SITE/nue.html", 'interval_sec' => 300, 'kind' => 'page', 'check_css' => 1]);
+$nueId = (int)$val("SELECT id FROM monitors WHERE name = ? LIMIT 1", ['Page nue']);
+ok('la sonde de la page nue est créée', $nueId > 0,
+   'id=' . $nueId . ' · HTTP ' . (string)($rNue['code'] ?? '?'));
+
+$req('/api.php?action=check', ['csrf' => $tokNue, 'id' => $nueId]);
+$apres1 = $db('SELECT css_state, css_baseline FROM monitors WHERE id = ?', [$nueId])[0] ?? [];
+ok('première passe : la référence est bien enregistrée malgré la remarque',
+   !empty($apres1['css_baseline']), (string)($apres1['css_state'] ?? '?'));
+
+$req('/api.php?action=check', ['csrf' => $tokNue, 'id' => $nueId]);
+$apres2 = $db('SELECT status, css_state, reason_code FROM monitors WHERE id = ?', [$nueId])[0] ?? [];
+ok('seconde passe : la page n\'est plus dégradée',
+   ($apres2['css_state'] ?? '?') === 'ok' && ($apres2['status'] ?? '?') === 'up',
+   'css=' . (string)($apres2['css_state'] ?? '?') . ' état=' . (string)($apres2['status'] ?? '?')
+   . ' cause=' . (string)($apres2['reason_code'] ?? '—'));
 
 // =========================================================================
 echo "\n" . str_repeat('═', 68) . "\n";

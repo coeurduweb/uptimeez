@@ -4617,6 +4617,45 @@ check('la confirmation est courte devant un intervalle de 15 min',
 check('une panne réelle est confirmée en une demi-minute, pas au prochain créneau',
     Uptimeez\Runner::CONFIRMATION_SEC < 900, true);
 
+section('Une page sans feuille de style : signalée une fois, pas à chaque passe');
+// ---------------------------------------------------------------------------
+// LE DÉFAUT, TROUVÉ LE 2026-08-06 SUR UNE VRAIE PAGE DU PARC. `come-together.fr` est une
+// page HTML 4.0 exportée d'OpenOffice, sans aucune feuille de style, et qui fonctionne
+// parfaitement. Elle était annoncée dégradée EN PERMANENCE depuis son ajout.
+//
+// La mécanique : le détecteur signale « aucune feuille de style » à la première
+// observation seulement, et son commentaire promettait le silence ensuite, « si c'est
+// l'état normal de la page ». Mais la référence n'est mémorisée que sur un état sain, et
+// cette remarque rendait l'état dégradé : aucune référence n'était jamais écrite, donc
+// chaque passe était une « première observation ». Un état qui se nourrit de lui-même.
+//
+// C'est le pire type de faux positif : il ne s'éteint pas, il ne s'explique pas par le
+// site, et il occupe l'écran des pannes indéfiniment.
+$sansFeuille = '<!doctype html><html><head><title>Page nue</title></head>'
+             . '<body><p>Un paragraphe, aucune feuille de style, aucun style en ligne.</p></body></html>';
+
+$a1 = Uptimeez\Check\Css::audit('https://exemple.fr/nue', $sansFeuille, null, [], ['silhouette' => false]);
+check('première observation : la remarque est faite', (bool)preg_match('~feuille de style~', implode(' ', $a1['messages'])), true);
+check('et le collecteur est autorisé à mémoriser la référence', $a1['premiere_sans_feuille'] ?? false, true);
+check('la remarque reste une remarque, pas une panne', $a1['state'] !== 'broken', true);
+
+// La passe suivante, avec la référence que le collecteur vient d'écrire : silence.
+$refNue = $a1['baseline'] ?? [];
+check('la référence existe et compte zéro feuille', (int)($refNue['sheets_declared'] ?? -1), 0);
+$a2 = Uptimeez\Check\Css::audit('https://exemple.fr/nue', $sansFeuille, null, $refNue, ['silhouette' => false]);
+check('passe suivante : plus aucune remarque sur les feuilles',
+    (bool)preg_match('~feuille de style~', implode(' ', $a2['messages'])), false);
+check('passe suivante : état sain', $a2['state'], 'ok');
+check('et le drapeau ne survit pas à la référence', $a2['premiere_sans_feuille'] ?? false, false);
+
+// ET LE CAS QUI DOIT RESTER UNE PANNE : une page qui AVAIT des feuilles et n'en a plus.
+$refAvecFeuilles = $refNue;
+$refAvecFeuilles['sheets_declared'] = 3;
+$a3 = Uptimeez\Check\Css::audit('https://exemple.fr/nue', $sansFeuille, null, $refAvecFeuilles, ['silhouette' => false]);
+check('la page qui a PERDU ses feuilles reste cassée', $a3['state'], 'broken');
+check('et son message nomme le compte de la référence',
+    (bool)preg_match('~référence en comptait 3~', implode(' ', $a3['messages'])), true);
+
 section('Le plafond par hôte : la décision, pas le réseau');
 // Le plafond par hôte est né du 2026-08-04 : dix requêtes simultanées vers la même
 // machine, un « trop de requêtes » en retour, et 43 fausses alertes. La décision qui

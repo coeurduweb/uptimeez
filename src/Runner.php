@@ -937,9 +937,18 @@ final class Runner
                 'metrics'  => self::slimCssMetrics($det['css']['metrics'] ?? []),
                 'at'       => $ts,
             ]);
-            // L'empreinte de référence n'est mémorisée que sur un état sain.
+            // L'empreinte de référence n'est mémorisée que sur un état sain, À UNE
+            // EXCEPTION PRÈS : la toute première observation d'une page sans aucune
+            // feuille de style. Cette remarque se veut unique (« si c'est l'état normal
+            // de la page, la référence l'enregistrera et on se taira »), et sans cette
+            // exception elle ne l'était pas : l'état dégradé empêchait la mémorisation,
+            // donc la remarque revenait à chaque passe, indéfiniment. Vérifié sur une
+            // page HTML 4.0 sans feuille de style, dégradée en permanence depuis son
+            // ajout au parc.
             $lock = (int)($mon['css_baseline_locked'] ?? 0) === 1;
-            if ($det['css']['state'] === 'ok' && !$lock && !empty($det['css']['baseline'])) {
+            $memorisable = $det['css']['state'] === 'ok'
+                || !empty($det['css']['premiere_sans_feuille']);
+            if ($memorisable && !$lock && !empty($det['css']['baseline'])) {
                 $upd['css_baseline']    = jenc($det['css']['baseline']);
                 $upd['css_baseline_at'] = $ts;
             }
