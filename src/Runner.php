@@ -57,6 +57,12 @@ final class Runner
      */
     public const REGLES = [
         \Uptimeez\Regle\CodeHttp::class,
+        // Une page vide se juge sur la même réponse que le code HTTP, d'où sa place ici.
+        // ATTENTION : cet ordre ne décide de rien. Deux règles peuvent se déclencher sur la
+        // même page, et c'est REASON_PRIORITY qui choisit la cause affichée, pas la position
+        // dans cette liste. Vérifié en écrivant la règle : sans priorité, une page vide
+        // sortait sous « la chaîne de contrôle a disparu », c'est-à-dire sa conséquence.
+        \Uptimeez\Regle\CorpsVide::class,
         \Uptimeez\Regle\BaseDeDonnees::class,
         \Uptimeez\Regle\ChaineDePreuve::class,
         \Uptimeez\Regle\ChaineInterdite::class,
@@ -746,6 +752,12 @@ final class Runner
         // à montrer en premier parmi les signaux dégradés, c'est le plus grave
         // d'entre eux, mais ce n'est pas une panne.
         'DB_ERROR_VISIBLE' => 58, 'APP_ERROR_VISIBLE' => 57,
+        // UN CORPS VIDE PASSE DEVANT LA CHAÎNE DE PREUVE, et ce n'est pas un détail
+        // d'affichage : les deux règles se déclenchent ensemble sur une page vide, puisque
+        // la chaîne attendue y est forcément absente. « La page ne contient rien » est la
+        // cause ; « la chaîne de contrôle a disparu » en est la conséquence, et envoie
+        // chercher un problème de contenu là où il n'y a aucun contenu du tout.
+        'EMPTY_BODY' => 82,
         'STRING_MISSING' => 80, 'STRING_FORBIDDEN' => 79,
         'HTTP_404' => 75, 'HTTP_403' => 74, 'HTTP_401' => 73, 'HTTP_429' => 72,
         'HTTP_4XX' => 71, 'HTTP_3XX' => 70, 'HTTP_UNEXPECTED' => 69,

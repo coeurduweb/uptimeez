@@ -127,6 +127,11 @@ return [
     'Certificat SSL invalide : {reason}',
     'Certificat SSL expire demain',
     'Certificat SSL expire dans {n} jours',
+    // Verdict de la règle CorpsVide, ajoutée le 2026-08-06 par le jeu d'essai inverse.
+    'La page répond {code} mais ne contient rien : le visiteur voit une page blanche.',
+    // La requalification par l'écart mesuré, du même jour : une feuille en échec qui ne
+    // change rien à l'aspect de la page.
+    'Ressource de style en échec, mais la page n\'a pas changé d\'aspect ({ecart} % d\'écart mesuré) : {detail}',
     'Mise en page cassée : {detail}',
     'CSS dégradé : {detail}',
     'anomalie détectée à la dernière analyse',

@@ -1038,6 +1038,15 @@ return [
     'Ce n\'est pas un problème ici' => 'This is not a problem here',
     'L\'alerte n\'apparaîtra plus sur cette page. Elle reste comptée, et l\'exception sera à revoir dans six mois.'
         => 'The alert will no longer appear on this page. It stays counted, and the exception comes up for review in six months.',
+    'Ressource de style en échec, mais la page n\'a pas changé d\'aspect ({ecart} % d\'écart mesuré) : {detail}'
+        => 'A style resource failed, but the page has not changed appearance ({ecart} % measured difference): {detail}',
+    'La page répond {code} mais ne contient rien : le visiteur voit une page blanche.'
+        => 'The page answers {code} but contains nothing: the visitor sees a blank page.',
+    'La page répond, et elle est vide' => 'The page answers, and it is empty',
+    'Le serveur renvoie un code correct avec un corps entièrement vide : le visiteur voit une page blanche. C\'est la signature d\'un script qui meurt avant d\'écrire, d\'un cache qui sert un fichier vide, ou d\'un intermédiaire qui coupe la réponse.'
+        => 'The server returns a correct status with a completely empty body: the visitor sees a blank page. That is the signature of a script dying before it writes, a cache serving an empty file, or an intermediary cutting the response short.',
+    'Ouvrez la page dans un navigateur pour confirmer, puis regardez le journal d\'erreurs du serveur : une erreur fatale de PHP produit exactement ça. Si un cache est en cause, purgez-le.'
+        => 'Open the page in a browser to confirm, then look at the server error log: a PHP fatal error produces exactly this. If a cache is to blame, purge it.',
     'Taire ce signal ici' => 'Silence this signal here',
     'Tant qu\'aucun compte n\'existe, l\'accès se fait par le seul mot de passe de l\'instance. Dès le premier compte créé, l\'écran de connexion demande un identifiant, et ce mot de passe devient un accès de secours : il fonctionne toujours, pour le cas où le courriel ou le tableau de bord seraient indisponibles, et chacun de ses usages est consigné ci-dessous.' => 'While no account exists, access uses the instance\'s single password. From the first account onwards, the sign-in screen asks for a username, and that password becomes emergency access: it still works, in case email or the dashboard are unavailable, and every use of it is recorded below.',
     'Technologie' => 'Technology',

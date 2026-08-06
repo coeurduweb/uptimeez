@@ -118,6 +118,15 @@ final class Diagnose
                 'fix'   => t('Consultez le détail des ressources. Si c\'est un service tiers, il n\'y a souvent rien à faire côté site.'),
                 'icon'  => 'layers',
             ],
+            // Trouvé par le jeu d'essai inverse du 2026-08-06 : une page vide passait au
+            // vert. Elle a maintenant sa règle, donc il lui faut sa conduite à tenir,
+            // sans quoi la carte du jour affiche une cause sans savoir quoi en faire.
+            'EMPTY_BODY' => [
+                'title' => t('La page répond, et elle est vide'),
+                'why'   => t('Le serveur renvoie un code correct avec un corps entièrement vide : le visiteur voit une page blanche. C\'est la signature d\'un script qui meurt avant d\'écrire, d\'un cache qui sert un fichier vide, ou d\'un intermédiaire qui coupe la réponse.'),
+                'fix'   => t('Ouvrez la page dans un navigateur pour confirmer, puis regardez le journal d\'erreurs du serveur : une erreur fatale de PHP produit exactement ça. Si un cache est en cause, purgez-le.'),
+                'icon'  => 'alert',
+            ],
             'STRING_MISSING' => [
                 'title' => t('La chaîne de contrôle a disparu de la page'),
                 'why'   => t('Le texte qui prouve que le contenu est bien servi n\'est plus là. C\'est le signe d\'une page d\'erreur, d\'un contenu vidé, ou d\'une base qui ne répond plus.'),

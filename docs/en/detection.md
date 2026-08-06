@@ -7,7 +7,7 @@ you act on it, and you need to know why a false alarm is a bug we want to hear a
 
 ---
 
-## The 25 causes
+## The 26 causes
 
 Every verdict resolves to one cause, and every cause carries a title, an explanation and a remedy, in your
 language.

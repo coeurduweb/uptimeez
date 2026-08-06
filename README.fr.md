@@ -608,13 +608,14 @@ Un outil de surveillance qui vous ment est pire que pas d'outil du tout. La logi
 testée contre de vraies pannes, et l'interface est testée dans un vrai navigateur.
 
 ```
-php bin/selftest.php      1 203 contrôles   logique de détection, hors ligne, sans réseau
+php bin/selftest.php      1 204 contrôles   logique de détection, hors ligne, sans réseau
 php bin/regles.php        138 contrôles   un fichier par règle, chacun seul en 0,04 s
 php bin/bench.php          74 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
 php bin/e2e.php           313 contrôles   parcours complet en HTTP réel, instance isolée
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
 php bin/chaos.php          35 contrôles   859 requêtes hostiles d'un utilisateur qui fait tout de travers
 php bin/security.php      126 contrôles   OWASP Top 10, trois profondeurs, face à un site hostile local
+php bin/angles-morts.php   16 contrôles   le corpus INVERSE : des pages cassées, et celles qu'on manque
 php bin/infra.php          61 contrôles   UptimeEZ en panne : ce qu'il dit, et ce qu'il ne divulgue pas
 php bin/mysql.php          43 contrôles   le pilote MySQL / MariaDB, sur un vrai serveur
 php bin/mcp.php            n/a            serveur MCP pour les agents (27 des contrôles ci-dessus le testent)
@@ -622,7 +623,7 @@ php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, ms
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**2 098 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**2 115 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
 Quatre suites méritent un mot.
 
@@ -672,7 +673,7 @@ uptimeez/
 │   ├── Detect/Cms.php        empreinte de la technologie
 │   ├── Detect/Discovery.php  choix des pages + déduction de la chaîne de preuve
 │   ├── Triage.php            transforme des états en liste de tâches
-│   ├── Diagnose.php          25 causes → ce que ça veut dire, quoi faire
+│   ├── Diagnose.php          26 causes → ce que ça veut dire, quoi faire
 │   ├── Tune.php              seuils auto-ajustés + journal des décisions
 │   ├── Heartbeat.php         le dead-man switch
 │   ├── Fail.php              la panne d'UptimeEZ lui-même : cause, remède, et rien de public
