@@ -591,13 +591,14 @@ real failures, and the interface is tested in a real browser.
 
 ```
 php bin/selftest.php      1,249 checks   detection logic, offline, no network needed
-php bin/regles.php        138 checks   one file per rule, each runnable alone in 0.04 s
+php bin/regles.php        152 checks   one file per rule, each runnable alone in 0.04 s
 php bin/bench.php          74 checks   real failures reproduced end to end (incl. badssl.com)
 php bin/e2e.php           322 checks   full user journey over real HTTP, isolated instance
 node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
 php bin/chaos.php          35 checks   859 hostile requests from a user doing everything wrong
 php bin/security.php      126 checks   OWASP Top 10, three depths, against a hostile local site
 php bin/angles-morts.php   16 checks   the INVERSE corpus: broken pages, and which ones we miss
+php bin/lisibilite.php     61 checks   WCAG contrast, type size and table density, both themes
 php bin/infra.php          61 checks   UptimeEZ itself down: what it says, and what it never leaks
 php bin/mysql.php          43 checks   the MySQL / MariaDB driver, on a real server
 php bin/mcp.php            n/a         MCP server for agents (27 of the checks above exercise it)
@@ -605,7 +606,7 @@ php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, 
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**2,169 checks, all green**, plus zero dead code and a complete default catalogue.
+**2,244 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Four suites deserve a word.
 

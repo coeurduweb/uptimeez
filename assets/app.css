@@ -14,7 +14,14 @@
   --surface-2: #f7f9fc;
   --surface-3: #eef2f8;
   --border: #e4e9f1;
-  --border-strong: #ccd5e2;
+  /* WCAG 1.4.11, MEASURED AND NOT ESTIMATED. This is the visual boundary of a control —
+     inputs, selects, buttons, the command palette, the segmented switch — and the standard
+     asks 3:1 against the surface behind it, because a control you cannot find is a control
+     that does not exist. It measured 1.48:1 on white. Lightened hue kept (213°, 26%), only
+     the lightness moved, so the interface stays as calm as it was: 3.04:1 now.
+     --border, above, stays soft on purpose: the edge of a CARD is decorative, the card is
+     identified by its shadow and its content. Only controls fall under the clause. */
+  --border-strong: #7e96b4;
   --text: #0d1526;
   --text-soft: #445067;
   --muted: #5c677c;
@@ -58,7 +65,9 @@ html[data-theme="dark"] {
   --surface-2: #171d2a;
   --surface-3: #1e2635;
   --border: #232c3d;
-  --border-strong: #364357;
+  /* Same clause, other direction: on a dark surface the boundary has to get LIGHTER.
+     Measured 1.79:1, now 3.01:1, hue kept. */
+  --border-strong: #516581;
   --text: #e9eef8;
   --text-soft: #b6c2d4;
   --muted: #8494ab;
@@ -871,8 +880,8 @@ kbd { font: 12px var(--mono); border: 1px solid var(--border-strong); border-bot
 /* Sur petit écran la barre d'outils doit tenir : le niveau de détail et la
    langue se réduisent à l'essentiel plutôt que de pousser la page en largeur. */
 @media (max-width: 900px) {
-  .seg-i { padding: .3rem .4rem; font-size: .72rem; }
-  .lang-pick select { padding-block: .3rem; font-size: .72rem; max-width: 88px; }
+  .seg-i { padding: .3rem .4rem; font-size: .75rem; }
+  .lang-pick select { padding-block: .3rem; font-size: .75rem; max-width: 88px; }
   .topbar-actions { flex-wrap: wrap; row-gap: 5px; flex: 1 1 100%; margin-left: 0;
                     justify-content: flex-end; min-width: 0; }
 }
@@ -891,7 +900,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--border-strong); border-bot
              border: 1px dashed color-mix(in srgb, var(--warn) 45%, var(--border));
              color: var(--text-soft); font-size: .8rem; line-height: 1.45; }
 .demo-flag strong { color: var(--text); }
-.demo-flag code { margin-inline-start: auto; font-size: .72rem; padding: .1rem .4rem;
+.demo-flag code { margin-inline-start: auto; font-size: .75rem; padding: .1rem .4rem;
                   border-radius: 4px; background: var(--surface-3); color: var(--text-soft); }
 @media (max-width: 640px) { .demo-flag code { margin-inline-start: 0; } }
 
@@ -905,7 +914,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--border-strong); border-bot
 .sil-pair.sil-solo { grid-template-columns: minmax(0, 420px); }
 .sil { margin: 0; min-width: 0; }
 .sil figcaption { display: flex; gap: .4rem; align-items: baseline; margin-bottom: .3rem;
-                  font-size: .74rem; font-weight: 600; text-transform: uppercase;
+                  font-size: .75rem; font-weight: 600; text-transform: uppercase;
                   letter-spacing: .04em; color: var(--text-soft); }
 .sil figcaption .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
 .sil-view { border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden;
@@ -922,7 +931,7 @@ kbd { font: 12px var(--mono); border: 1px solid var(--border-strong); border-bot
 /* Liste d'avis de sécurité : compacte, un identifiant cliquable par ligne. */
 .adv-list { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; gap: .3rem; }
 .adv-list li { font-size: .78rem; line-height: 1.35; }
-.adv-list a { font-family: var(--mono, ui-monospace, monospace); font-size: .74rem; }
+.adv-list a { font-family: var(--mono, ui-monospace, monospace); font-size: .75rem; }
 
 /* ===========================================================================
    Mode agence : la liste des clients et l'espace en lecture seule

@@ -83,6 +83,57 @@ if ($sansRegle !== []) {
     echo "⚠️  Fichier(s) de test sans règle correspondante : " . implode(', ', $sansRegle) . "\n";
 }
 
+/**
+ * THE READMEs MUST ANNOUNCE THE NUMBER THIS SUITE ACTUALLY RUNS.
+ *
+ * On 2026-08-06 they announced 138 while this file ran 152. Fourteen checks had been written
+ * without the line being updated, and nothing could have said so: bin/selftest.php verifies
+ * that the README's grand total equals the SUM of its own table, which it did — the table was
+ * internally consistent and externally wrong. That guard says as much in its own comment: it
+ * takes the other suites' figures for granted, because verifying them would mean running them,
+ * and selftest promises to need neither network nor browser nor database.
+ *
+ * So the suite that KNOWS the number is the one that guards it. This file needs nothing but
+ * PHP, it has just counted, and the count is right there.
+ *
+ * Both files, and that is not belt and braces: on 2026-08-02 a wrong figure survived in
+ * README.fr.md alone, because only the English one was being read.
+ */
+$readmesFaux = [];
+
+foreach (['README.md' => '/php bin\/regles\.php\s+([\d,\x{202f}\x{00a0} ]+) checks/u',
+          'README.fr.md' => '/php bin\/regles\.php\s+([\d,\x{202f}\x{00a0} ]+) contrôles/u'] as $nom => $motif) {
+    $chemin = __DIR__ . '/../' . $nom;
+
+    if (! is_file($chemin)) {
+        $readmesFaux[] = "$nom is missing";
+
+        continue;
+    }
+
+    if (preg_match($motif, (string) file_get_contents($chemin), $m) !== 1) {
+        $readmesFaux[] = "$nom no longer announces this suite at all";
+
+        continue;
+    }
+
+    $annonce = (int) preg_replace('/\D/', '', $m[1]);
+
+    if ($annonce !== $total) {
+        $readmesFaux[] = sprintf('%s announces %d checks, this suite runs %d', $nom, $annonce, $total);
+    }
+}
+
+if ($readmesFaux !== []) {
+    echo "\n⚠️  The READMEs do not tell the truth about this suite:\n";
+    foreach ($readmesFaux as $f) {
+        echo "  - $f\n";
+    }
+    echo "  Fix the line AND the grand total: bin/selftest.php checks that the total is the sum\n";
+    echo "  of its table, so changing one without the other moves the failure, it does not fix it.\n";
+    exit(1);
+}
+
 if ($echecs === [] && $sansTest === [] && $sansRegle === []) {
     printf("✅ %d règle(s), %d contrôle(s), aucun échec.\n", count($fichiers), $total);
     exit(0);
