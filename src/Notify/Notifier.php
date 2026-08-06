@@ -590,6 +590,18 @@ final class Notifier
             'css_changed'     => t('Fichiers CSS modifiés'),
             'domain_soon'     => t('Domaine bientôt expiré'),
             'grouped_alert'   => t('Panne groupée'),
+            // WRITTEN BY WHOEVER OPERATES THE INSTANCE, not by the engine, and named here anyway.
+            //
+            // A self-hosted install that updates itself — by git, by a package, by hand — has
+            // every reason to leave a trace in the journal, and the journal is the only place the
+            // operator actually looks. Without these two lines the entry still appears, but under
+            // the generic "Évènement" badge, which is the one thing the eye skips.
+            //
+            // The FAILED one matters more than the successful one: an update that refused itself
+            // and rolled back is the moment when someone needs to know that the code is
+            // deliberately older than the repository.
+            'moteur_maj'         => t('Moteur mis à jour'),
+            'moteur_maj_echouee' => t('Mise à jour refusée et annulée'),
             default           => t('Évènement'),
         };
     }
