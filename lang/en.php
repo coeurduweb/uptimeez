@@ -1709,4 +1709,28 @@ return [
     'échéance {date}' => 'due {date}',
     '•••••• (inchangé)' => '•••••• (unchanged)',
     '⚠️ pas de HTTPS exploitable : surveillance en HTTP' => '⚠️ no usable HTTPS: monitoring over HTTP',
+
+    // LES QUINZE PHRASES QUI N'AVAIENT PAS DE VERSION ANGLAISE, ajoutées le 2026-08-06.
+    //
+    // Trouvées par bin/i18n-basculer.php, qui a refusé de basculer la langue source tant
+    // qu'elles manquaient : les laisser aurait produit un produit à moitié français, ce qui
+    // est pire que l'un ou l'autre état. Treize sur quinze viennent de src/Foreign.php,
+    // c'est-à-dire de l'import des exports concurrents, donc du premier écran qu'un nouveau
+    // venu voit. Elles n'avaient jamais été traduites parce que personne n'avait fait échouer
+    // un import exprès.
+    'Fichier trop volumineux : {max} au maximum.' => 'File too large: {max} maximum.',
+    'Format non reconnu. Les exports d\'UptimeRobot, Uptime Kuma, Better Stack, Pingdom et Site24x7 sont lus directement, ainsi qu\'un CSV avec une colonne d\'adresses.' => 'Unrecognised format. Exports from UptimeRobot, Uptime Kuma, Better Stack, Pingdom and Site24x7 are read directly, as is a CSV with a column of addresses.',
+    '{n} sondes lues, les {max} premières sont reprises.' => '{n} monitors read, the first {max} are imported.',
+    'ping ICMP : {app} vérifie en HTTP' => 'ICMP ping: {app} checks over HTTP',
+    'port TCP : sans équivalent, une sonde HTTP ne le remplace pas' => 'TCP port: no equivalent, an HTTP monitor does not replace it',
+    'battement : à recréer côté {app} pour obtenir une nouvelle URL de signal' => 'heartbeat: recreate it in {app} to get a new signal URL',
+    'adresse illisible' => 'unreadable address',
+    'JSON illisible.' => 'Unreadable JSON.',
+    'type « {type} » : {app} surveille en HTTP' => 'type “{type}”: {app} monitors over HTTP',
+    'type « {type} » : sans équivalent en surveillance HTTP' => 'type “{type}”: no equivalent in HTTP monitoring',
+    'Fichier vide.' => 'Empty file.',
+    'Aucune colonne d\'adresse trouvée. Attendu un en-tête contenant « url », « website », « hostname » ou « adresse ».' => 'No address column found. Expected a header containing “url”, “website”, “hostname” or “address”.',
+    'ligne {n}' => 'line {n}',
+    'sonde sans nom' => 'unnamed monitor',
+    'Toujours' => 'Always',
 ];
