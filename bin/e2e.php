@@ -461,6 +461,35 @@ ok('404 : la cause est nommée', ($auditCasse['reason'] ?? null) !== null,
    'cause=' . (string)($auditCasse['reason'] ?? '—'));
 ok('404 : aucun débit refusé compté', (int)($auditCasse['metrics']['throttled'] ?? 0) === 0);
 
+// =========================================================================
+title('Le corpus propose, et l\'écran qui le lit ne décide rien');
+// =========================================================================
+//
+// selftest éprouve les quatre garde-fous de l'apprentissage à l'unité. Ce qui ne se voit
+// qu'ici, c'est la LECTURE HUMAINE que le contrat exige : les propositions doivent atteindre
+// un écran, et cet écran ne doit rien changer en les affichant.
+foreach (['a.example', 'b.example', 'c.example'] as $hote) {
+    Uptimeez\Db::insert('retours', ['monitor_id' => $brokenId, 'reason_code' => 'CSS_DEGRADED',
+        'motif' => 'controle_errone', 'portee' => 'serveur', 'hote' => $hote,
+        'ts' => date('Y-m-d H:i:s')]);
+}
+$avantEtat = $val('SELECT status || reason_code FROM monitors WHERE id = ?', [$brokenId]);
+$avantExc  = (int) $val('SELECT COUNT(*) FROM exceptions');
+
+$rProp = $req('/index.php?p=retours');
+ok('l\'écran des retours affiche les propositions',
+   $has($rProp, 'Ce que le corpus propose') && $has($rProp, 'CSS_DEGRADED'));
+ok('la proposition dit qu\'elle ne s\'applique pas toute seule',
+   $has($rProp, 'pas à appliquer') || $has($rProp, 'not to apply'));
+ok('et l\'écran n\'offre aucun bouton pour l\'appliquer',
+   !preg_match('~data-fix="[^"]*appliquer|action=[\'"]apprentissage~i', (string) $rProp['body']));
+ok('aucune erreur PHP sur l\'écran', $noPhpError($rProp));
+ok('l\'état de la sonde n\'a pas bougé en lisant le corpus',
+   $val('SELECT status || reason_code FROM monitors WHERE id = ?', [$brokenId]) === $avantEtat);
+ok('et aucune exception n\'a été posée',
+   (int) $val('SELECT COUNT(*) FROM exceptions') === $avantExc);
+Uptimeez\Db::q('DELETE FROM retours');
+
 // LE PLAFOND PAR HÔTE NE DOIT RIEN PERDRE. Sa décision est éprouvée à l'unité dans
 // selftest ; ce qui se vérifie ici est le risque propre à l'ordonnanceur : une requête
 // oubliée dans la file, ou une boucle qui tourne sans jamais la relancer. Avec un

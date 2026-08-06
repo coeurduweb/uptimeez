@@ -4642,6 +4642,94 @@ check('le gabarit n\'utilise plus la version du produit pour ses fichiers',
 check('et il passe par la fonction qui lit le fichier',
     substr_count($gabarit, 'asset_url('), 2);
 
+section('L\'apprentissage PROPOSE, et ses quatre garde-fous tiennent');
+// ---------------------------------------------------------------------------
+// Le corpus des retours est le rêve de qui veut empoisonner un détecteur : déclarer faux ce
+// qui est vrai rendrait l'outil aveugle, chez soi et chez les autres. Ces contrôles éprouvent
+// les quatre garde-fous ÉCRITS dans le backlog depuis le sprint B, dont le code n'existait pas.
+Uptimeez\Db::q('DELETE FROM retours');
+$retour = static function (string $cause, string $hote, string $motif): void {
+    Uptimeez\Db::insert('retours', ['monitor_id' => 1, 'reason_code' => $cause, 'motif' => $motif,
+        'portee' => 'sonde', 'hote' => $hote, 'ts' => date('Y-m-d H:i:s')]);
+};
+$causesProposees = static fn (): array => array_map(
+    static fn (array $p): string => (string) $p['cause'], Uptimeez\Apprentissage::propositions());
+
+// 1. LE PLANCHER : trois contextes indépendants, pas trois clics.
+$retour('CSS_DEGRADED', 'un.fr', 'controle_errone');
+$retour('CSS_DEGRADED', 'un.fr', 'controle_errone');
+$retour('CSS_DEGRADED', 'un.fr', 'controle_errone');
+check('trois clics d\'un seul hôte ne proposent rien', $causesProposees(), []);
+$retour('CSS_DEGRADED', 'deux.fr', 'controle_errone');
+check('deux hôtes ne suffisent pas non plus', $causesProposees(), []);
+$retour('CSS_DEGRADED', 'trois.fr', 'controle_errone');
+check('trois hôtes indépendants font une proposition', $causesProposees(), ['CSS_DEGRADED']);
+
+// 2. LE POIDS BORNÉ : qui déclare tout faux perd en crédit. Vingt clics d'un même hôte ne
+// valent pas plus que trois. Le contrôle vaut par sa BORNE : sans elle, un parc bavard
+// couvrirait la voix des autres.
+Uptimeez\Db::q('DELETE FROM retours');
+foreach (['a.fr', 'b.fr', 'c.fr'] as $h) {
+    for ($i = 0; $i < 20; $i++) { $retour('SLOW', $h, 'controle_errone'); }
+}
+$p = Uptimeez\Apprentissage::propositions()[0] ?? [];
+check('soixante clics sur trois hôtes valent neuf contestations', (int) ($p['contestes'] ?? 0), 9);
+check('et le nombre de contextes reste trois', (int) ($p['contextes'] ?? 0), 3);
+
+// 3. JAMAIS SUR UNE PANNE. Un DB_DOWN contesté partout reste un DB_DOWN : si le visiteur
+// n'obtient pas la page, aucun corpus ne doit pouvoir suggérer de se taire.
+Uptimeez\Db::q('DELETE FROM retours');
+foreach (['a.fr', 'b.fr', 'c.fr', 'd.fr', 'e.fr'] as $h) {
+    $retour('DB_DOWN', $h, 'controle_errone');
+    $retour('HTTP_5XX', $h, 'controle_errone');
+    $retour('STRING_MISSING', $h, 'controle_errone');
+}
+check('aucune cause de panne n\'est proposée, même contestée cinq fois', $causesProposees(), []);
+
+// 4. LA DIVERGENCE NE SE CONFOND PAS AVEC L'ERREUR. Une cause confirmée ailleurs ne se
+// relâche pas : la proposition change de nature et demande de chercher ce qui diffère.
+Uptimeez\Db::q('DELETE FROM retours');
+foreach (['a.fr', 'b.fr', 'c.fr'] as $h) { $retour('NOINDEX', $h, 'controle_errone'); }
+$p = Uptimeez\Apprentissage::propositions()[0] ?? [];
+check('sans confirmation : on propose de relâcher', $p['divergente'] ?? null, false);
+check('et la phrase le dit', (bool) preg_match('~relâcher~', (string) ($p['proposition'] ?? '')), true);
+$retour('NOINDEX', 'ailleurs.fr', 'vrai_et_corrige');
+$p = Uptimeez\Apprentissage::propositions()[0] ?? [];
+check('une confirmation ailleurs change la nature de la proposition', $p['divergente'] ?? null, true);
+check('et la phrase ne propose plus de relâcher',
+    (bool) preg_match('~relâcher~', (string) ($p['proposition'] ?? '')), false);
+check('elle demande ce qui diffère entre les installations',
+    (bool) preg_match('~diffère~', (string) ($p['proposition'] ?? '')), true);
+
+// LA CONFIRMATION D'UN HÔTE QUI N'A JAMAIS CONTESTÉ DOIT COMPTER. La première version de la
+// requête l'écartait, et une cause contestée sur trois installations et confirmée sur une
+// quatrième sortait « jamais confirmée » : c'est exactement l'information qui sépare « la
+// règle se trompe » de « la règle dépend d'un contexte qu'on n'a pas nommé ».
+check('la confirmation vient d\'un hôte qui n\'a rien contesté, et elle compte',
+    (int) ($p['confirmes'] ?? 0), 1);
+
+// 5. LA RETENUE EST DANS LA PROPOSITION, pas dans une documentation à côté.
+check('chaque proposition porte sa retenue',
+    (bool) preg_match('~pas à appliquer~', (string) ($p['retenue'] ?? '')), true);
+
+// 6. ET SURTOUT : LIRE LE CORPUS NE CHANGE RIEN. Le garde-fou du sprint B tenait sur l'écran
+// et sur la trace ; il doit tenir sur l'apprentissage, qui est le premier code tenté de le
+// franchir. On compare l'état du monde avant et après.
+Uptimeez\Db::q('DELETE FROM retours');
+foreach (['a.fr', 'b.fr', 'c.fr'] as $h) { $retour('CSS_DEGRADED', $h, 'controle_errone'); }
+$avantSondes = (string) json_encode(Uptimeez\Db::all('SELECT id, status, reason_code, check_css FROM monitors ORDER BY id'));
+$avantExcept = (int) Uptimeez\Db::val('SELECT COUNT(*) FROM exceptions');
+Uptimeez\Apprentissage::propositions();
+check('aucune sonde n\'a bougé',
+    (string) json_encode(Uptimeez\Db::all('SELECT id, status, reason_code, check_css FROM monitors ORDER BY id')),
+    $avantSondes);
+check('aucune exception n\'a été posée', (int) Uptimeez\Db::val('SELECT COUNT(*) FROM exceptions'), $avantExcept);
+// Et la classe n'écrit nulle part : le contrôle lit le FICHIER, comme pour la trace.
+$sourceAppr = (string) file_get_contents(__DIR__ . '/../src/Apprentissage.php');
+check('le fichier ne contient aucune écriture en base',
+    (bool) preg_match('~Db::(insert|update|delete|q)\\(~', $sourceAppr), false);
+Uptimeez\Db::q('DELETE FROM retours');
+
 section('La démonstration n\'annonce pas une cadence qu\'elle ne tient pas');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT, RELEVÉ EN LIGNE LE 2026-08-05. Le bandeau promettait « remise à zéro chaque

@@ -26,6 +26,57 @@ $porteeLisible = [
 <p class="muted small"><?= te('Ce que vous nous dites quand un contrôle se trompe, et ce que vous avez choisi de taire. Rien ici n\'a modifié un verdict : cette page décrit, elle ne décide pas.') ?></p>
 
 <?php
+// LES PROPOSITIONS, EN HAUT, ET SANS AUCUN BOUTON.
+//
+// C'est la lecture humaine qu'exige le contrat du sprint B : « aucun chemin de code ne laisse
+// le corpus modifier une règle sans lecture humaine ». Elle n'existe que s'il y a un endroit
+// où lire, et cet endroit est ici.
+//
+// AUCUN BOUTON, ET C'EST LE POINT. Un bouton « appliquer » ferait de ce bloc exactement ce
+// que le sprint refuse : une boucle où le corpus se corrige tout seul. Le geste qui suit une
+// proposition est ailleurs — une exception sur l'écran du jour, ou une modification de règle
+// dans le code, relue et testée.
+$propositions = Uptimeez\Apprentissage::propositions();
+?>
+<?php if ($propositions !== []): ?>
+<div class="panel">
+  <div class="panel-head">
+    <h2><?= te('Ce que le corpus propose') ?></h2>
+    <span class="muted small"><?= te('À lire. Rien ici ne s\'applique tout seul.') ?></span>
+  </div>
+  <div class="panel-body tight">
+    <div class="table-scroll"><table class="tbl">
+      <thead><tr>
+        <th><?= te('Contrôle') ?></th>
+        <th class="num"><?= te('Contextes') ?></th>
+        <th class="num"><?= te('Contesté') ?></th>
+        <th class="num"><?= te('Confirmé') ?></th>
+        <th><?= te('Proposition') ?></th>
+      </tr></thead>
+      <tbody>
+      <?php foreach ($propositions as $prop): ?>
+        <tr>
+          <td class="small"><code><?= e((string)$prop['cause']) ?></code></td>
+          <td class="num"><?= (int)$prop['contextes'] ?></td>
+          <td class="num"><?= (int)$prop['contestes'] ?></td>
+          <td class="num"><?= (int)$prop['confirmes'] ?></td>
+          <td class="small">
+            <?= e((string)$prop['proposition']) ?>
+            <span class="muted"><?= e((string)$prop['retenue']) ?></span>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table></div>
+    <p class="muted small" style="padding:.5rem .75rem 0">
+      <?= e(t('Un contexte est un serveur distinct. Trois contextes indépendants sont exigés avant toute proposition, et un même serveur ne compte que pour {n} contestations au plus : cinquante retours d\'un seul hébergeur pèsent moins que trois retours de trois piles différentes.',
+          ['n' => Uptimeez\Apprentissage::PLAFOND_PAR_CONTEXTE])) ?>
+    </p>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php
 // LE BILAN DES EXCEPTIONS EST EN HAUT, ET C'EST TOUT LE POINT. Une exception oubliée est
 // une panne qu'on ne verra pas. Le seul moyen de ne pas l'oublier est de rappeler, sans
 // qu'on ait à le demander, combien d'alertes elles ont tues et combien sont à revoir.
