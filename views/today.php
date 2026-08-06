@@ -143,6 +143,38 @@ $taskSparks = $taskIds ? Stats::sparkBatch($taskIds, 86400, 40) : [];
                 <button type="button" class="js-fix" data-id="<?= $mid ?>" data-fix="ack">
                   <?= Ui::icon('check', 14) ?> <?= te('Pris en compte') ?></button>
               <?php endif; ?>
+              <?php
+              /*
+               * TAIRE CE SIGNAL, DEPUIS L'ENDROIT OÙ ON LE LIT.
+               *
+               * Le geste existait, mais seulement sur l'écran des incidents : il fallait donc
+               * quitter la liste de tâches, retrouver la ligne, et déplier. Sur un parc avec
+               * quelques cas particuliers légitimes — un « noindex » assumé sur un site
+               * technique, une police d'icônes qu'on ne remettra pas — c'est assez de
+               * frottement pour qu'on préfère ignorer la carte. Et une carte qu'on apprend à
+               * ignorer est le début de l'écran qu'on n'ouvre plus.
+               *
+               * TROIS GARDES, INCHANGÉES, parce que ce geste éteint une alerte. Il n'apparaît
+               * que sur une cause d'apparence, exactement comme sur l'autre écran : proposer
+               * puis refuser userait la confiance autant que ne rien proposer. La raison est
+               * obligatoire. Et le libellé dit ce qui va se passer plutôt que « ignorer »,
+               * qui laisserait croire à un simple masquage.
+               *
+               * Aucun JavaScript de plus : la classe « exception-form » est déjà écoutée.
+               */
+              ?>
+              <?php if ($a['incident'] && Uptimeez\Exceptions::estExcusable($a['reason'] ?? null)): ?>
+                <details class="act-excuse">
+                  <summary><?= Ui::icon('shield', 14) ?> <?= te('Ce n\'est pas un problème ici') ?></summary>
+                  <form class="exception-form" data-incident="<?= (int)$a['incident'] ?>">
+                    <p class="tiny muted"><?= te('L\'alerte n\'apparaîtra plus sur cette page. Elle reste comptée, et l\'exception sera à revoir dans six mois.') ?></p>
+                    <label class="tiny"><?= te('Pourquoi (obligatoire)') ?>
+                      <input type="text" name="raison" maxlength="500" required>
+                    </label>
+                    <button class="btn btn-sm btn-ghost"><?= te('Taire ce signal ici') ?></button>
+                  </form>
+                </details>
+              <?php endif; ?>
               <a href="<?= e(u('monitor', ['id' => $mid])) ?>">
                 <?= Ui::icon('eye', 14) ?> <?= te('Fiche complète') ?></a>
             </div>

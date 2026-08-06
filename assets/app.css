@@ -680,6 +680,22 @@ html[data-theme="dark"] .hero-proof-view { background: #dde3ec; }
   color: var(--text); border-radius: 5px; cursor: pointer; min-height: 36px;
 }
 .act-menu > a:hover, .act-menu > button:hover { background: var(--surface-2); text-decoration: none; }
+
+/* « Ce n'est pas un problème ici » : une ligne de menu qui se déplie en formulaire.
+   Le repli compte : ce geste éteint une alerte, il ne doit pas être à un clic distrait,
+   et il ne doit pas non plus occuper le menu de tout le monde en permanence. */
+.act-excuse > summary {
+  display: flex; align-items: center; gap: var(--s2); padding: 8px 10px;
+  font-size: 13.5px; border-radius: 5px; cursor: pointer; min-height: 36px;
+  list-style: none;
+}
+.act-excuse > summary::-webkit-details-marker, .act-excuse > summary::marker { display: none; content: ''; }
+.act-excuse > summary:hover { background: var(--surface-2); }
+.act-excuse svg { color: var(--muted); flex: 0 0 auto; }
+.act-excuse[open] > summary { color: var(--text); font-weight: 600; }
+.act-excuse .exception-form { display: grid; gap: 6px; padding: 4px 10px 10px; }
+.act-excuse .exception-form input[type=text] { width: 100%; }
+.act-excuse .exception-form label { display: grid; gap: 3px; }
 .act-menu svg { color: var(--muted); flex: 0 0 auto; }
 
 /* La file : une ligne par panne. Trente lignes se lisent, trente cartes non. */

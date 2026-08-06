@@ -102,6 +102,10 @@ file_put_contents("$tmp/site/indisponible.php",
 // UNE PAGE SANS AUCUNE FEUILLE DE STYLE, ni style en ligne : elle existe pour le défaut
 // du 2026-08-06, où une telle page restait dégradée à VIE parce que la remarque de
 // première observation empêchait d'enregistrer la référence qui devait la faire taire.
+// Une page en noindex, par ailleurs impeccable : elle sert à éprouver le geste « ce n'est
+// pas un problème ici » sur une cause d'apparence, et rien d'autre ne doit s'y déclencher.
+file_put_contents("$tmp/site/noindex-volontaire.html", $page('Recette',
+    $L . '<meta name="robots" content="noindex, nofollow">'));
 file_put_contents("$tmp/site/nue.html",
     '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Page nue</title></head>'
   . '<body><p>Un paragraphe, aucune feuille de style.</p></body></html>');
@@ -804,6 +808,7 @@ ok('chaque tâche porte sa cause', $has($r, 'La mise en page est cassée')
 ok('chaque tâche porte la conduite à tenir', $has($r, 'hero-fix'));
 ok('actions disponibles sur place', $has($r, 'js-fix') && $has($r, 'js-copy-report'));
 ok('bloc d\'anticipation présent', $has($r, 'À prévoir') || $has($r, 'sans rien à signaler'));
+
 $r2 = $req('/index.php');
 ok('la racine mène à Aujourd\'hui', ($r2['code'] === 200
       && ($has($r2, 'À traiter d&#039;abord') || $has($r2, 'Rien à faire')))
@@ -1809,6 +1814,83 @@ ok('première passe : la référence est bien enregistrée malgré la remarque',
 
 $req('/api.php?action=check', ['csrf' => $tokNue, 'id' => $nueId]);
 $apres2 = $db('SELECT status, css_state, reason_code FROM monitors WHERE id = ?', [$nueId])[0] ?? [];
+// =========================================================================
+// « Ce n'est pas un problème ici », depuis la liste où on lit le problème
+// =========================================================================
+//
+// LE GESTE EXISTAIT, MAIS AILLEURS. Taire un signal n'était offert que sur l'écran des
+// incidents : il fallait quitter la liste de tâches, retrouver la ligne, déplier. Sur un
+// parc où quelques cas particuliers sont légitimes, c'est assez de frottement pour qu'on
+// préfère ignorer la carte, et une carte qu'on ignore est le début de l'écran qu'on
+// n'ouvre plus.
+//
+// POURQUOI CE CONTRÔLE A SA PROPRE SONDE, ET SUR SON PROPRE SITE. La première version le
+// vérifiait sur la liste du parcours principal : tous les défauts y appartiennent au même
+// site, et l'écran ne garde qu'une carte par site, la plus grave. La carte visible était
+// donc « base de données morte », une cause qu'on ne peut pas taire, et le contrôle
+// échouait pour une raison qui n'avait rien à voir avec ce qu'il testait.
+$tokEx = $csrf();
+$req('/index.php?p=monitors', ['csrf' => $tokEx, 'action' => 'save_monitor',
+    'name' => 'Recette en noindex', 'url' => "$SITE/noindex-volontaire.html",
+    'interval_sec' => 300, 'kind' => 'page', 'check_noindex' => 1, 'enabled' => 1]);
+$exId = (int)$val("SELECT id FROM monitors WHERE name = ? LIMIT 1", ['Recette en noindex']);
+ok('la sonde de recette est créée', $exId > 0, 'id=' . $exId);
+
+// DEUX PIÈGES DU JEU D'ESSAI, ET ILS SE PAIENT EN CONTRÔLES ROUGES POUR RIEN.
+//
+// « enabled » est une case à cocher, comme « check_css » : sans le champ, la sonde naît
+// DÉSACTIVÉE et l'écran du jour ne la montre jamais. Première version : trois contrôles
+// rouges et une demi-heure à chercher côté affichage.
+//
+// Et toutes les pages du faux site partagent un hôte, donc la sonde est rattachée au même
+// site que les autres. Or l'écran ne garde QU'UNE carte par site, la plus grave : la nôtre
+// aurait disparu derrière « base de données morte ». On la détache, ce qui est une
+// manipulation de jeu d'essai assumée.
+//
+// Au passage, ce regroupement est une limite réelle du produit : sur un site qui cumule
+// plusieurs défauts, seule la cause la plus grave est visible depuis la liste, donc seule
+// celle-là peut y être tue. Les autres demandent d'ouvrir la fiche.
+Uptimeez\Db::update('monitors', ['site_id' => null], 'id = :i', ['i' => $exId]);
+
+// Deux passes : la première confirme, la seconde ouvre l'incident. C'est la règle de
+// confirmation avant alerte, et elle vaut aussi pour les causes d'apparence.
+$req('/api.php?action=check', ['csrf' => $tokEx, 'id' => $exId]);
+$req('/api.php?action=check', ['csrf' => $tokEx, 'id' => $exId]);
+$etatEx = $db('SELECT status, reason_code FROM monitors WHERE id = ?', [$exId])[0] ?? [];
+ok('la sonde est dégradée pour cause d\'indexation',
+   ($etatEx['reason_code'] ?? '') === 'NOINDEX' && ($etatEx['status'] ?? '') === 'degraded',
+   (string)($etatEx['status'] ?? '?') . '/' . (string)($etatEx['reason_code'] ?? '—'));
+
+$rToday = $req('/index.php?p=today');
+ok('la carte propose de taire le signal',
+   $has($rToday, 'act-excuse') && $has($rToday, 'exception-form') && $has($rToday, 'Recette en noindex'));
+ok('la raison y est obligatoire',
+   (bool)preg_match('~name="raison"[^>]*required~', (string)$rToday['body']));
+ok('et le libellé dit ce qui va se passer, pas « ignorer »',
+   $has($rToday, 'Taire ce signal ici') && !$has($rToday, 'Ignorer'));
+
+// LE GESTE MARCHE DEPUIS CETTE CARTE, et pas seulement s'affiche. On lit l'identifiant
+// d'incident que la carte porte, puis on poste comme le ferait le navigateur.
+preg_match('~exception-form" data-incident="(\d+)"~', (string)$rToday['body'], $mInc);
+$incEx = (int)($mInc[1] ?? 0);
+ok('la carte porte l\'incident à taire', $incEx > 0, 'incident=' . $incEx);
+$rPose = $req('/api.php?action=exception_poser', ['csrf' => $tokEx, 'action' => 'exception_poser',
+    'incident_id' => $incEx, 'raison' => 'site de recette, noindex volontaire']);
+ok('l\'exception se pose depuis la carte',
+   (json_decode((string)$rPose['body'], true)['ok'] ?? false) === true, str_cut(trim((string)$rPose['body']), 70));
+
+// ET LA SUITE COMPTE AUTANT : la sonde repasse au vert, le signal est tu, mais l'exception
+// reste inscrite avec sa raison et sa date de revue.
+$req('/api.php?action=check', ['csrf' => $tokEx, 'id' => $exId]);
+$apresEx = $db('SELECT status, reason_code FROM monitors WHERE id = ?', [$exId])[0] ?? [];
+ok('le signal tu ne dégrade plus la sonde', ($apresEx['status'] ?? '?') === 'up',
+   (string)($apresEx['status'] ?? '?') . '/' . (string)($apresEx['reason_code'] ?? '—'));
+$exLigne = $db('SELECT reason_code, raison, revoir_le FROM exceptions WHERE monitor_id = ?', [$exId])[0] ?? [];
+ok('l\'exception garde sa raison et sa date de revue',
+   ($exLigne['reason_code'] ?? '') === 'NOINDEX' && trim((string)($exLigne['raison'] ?? '')) !== ''
+   && !empty($exLigne['revoir_le']),
+   (string)($exLigne['revoir_le'] ?? 'sans date'));
+
 ok('seconde passe : la page n\'est plus dégradée',
    ($apres2['css_state'] ?? '?') === 'ok' && ($apres2['status'] ?? '?') === 'up',
    'css=' . (string)($apres2['css_state'] ?? '?') . ' état=' . (string)($apres2['status'] ?? '?')

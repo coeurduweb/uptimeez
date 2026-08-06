@@ -1035,6 +1035,9 @@ return [
     'Table pleine / quota disque atteint' => 'Table full or disk quota reached',
     'Tableau de bord' => 'Dashboard',
     'Tableur des incidents de la période (rapport client, justificatif de SLA)' => 'Spreadsheet of incidents for the period (client report, SLA evidence)',
+    'Ce n\'est pas un problème ici' => 'This is not a problem here',
+    'L\'alerte n\'apparaîtra plus sur cette page. Elle reste comptée, et l\'exception sera à revoir dans six mois.'
+        => 'The alert will no longer appear on this page. It stays counted, and the exception comes up for review in six months.',
     'Taire ce signal ici' => 'Silence this signal here',
     'Tant qu\'aucun compte n\'existe, l\'accès se fait par le seul mot de passe de l\'instance. Dès le premier compte créé, l\'écran de connexion demande un identifiant, et ce mot de passe devient un accès de secours : il fonctionne toujours, pour le cas où le courriel ou le tableau de bord seraient indisponibles, et chacun de ses usages est consigné ci-dessous.' => 'While no account exists, access uses the instance\'s single password. From the first account onwards, the sign-in screen asks for a username, and that password becomes emergency access: it still works, in case email or the dashboard are unavailable, and every use of it is recorded below.',
     'Technologie' => 'Technology',
