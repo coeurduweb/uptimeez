@@ -101,7 +101,7 @@ $uiMode  = Ui::mode();
 // SUR LA DÉMONSTRATION, le favicon porte la marque et non l'état.
 //
 // Ce n'est pas une exception de confort : la démo est une surface de vitrine, ses
-// données sont fictives et remises à zéro chaque heure. L'état qu'elle afficherait
+// données sont fictives et remises à zéro à intervalle régulier. L'état qu'elle afficherait
 // n'appelle aucune action, alors que la reconnaissance de la marque, elle, compte.
 // Signalé le 2026-07-29 : l'onglet de la démo montrait une barre verte quand le
 // site et le back-office en montraient une ambre, ce qui se lit comme deux

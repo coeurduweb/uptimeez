@@ -4617,6 +4617,34 @@ check('la confirmation est courte devant un intervalle de 15 min',
 check('une panne réelle est confirmée en une demi-minute, pas au prochain créneau',
     Uptimeez\Runner::CONFIRMATION_SEC < 900, true);
 
+section('La démonstration n\'annonce pas une cadence qu\'elle ne tient pas');
+// ---------------------------------------------------------------------------
+// LE DÉFAUT, RELEVÉ EN LIGNE LE 2026-08-05. Le bandeau promettait « remise à zéro chaque
+// heure », la tâche planifiée la remettait à zéro chaque heure, et le badge du
+// planificateur passait à « inactive » au bout de quinze minutes (seuil de 900 s dans
+// views/settings.php). Un visiteur sur quatre ouvrait donc les réglages d'un outil de
+// supervision qui annonçait son propre planificateur mort.
+//
+// Deux choses en sortent. La cadence n'est plus écrite en dur dans la phrase : elle vient
+// de l'environnement, comme le drapeau de démonstration, donc le texte ne peut plus se
+// périmer tout seul. Et elle doit rester SOUS le seuil du badge, sinon la vitrine
+// contredit le produit.
+$cadenceDemo = Uptimeez\Demo::cadenceMinutes();
+check('la cadence par défaut est l\'heure, comme avant', $cadenceDemo >= 1 && $cadenceDemo <= 1440, true);
+check('la phrase de refus porte la cadence et non un chiffre en dur',
+    str_contains(Uptimeez\Demo::refusal()[1], (string)$cadenceDemo), true);
+// Le seuil du badge vit dans la vue : on le lit là où il est, pour que déplacer l'un
+// fasse tomber l'autre.
+$vueReglages = (string)file_get_contents(__DIR__ . '/../views/settings.php');
+preg_match('~time\(\)\s*-\s*(\d+)~', $vueReglages, $mSeuil);
+$seuilBadge = (int)($mSeuil[1] ?? 0);
+check('le seuil du badge de planificateur est bien lu dans la vue', $seuilBadge > 0, true);
+check('une démonstration à la cadence par défaut serait vue « inactive »',
+    $cadenceDemo * 60 > $seuilBadge, true);
+// Ce contrôle-ci ne juge pas l'hôte, il documente le calcul : c'est pour ça que la
+// démonstration publique règle UPTIMEEZ_DEMO_RESET_MIN sous ce seuil.
+check('dix minutes, elles, tiennent sous le seuil', 10 * 60 < $seuilBadge, true);
+
 section('Une page sans feuille de style : signalée une fois, pas à chaque passe');
 // ---------------------------------------------------------------------------
 // LE DÉFAUT, TROUVÉ LE 2026-08-06 SUR UNE VRAIE PAGE DU PARC. `come-together.fr` est une

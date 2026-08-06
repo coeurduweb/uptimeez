@@ -22,8 +22,8 @@ use Uptimeez\Ui;
                  seulement qu'un robot indexe l'intérieur. */ ?>
         <div class="alert alert-warn" role="note" style="margin-top:0">
           <?= Ui::icon('info', 18) ?>
-          <div><?= te('Démonstration : le mot de passe est {password}. Tout est remis à zéro chaque heure.',
-                      ['password' => 'demo1234']) ?></div>
+          <div><?= te('Démonstration : le mot de passe est {password}. Tout est remis à zéro toutes les {minutes} minutes.',
+                      ['password' => 'demo1234', 'minutes' => (string)\Uptimeez\Demo::cadenceMinutes()]) ?></div>
         </div>
       <?php endif; ?>
       <?php if (!empty($info)): ?>

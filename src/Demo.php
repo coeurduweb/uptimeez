@@ -152,9 +152,28 @@ final class Demo
         return self::on() && $secret !== '' ? $masque : $secret;
     }
 
+    /**
+     * Toutes les combien de minutes la démonstration est-elle remise à zéro ?
+     *
+     * POURQUOI CE N'EST PAS ÉCRIT EN DUR DANS LA PHRASE. Le bandeau annonçait « chaque
+     * heure ». La cadence, elle, vit dans la tâche planifiée de l'hôte : deux endroits, et
+     * c'est toujours le texte qui se périme. Or ce texte est la promesse faite au visiteur
+     * (« ce que je casse disparaît »), donc un texte qui mentirait vaudrait mieux absent.
+     *
+     * La valeur vient de l'environnement, comme le drapeau de démonstration lui-même, et
+     * le défaut reste l'heure : une installation qui ne dit rien garde l'ancien sens.
+     */
+    public static function cadenceMinutes(): int
+    {
+        $v = (int)(getenv('UPTIMEEZ_DEMO_RESET_MIN') ?: 0);
+
+        return $v >= 1 && $v <= 1440 ? $v : 60;
+    }
+
     /** Le message rendu à l'écran quand une action est refusée. */
     public static function refusal(): array
     {
-        return ['warn', t('Action désactivée dans la démonstration : elle est remise à zéro chaque heure, et rien n\'en sort. Installez {app} pour tout essayer.')];
+        return ['warn', t('Action désactivée dans la démonstration : elle est remise à zéro toutes les {minutes} minutes, et rien n\'en sort. Installez {app} pour tout essayer.',
+            ['minutes' => (string)self::cadenceMinutes()])];
     }
 }
