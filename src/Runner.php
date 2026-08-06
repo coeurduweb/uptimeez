@@ -639,6 +639,9 @@ final class Runner
                     'state'      => $css['state'],
                     'messages'   => $css['messages'] ?? [],
                     'analyse_le' => null,
+                    // L'écart mesuré descend jusqu'aux règles : c'est lui qui décide si une
+                    // ressource en échec a réellement changé ce que voit un visiteur.
+                    'silhouette_drift' => $css['silhouette_drift'] ?? null,
                 ];
 
                 if ($css['changed']) {
@@ -653,6 +656,16 @@ final class Runner
                     'state'      => (string) ($mon['css_state'] ?? 'ok'),
                     'messages'   => jdec($mon['css_detail'] ?? null)['messages'] ?? [],
                     'analyse_le' => $mon['css_checked_at'] ?? null,
+                    // L'ÉCART VIENT DE LA LIGNE DE LA SONDE, ET IL LE FAUT.
+                    //
+                    // Le détail d'analyse ne stocke que les messages et les mesures ; l'écart,
+                    // lui, vit dans sa propre colonne. Sans cette ligne, la requalification
+                    // par la mesure ne marchait QUE sur une analyse fraîche : entre deux
+                    // audits, la même page redevenait « cassée » alors que l'écart mesuré
+                    // disait le contraire. Constaté sur le parc le 2026-08-06, une sonde
+                    // requalifiée par l'audit et re-cassée par la passe suivante.
+                    'silhouette_drift' => isset($mon['silhouette_drift'])
+                        ? (int) $mon['silhouette_drift'] : null,
                 ];
             }
 
