@@ -512,6 +512,9 @@ seconds to a day. No crontab access? The settings screen hands you a URL to call
 
 **Two other ways in, and the first one above stays the reference.** `php bin/installer.php` does the same thing
 over SSH, with the same environment checks, and prints the cron line with the right PHP path for that machine.
+It is also the way out when `install.php` answers 403 although the file is there: inside a WordPress
+document root, a firewall or a security plugin refuses any path ending in `install.php`, because the name is a
+known attack signature. Nothing about the resulting installation differs.
 `docker compose up -d` builds an optional image for people who have their own server and prefer one command to a
 file transfer: two services, because a container that only serves pages would monitor nothing. Neither adds a
 dependency to the product, which is why they are options rather than requirements.

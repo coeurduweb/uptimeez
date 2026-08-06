@@ -108,6 +108,22 @@ This is the primary target, not an afterthought.
 rewrite flags, which is why UptimeEZ never relies on URL rewriting: every URL is a plain
 `index.php?p=…`. Nothing to configure.
 
+**`install.php` answers 403 and you are sure the file is there.** Seen on 2026-08-04 while
+installing into a subdirectory of a WordPress site: the WAF, or a security plugin, refuses any
+request whose path ends in `install.php`, because that name is a known attack signature. The
+file is fine, the request never reaches it.
+
+Do not fight the rule, take the other door:
+
+```
+php bin/installer.php
+```
+
+It asks the same questions, runs the same environment checks, and writes the same
+`config.php`. Nothing about the installation differs afterwards. If SSH is not available
+either, rename `install.php` to something the filter ignores, run it once, and delete it: it
+refuses to run a second time anyway.
+
 **No crontab at all?** Settings → *Trigger over URL* gives you a secret URL:
 
 ```

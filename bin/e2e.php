@@ -220,6 +220,39 @@ $wait = function (int $port): bool {
 };
 if (!$wait($appPort) || !$wait($sitePort)) exit("Les serveurs de test n'ont pas démarré.\n");
 
+// --- Pré-vol : le moteur peut-il vraiment atteindre la boucle locale ? ----
+//
+// POURQUOI CE CONTRÔLE EXISTE. Sur un mutualisé PlanetHoster, cette suite a rendu
+// dix-neuf échecs de détection : « la page saine est vue hors service », « la base
+// HS n'est pas détectée », et ainsi de suite. Aucun de ces défauts n'était réel.
+// L'hébergeur interdit les requêtes sortantes vers 127.0.0.1, donc les sondes ne
+// voyaient RIEN, et chaque contrôle de détection le racontait à sa façon.
+//
+// Le socket TCP ci-dessus ne suffit pas à l'attraper : il s'ouvre, puisque c'est
+// notre propre serveur qui écoute. C'est la couche HTTP du produit, celle que les
+// sondes utilisent, qui est bloquée. Il faut donc mesurer AVEC ELLE.
+//
+// Dix-neuf messages qui décrivent chacun une fausse panne coûtent plus qu'un
+// diagnostic faux : ils envoient chercher un défaut de détection là où il y a une
+// règle d'hébergeur. Une suite qui ne peut pas mesurer doit le dire et s'arrêter.
+$prevol = \Uptimeez\Http::fetch("$SITE/", ['timeout' => 8]);
+if (!$prevol->ok || $prevol->status !== 200) {
+    $motif = $prevol->error !== null && $prevol->error !== ''
+        ? (string)$prevol->error
+        : 'HTTP ' . (int)$prevol->status;
+    fwrite(STDERR,
+        "\n⚠️  Boucle locale injoignable depuis cet hébergement : $motif\n"
+      . "    Le serveur de test répond sur le port $sitePort, mais le client HTTP du\n"
+      . "    produit n'arrive pas jusqu'à lui. C'est la signature d'un hébergement qui\n"
+      . "    interdit les requêtes sortantes vers 127.0.0.1 (constaté sur PlanetHoster).\n"
+      . "    Les contrôles de détection mesureraient alors le blocage et non le moteur :\n"
+      . "    on s'arrête ici plutôt que de rendre une vingtaine de faux échecs.\n\n"
+      . "    Contournement : lancer cette suite sur une machine sans cette règle, ou\n"
+      . "    depuis le conteneur Docker du dépôt. Les autres suites (selftest, regles,\n"
+      . "    security) n'ont besoin d'aucun réseau et restent utilisables ici.\n");
+    exit(2);
+}
+
 echo "Test de bout en bout : application $APP · faux site $SITE\n";
 
 // =========================================================================

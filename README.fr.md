@@ -529,7 +529,10 @@ quel service externe.
 
 **Deux autres voies, et la première ci-dessus reste la référence.** `php bin/installer.php` fait la même chose
 en SSH, avec les mêmes contrôles d'environnement, et imprime la ligne de cron avec le bon chemin de PHP pour
-cette machine. `docker compose up -d` construit une image facultative pour qui a son propre serveur et préfère
+cette machine. C'est aussi la sortie de secours quand `install.php` répond 403 alors que le fichier est bien
+là : dans la racine d'un site WordPress, un pare-feu ou une extension de sécurité refuse toute adresse qui
+finit par `install.php`, parce que ce nom est une signature d'attaque connue. L'installation obtenue est
+identique. `docker compose up -d` construit une image facultative pour qui a son propre serveur et préfère
 une commande à un transfert de fichiers : deux services, parce qu'un conteneur qui ne sert que des pages ne
 surveillerait rien. Aucune des deux n'ajoute de dépendance au produit, et c'est pour ça que ce sont des options
 et non des prérequis.
