@@ -1,40 +1,39 @@
-# UptimeEZ : image optionnelle. La troisième des trois voies d'installation.
+# UptimeEZ: an optional image. The third of the three ways in.
 #
 # ------------------------------------------------------------------------------
-# CE FICHIER NE CHANGE PAS LA PROMESSE DU PRODUIT
+# THIS FILE DOES NOT CHANGE WHAT THE PRODUCT PROMISES
 # ------------------------------------------------------------------------------
 #
-# UptimeEZ n'a besoin ni de Docker ni de Composer ni de Node : c'est écrit partout et ça
-# reste vrai. Cette image existe pour qui a une machine à lui et préfère une commande à un
-# transfert de fichiers. La voie de référence reste `install.php` dans un navigateur, sur
-# un hébergement mutualisé s'il le faut.
+# UptimeEZ needs neither Docker nor Composer nor Node: that is written everywhere and it
+# stays true. This image exists for people who have a machine of their own and prefer one
+# command to a file transfer. The reference way in is still `install.php` in a browser, on
+# plain shared hosting if that is what you have.
 #
 # ------------------------------------------------------------------------------
-# CE QU'ELLE CONTIENT, ET RIEN DE PLUS
+# WHAT IT CONTAINS, AND NOTHING MORE
 # ------------------------------------------------------------------------------
 #
-# PHP, Apache, et les cinq extensions que l'installeur exige. Pas de gestionnaire de
-# processus, pas de démon cron : la planification est un SECOND service, déclaré dans
-# compose.yml, dont on lit la boucle en trois lignes. Un cron dans un conteneur est la
-# première chose qui échoue en silence, parce que ses journaux vont ailleurs que la sortie
-# standard que Docker montre.
+# PHP, Apache, and the five extensions the installer requires. No process manager, no cron
+# daemon: scheduling is a SECOND service, declared in compose.yml, whose loop reads in
+# three lines. A cron inside a container is the first thing to fail silently, because its
+# logs go somewhere other than the standard output Docker shows you.
 FROM php:8.4-apache
 
-# LES EXTENSIONS, ET POURQUOI CHACUNE. La liste est exactement celle que bin/installer.php
-# vérifie : deux listes qui divergent produiraient une image où l'installeur refuse de
-# travailler, et le message arriverait après la construction.
-#   curl     : toutes les requêtes du collecteur
-#   pdo_*    : SQLite par défaut, MySQL en option
-#   mbstring : le texte des pages analysées
-#   intl     : facultatif, il améliore la recherche insensible aux accents
+# THE EXTENSIONS, AND WHY EACH ONE. The list is exactly the one bin/installer.php checks:
+# two lists that drift apart would produce an image where the installer refuses to work,
+# and the message would arrive after the build.
+#   curl     : every request the collector makes
+#   pdo_*    : SQLite by default, MySQL optionally
+#   mbstring : the text of the analysed pages
+#   intl     : optional, it improves accent-insensitive search
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends libicu-dev libonig-dev; \
     docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring intl; \
     rm -rf /var/lib/apt/lists/*
 
-# Apache sert le dossier de l'application, et RIEN au-dessus : data/ y est protégé par son
-# .htaccess, ce qui suppose que les surcharges soient autorisées.
+# Apache serves the application folder and NOTHING above it: data/ is protected there by
+# its own .htaccess, which assumes overrides are allowed.
 RUN a2enmod rewrite && \
     printf '<Directory /var/www/html>\n    AllowOverride All\n</Directory>\n' \
       > /etc/apache2/conf-available/uptimeez.conf && \
@@ -43,9 +42,9 @@ RUN a2enmod rewrite && \
 WORKDIR /var/www/html
 COPY . /var/www/html
 
-# LE DOSSIER DE DONNÉES APPARTIENT À APACHE, et config.php doit être créable : sans ce
-# droit, l'installeur web s'arrête sur « racine non accessible en écriture », ce qui est le
-# tout premier écran et donne l'impression que l'image est cassée.
+# THE DATA FOLDER BELONGS TO APACHE, and config.php must be creatable: without that right,
+# the web installer stops on "root not writable", which is the very first screen and gives
+# the impression that the image is broken.
 RUN mkdir -p /var/www/html/data && \
     chown -R www-data:www-data /var/www/html/data /var/www/html && \
     chmod 775 /var/www/html/data

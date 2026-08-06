@@ -3,34 +3,35 @@
 namespace Uptimeez\Regle;
 
 /**
- * Le port répond-il ? La règle la plus courte du moteur, et la seule sans nuance.
+ * Does the port answer? The shortest rule in the engine, and the only one without nuance.
  *
  * ------------------------------------------------------------------------------
- * PAS DE « DÉGRADÉ » ICI, ET C'EST LE POINT
+ * NO "DEGRADED" HERE, AND THAT IS THE POINT
  * ------------------------------------------------------------------------------
  *
- * Un port est ouvert ou fermé. Il n'y a pas d'état intermédiaire à inventer : un port lent à
- * accepter la connexion est un port ouvert, et le mesurer sert à afficher une durée, pas à
- * fabriquer un verdict. Les autres règles ont des nuances parce qu'une page peut arriver et
- * être fausse ; un port ne peut pas être « à moitié ouvert ».
+ * A port is open or closed. There is no intermediate state to invent: a port that is slow to
+ * accept the connection is an open port, and measuring that serves to display a duration,
+ * not to manufacture a verdict. The other rules have nuances because a page can arrive and
+ * be wrong; a port cannot be "half open".
  *
- * CE QU'IL NE FAUT PAS EN CONCLURE, ET LA FICHE LE DIT AUSSI : un port ouvert ne prouve pas
- * que le service derrière fonctionne. Un SMTP qui accepte la connexion et refuse tous les
- * messages répond « ouvert ». C'est la limite du contrôle, pas un défaut à corriger : y
- * ajouter un dialogue par protocole ferait de ce moteur autre chose que ce qu'il est.
+ * WHAT NOT TO CONCLUDE FROM IT, AND THE MONITOR PAGE SAYS SO TOO: an open port does not
+ * prove that the service behind it works. An SMTP server that accepts the connection and
+ * refuses every message answers "open". That is the limit of the check, not a defect to
+ * fix: adding a per-protocol conversation would make this engine something other than what
+ * it is.
  */
 final class Port implements Regle
 {
-    /** Le nom sous lequel le collecteur dépose le résultat de la sonde. */
+    /** The name under which the collector files the probe's result. */
     public const DETECTEUR = 'port';
 
     public function evaluer(Contexte $c): ?Verdict
     {
         $sonde = $c->detecteur(self::DETECTEUR);
 
-        // Pas de sonde, ou une sonde qui n'a pas abouti : se taire est le seul verdict
-        // honnête. Dire « fermé » sur une sonde qu'on n'a pas su faire accuserait le port
-        // d'un défaut qui est le nôtre.
+        // No probe, or a probe that did not complete: saying nothing is the only honest
+        // verdict. Saying "closed" about a probe we failed to run would blame the port for
+        // a defect that is ours.
         if (! is_array($sonde) || ($sonde['checked'] ?? false) !== true) {
             return null;
         }

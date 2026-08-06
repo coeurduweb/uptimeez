@@ -3,33 +3,33 @@
 namespace Uptimeez\Regle;
 
 /**
- * L'enregistrement DNS est-il là, et dit-il ce qu'il devrait ?
+ * Is the DNS record there, and does it say what it should?
  *
  * ------------------------------------------------------------------------------
- * DEUX VERDICTS, ET ILS NE SE VALENT PAS
+ * TWO VERDICTS, AND THEY ARE NOT EQUIVALENT
  * ------------------------------------------------------------------------------
  *
- * « Aucune réponse » est hors service : l'enregistrement a disparu, et tout ce qui en
- * dépendait est cassé. « Réponse inattendue » est hors service aussi, et pour une raison
- * qu'il faut dire : un A qui pointe ailleurs répond parfaitement, donc rien d'autre dans ce
- * moteur ne le verra. C'est précisément le cas où la surveillance DNS gagne son existence,
- * puisque la page, elle, s'affichera très bien depuis la nouvelle adresse.
+ * "No answer" is down: the record is gone, and everything that depended on it is broken.
+ * "Unexpected answer" is down too, and for a reason worth stating: an A record pointing
+ * somewhere else answers perfectly, so nothing else in this engine will ever see it. That is
+ * precisely the case where DNS monitoring earns its existence, since the page itself will
+ * display very well from the new address.
  *
  * ------------------------------------------------------------------------------
- * LA COMPARAISON EST UNE INCLUSION, PAS UNE ÉGALITÉ
+ * THE COMPARISON IS AN INCLUSION, NOT AN EQUALITY
  * ------------------------------------------------------------------------------
  *
- * Un MX rend « 10 mx.exemple.fr », un CAA rend trois champs. Exiger l'égalité obligerait
- * l'exploitant à recopier une syntaxe qu'il n'a aucune raison de connaître, et la première
- * alerte serait un faux positif sur un espace. On cherche donc la valeur attendue DANS l'une
- * des réponses, ce qui est ce qu'un humain fait en lisant le résultat de dig.
+ * An MX returns "10 mx.example.com", a CAA returns three fields. Demanding equality would
+ * force the operator to copy a syntax they have no reason to know, and the first alert would
+ * be a false positive over a space. So we look for the expected value INSIDE one of the
+ * answers, which is what a human does when reading the output of dig.
  */
 final class Dns implements Regle
 {
-    /** Le nom sous lequel le collecteur dépose le résultat de la sonde. */
+    /** The name under which the collector files the probe's result. */
     public const DETECTEUR = 'dns';
 
-    /** Au-delà, la liste des valeurs trouvées est coupée dans le message. */
+    /** Past this, the list of values found is truncated in the message. */
     private const APERCU = 120;
 
     public function evaluer(Contexte $c): ?Verdict

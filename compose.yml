@@ -1,45 +1,44 @@
-# UptimeEZ par Docker : deux services, et le second est celui qu'on oublie.
+# UptimeEZ over Docker: two services, and the second one is the one people forget.
 #
 # ------------------------------------------------------------------------------
 #   docker compose up -d
-#   puis http://localhost:8080/install.php
+#   then http://localhost:8080/install.php
 # ------------------------------------------------------------------------------
 #
-# POURQUOI DEUX SERVICES ET NON UN. Un conteneur qui ne sert que des pages donne une
-# installation qui s'ouvre, qui affiche tout en vert, et qui ne surveille rien : c'est
-# l'état le plus trompeur du produit. La planification est donc un service à part, visible
-# dans « docker compose ps », dont l'arrêt se voit.
+# WHY TWO SERVICES AND NOT ONE. A container that only serves pages gives you an
+# installation that opens, shows everything green, and monitors nothing: that is the most
+# misleading state this product can be in. Scheduling is therefore a service of its own,
+# visible in "docker compose ps", whose absence can be seen.
 #
-# La boucle tient en une ligne et remplace un démon cron à dessein : ses messages partent sur
-# la sortie standard, donc « docker compose logs planificateur » montre ce qui se passe. Un
-# cron dans un conteneur écrit dans un fichier que personne ne lit, et son silence ressemble
-# à un fonctionnement normal.
+# The loop is one line and replaces a cron daemon on purpose: its output goes to standard
+# output, so "docker compose logs planificateur" shows what is happening. A cron inside a
+# container writes to a file nobody reads, and its silence looks like normal operation.
 
 services:
   web:
     build: .
     ports:
-      # LE PORT SE CHANGE SANS TOUCHER À CE FICHIER : « PORT=8090 docker compose up -d ».
-      # Le 8080 est déjà pris sur beaucoup de machines de développement, et l'erreur de
-      # Docker dans ce cas parle de « endpoint » et de « networking », ce qui envoie
-      # chercher un problème de réseau là où il faut juste un autre numéro.
+      # THE PORT CHANGES WITHOUT TOUCHING THIS FILE: "PORT=8090 docker compose up -d".
+      # 8080 is already taken on many development machines, and Docker's error in that
+      # case talks about "endpoint" and "networking", which sends you looking for a
+      # network problem where you only need another number.
       - "${PORT:-8080}:80"
     volumes:
-      # UN SEUL VOLUME, ET LA CONFIGURATION Y VIT AUSSI. C'est ce que règle
-      # UPTIMEEZ_CONFIG ci-dessous : sans lui, config.php serait écrit à la racine de
-      # l'image, donc perdu à la première reconstruction, et l'installation recommencerait
-      # à zéro en silence, base intacte et mot de passe oublié.
+      # ONE VOLUME, AND THE CONFIGURATION LIVES IN IT TOO. That is what UPTIMEEZ_CONFIG
+      # below is for: without it, config.php would be written at the root of the image,
+      # therefore lost on the first rebuild, and the installation would silently start
+      # over with an intact database and a forgotten password.
       - donnees:/var/www/html/data
     environment:
       UPTIMEEZ_CONFIG: /var/www/html/data/config.php
-      # Le fuseau décide de l'heure écrite dans les incidents et les rapports : par défaut
-      # celui de l'image est UTC, et un rapport client décalé de deux heures est un rapport
-      # qu'on relit trois fois.
+      # The timezone decides the time written in incidents and reports: the image
+      # defaults to UTC, and a client report two hours off is a report you read three
+      # times.
       TZ: ${TZ:-Europe/Paris}
-    # LE FICHIER DOIT EXISTER, MÊME VIDE, AVANT QUE L'INSTALLEUR NE L'OUVRE.
-    # UPTIMEEZ_CONFIG ne se replie jamais sur le config.php de la racine, et c'est voulu :
-    # un repli ferait servir la base et les secrets d'une autre instance. On le crée donc
-    # au démarrage, sans rien écraser s'il est déjà là.
+    # THE FILE MUST EXIST, EVEN EMPTY, BEFORE THE INSTALLER OPENS IT.
+    # UPTIMEEZ_CONFIG never falls back to the config.php at the root, and that is
+    # deliberate: a fallback would serve another instance's database and secrets. So we
+    # create it at startup, overwriting nothing if it is already there.
     command: >
       sh -c '[ -f /var/www/html/data/config.php ] || printf "<?php return [];\n" > /var/www/html/data/config.php;
              chown -R www-data:www-data /var/www/html/data;
@@ -55,9 +54,9 @@ services:
     environment:
       UPTIMEEZ_CONFIG: /var/www/html/data/config.php
       TZ: ${TZ:-Europe/Paris}
-    # UNE PASSE PAR MINUTE, ET LE MOTEUR CHOISIT LES SONDES DUES : c'est la même règle que
-    # la ligne de crontab de la documentation, et le même intervalle quelles que soient les
-    # cadences configurées.
+    # ONE PASS PER MINUTE, AND THE ENGINE PICKS THE MONITORS THAT ARE DUE: this is the
+    # same rule as the crontab line in the documentation, and the same interval whatever
+    # check rates are configured.
     command: >
       sh -c 'while true; do php /var/www/html/cron.php || true; sleep 60; done'
     restart: unless-stopped

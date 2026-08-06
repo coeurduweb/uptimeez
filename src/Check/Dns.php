@@ -4,34 +4,34 @@ declare(strict_types=1);
 namespace Uptimeez\Check;
 
 /**
- * Un enregistrement DNS existe-t-il, et vaut-il ce qu'il devrait ?
+ * Does a DNS record exist, and is it worth what it should be?
  *
  * ------------------------------------------------------------------------------
- * POURQUOI CE CONTRÔLE MÉRITE D'EXISTER À CÔTÉ DE LA SURVEILLANCE D'UNE PAGE
+ * WHY THIS CHECK DESERVES TO EXIST NEXT TO WATCHING A PAGE
  * ------------------------------------------------------------------------------
  *
- * Une page qui répond prouve que la zone DNS marche. L'inverse n'est pas vrai, et c'est là
- * qu'est l'intérêt : les enregistrements qui ne servent AUCUNE page ne sont surveillés par
- * personne. Un MX supprimé par erreur ne casse pas le site, il fait disparaître le courrier
- * sans qu'aucun visiteur ne s'en aperçoive. Un TXT de validation retiré casse une
- * signature. Un NS changé chez le registraire déplace toute la zone.
+ * A page that answers proves the DNS zone works. The reverse is not true, and that is where
+ * the value is: the records that serve NO page are watched by nobody. An MX deleted by
+ * mistake does not break the site, it makes the mail disappear without a single visitor
+ * noticing. A validation TXT removed breaks a signature. An NS changed at the registrar
+ * moves the whole zone.
  *
  * ------------------------------------------------------------------------------
- * DEUX QUESTIONS, ET LA SECONDE EST FACULTATIVE
+ * TWO QUESTIONS, AND THE SECOND ONE IS OPTIONAL
  * ------------------------------------------------------------------------------
  *
- * « Y a-t-il une réponse » se contrôle sans rien configurer. « Vaut-elle ceci » demande une
- * valeur attendue, et c'est celle qui attrape le changement silencieux : un A qui pointe
- * ailleurs répond parfaitement.
+ * "Is there an answer" is checked without configuring anything. "Is it this value" needs an
+ * expected value, and that is the one that catches the silent change: an A record pointing
+ * somewhere else answers perfectly.
  *
- * LA COMPARAISON EST UNE INCLUSION ET NON UNE ÉGALITÉ, parce qu'un enregistrement rend
- * plusieurs champs selon son type : un MX porte une cible et une priorité, un SOA une
- * dizaine de valeurs. Exiger l'égalité obligerait l'exploitant à recopier une syntaxe
- * exacte qu'il n'a aucune raison de connaître.
+ * THE COMPARISON IS AN INCLUSION AND NOT AN EQUALITY, because a record returns several
+ * fields depending on its type: an MX carries a target and a priority, an SOA about ten
+ * values. Demanding equality would force the operator to copy an exact syntax they have no
+ * reason to know.
  */
 final class Dns
 {
-    /** Les types qu'on sait interroger, et rien de plus : le reste est refusé plutôt que deviné. */
+    /** The types we know how to query, and nothing more: the rest is refused, not guessed. */
     public const TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'CAA'];
 
     /**
@@ -61,10 +61,10 @@ final class Dns
                     'error' => t('la résolution a échoué')];
         }
 
-        // LES VALEURS SONT APLATIES EN TEXTE, une par enregistrement, parce que c'est sous
-        // cette forme qu'un exploitant les reconnaît : « 203.0.113.10 », « 10 mx.exemple.fr ».
-        // Rendre le tableau brut de PHP obligerait chaque appelant à savoir quel champ porte
-        // la valeur selon le type, et cette connaissance appartient ici.
+        // VALUES ARE FLATTENED TO TEXT, one per record, because that is the form an operator
+        // recognises: "203.0.113.10", "10 mx.example.com". Returning PHP's raw array would
+        // force every caller to know which field carries the value for which type, and that
+        // knowledge belongs here.
         $valeurs = [];
 
         foreach ($reponses as $r) {

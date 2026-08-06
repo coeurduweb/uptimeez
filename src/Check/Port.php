@@ -4,30 +4,30 @@ declare(strict_types=1);
 namespace Uptimeez\Check;
 
 /**
- * Un port TCP répond-il ?
+ * Does a TCP port answer?
  *
  * ------------------------------------------------------------------------------
- * CE QUE CE DÉTECTEUR SAIT, ET CE QU'IL NE PRÉTEND PAS SAVOIR
+ * WHAT THIS PROBE KNOWS, AND WHAT IT DOES NOT CLAIM TO KNOW
  * ------------------------------------------------------------------------------
  *
- * Il ouvre une connexion et la referme. C'est tout, et c'est déjà la seule question
- * intéressante : quelque chose écoute-t-il là. Il ne parle aucun protocole, donc il ne dit
- * rien de l'état du service derrière le port : un SMTP qui accepte la connexion et refuse
- * tous les messages répondra « ouvert ». La documentation le dit, parce qu'un contrôle qui
- * laisse croire à plus que ce qu'il mesure est exactement ce que ce produit reproche aux
- * autres.
+ * It opens a connection and closes it. That is all, and it is already the only interesting
+ * question: is something listening there. It speaks no protocol, so it says nothing about
+ * the state of the service behind the port: an SMTP server that accepts the connection and
+ * refuses every message will answer "open". The documentation says so, because a check that
+ * lets you believe more than it measures is exactly what this product holds against the
+ * others.
  *
- * POURQUOI PAS DE PING ICMP À CÔTÉ. Un ping répond quand le service est mort, donc il
- * fabrique de la fausse tranquillité. Un port fermé, lui, est un fait exploitable : ou bien
- * le processus n'écoute plus, ou bien un pare-feu s'est mis entre les deux.
+ * WHY THERE IS NO ICMP PING NEXT TO IT. A ping answers while the service is dead, so it
+ * manufactures false calm. A closed port, on the other hand, is a fact you can act on:
+ * either the process stopped listening, or a firewall got in between.
  *
- * LA CONNEXION EST FERMÉE TOUT DE SUITE, sans rien lire. Attendre une bannière ferait
- * dépendre le verdict d'un protocole, et un service qui parle en premier n'est pas la
- * règle : HTTP attend la requête, MySQL envoie sa bannière, Redis ne dit rien.
+ * THE CONNECTION IS CLOSED IMMEDIATELY, reading nothing. Waiting for a banner would make
+ * the verdict depend on a protocol, and a service that speaks first is not the rule: HTTP
+ * waits for the request, MySQL sends its banner, Redis says nothing.
  */
 final class Port
 {
-    /** Au-delà, on considère que rien n'écoute : c'est aussi le défaut d'un navigateur. */
+    /** Past this, we consider nothing is listening: it is also a browser's default. */
     public const DELAI_PAR_DEFAUT = 10;
 
     /**
@@ -46,9 +46,9 @@ final class Port
         $errno = 0;
         $erreur = '';
 
-        // fsockopen et non stream_socket_client : le premier suffit, existe partout, et ne
-        // demande aucun contexte. Le second n'apporterait que du TLS, dont on ne veut pas
-        // ici : négocier du TLS ferait échouer un port qui écoute en clair.
+        // fsockopen rather than stream_socket_client: the first is enough, exists
+        // everywhere, and needs no context. The second would only add TLS, which we do not
+        // want here: negotiating TLS would fail a port that listens in clear text.
         $flux = @fsockopen($hote, $port, $errno, $erreur, max(1, $delaiSec));
         $ms = (int) round((microtime(true) - $debut) * 1000);
 
