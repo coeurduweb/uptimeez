@@ -7,15 +7,15 @@ use Uptimeez\Config;
 use Uptimeez\Db;
 
 /**
- * Envoi des alertes : Discord, Slack, e-mail, webhook générique.
- * Garde-fous : heures calmes (les incidents critiques passent quand même),
- * anti-répétition, journalisation de chaque envoi.
+ * Sending alerts: Discord, Slack, e-mail, generic webhook.
+ * Guards: quiet hours (critical incidents still get through), repetition control,
+ * and a journal entry for every send.
  */
 final class Notifier
 {
     /**
-     * En dessous, un rétablissement ne s'annonce pas : l'incident n'a pas duré une passe.
-     * Voir sendRecovery() et le plan du 2026-08-04, défaut D4.
+     * Below this, a recovery is not announced: the incident did not last one pass.
+     * See sendRecovery() and the plan of 2026-08-04, defect D4.
      */
     public const PLANCHER_RETABLISSEMENT = 60;
 
@@ -26,31 +26,27 @@ final class Notifier
         'info'     => 0x5B7FFF,
     ];
 
-    /** Nouvelle alerte (ou relance) sur un incident. */
     /**
-     * @param  'nouveau'|'aggrave'|'rappel'  $nature  ce qui motive CETTE alerte
-     */
-    /**
-     * LE DÉTAIL D'UN INCIDENT, VARIABLES SUBSTITUÉES.
+     * AN INCIDENT'S DETAIL, WITH ITS VARIABLES SUBSTITUTED.
      *
      * ------------------------------------------------------------------------------
-     * LE DÉFAUT QUE CETTE FONCTION RÉPARE, ET IL DURAIT DEPUIS LE DÉBUT
+     * THE DEFECT THIS FUNCTION REPAIRS, AND IT HAD BEEN THERE FROM THE START
      * ------------------------------------------------------------------------------
      *
-     * Le 2026-08-04, Laurent a montré sa boîte : chaque courriel portait le GABARIT au lieu de
-     * la valeur. « Mise en page cassée : {detail} », « Temps de réponse élevé : {seconds} s »,
-     * « Erreur serveur {code} : le site ne répond plus correctement ». Des centaines de
-     * messages, tous illisibles sur la seule ligne qui explique quoi faire.
+     * On 2026-08-04 the operator showed his inbox: every e-mail carried the TEMPLATE instead
+     * of the value. "Broken layout: {detail}", "Response time high: {seconds} s", "Server
+     * error {code}: the site is not answering properly". Hundreds of messages, all unreadable
+     * on the one line that says what to do.
      *
-     * La cause : le message stocké est une phrase SOURCE, et ses variables vivent à côté, dans
-     * « message_vars ». L'écran passe par verdict_text() qui applique les deux ; le courriel
-     * lisait « message » tout seul. Deux chemins pour un même rendu, dont un seul était juste,
-     * et c'est exactement la forme du défaut qui avait produit deux verdicts de certificat
-     * contradictoires en juillet.
+     * The cause: the stored message is a SOURCE phrase, and its variables live beside it in
+     * "message_vars". The screen goes through verdict_text(), which applies both; the e-mail
+     * read "message" on its own. Two paths to one rendering, only one of them right, which is
+     * exactly the shape of the defect that had produced two contradictory certificate verdicts
+     * in July.
      *
-     * AUCUN TEST NE POUVAIT LE VOIR, parce qu'aucun ne lit un courriel RENDU : ils vérifiaient
-     * qu'un envoi partait, pas ce qu'il contenait. Le contrôle ajouté au selftest refuse
-     * désormais une accolade dans un détail d'incident.
+     * NO TEST COULD SEE IT, because none read a RENDERED e-mail: they checked that a send
+     * happened, not what it contained. The check added to selftest now refuses a brace inside
+     * an incident detail.
      *
      * @param array<string,mixed> $incident
      */
@@ -63,23 +59,23 @@ final class Notifier
     }
 
     /**
-     * UNE CAUSE D'APPARENCE NE PART PLUS PAR COURRIEL. Arbitrage de Laurent, 2026-08-04.
+     * AN APPEARANCE CAUSE NO LONGER LEAVES BY E-MAIL. Operator's call, 2026-08-04.
      *
      * ------------------------------------------------------------------------------
-     * POURQUOI CETTE PORTE EXISTE, ET CE QU'ELLE NE FERME PAS
+     * WHY THIS GATE EXISTS, AND WHAT IT DOES NOT CLOSE
      * ------------------------------------------------------------------------------
      *
-     * Ses mots : « à la rigueur on peut avoir une remarque de l'outil sans avoir de mail ». Il
-     * avait ouvert les sites signalés : aucun n'avait de problème de feuille de style. Le
-     * détecteur se trompe donc en masse, et il continuera de se tromper tant que le sprint 2
-     * n'aura pas trouvé pourquoi — mais son erreur cesse d'atteindre une boîte de courriel.
+     * His words: "at a pinch we can have a remark in the tool without an e-mail". He had
+     * opened the reported sites: not one had a stylesheet problem. So the detector was wrong
+     * in bulk, and it would keep being wrong until sprint 2 found out why. Its error simply
+     * stops reaching an inbox.
      *
-     * CE QUI RESTE ENTIER : la sonde garde son état, l'écran garde son avertissement, le
-     * journal garde sa ligne. Une remarque visible dans l'outil n'a jamais réveillé personne à
-     * trois heures du matin, et c'est toute la différence.
+     * WHAT STAYS INTACT: the monitor keeps its state, the screen keeps its warning, the
+     * journal keeps its line. A remark visible in the tool has never woken anyone at three in
+     * the morning, and that is the whole difference.
      *
-     * CE QUI N'EST PAS COUVERT ICI : le rétablissement. Un incident d'apparence qui se referme
-     * n'envoie rien non plus, puisque son ouverture n'a rien envoyé. Voir sendRecovery().
+     * WHAT IS NOT COVERED HERE: recovery. An appearance incident that closes sends nothing
+     * either, since its opening sent nothing. See sendRecovery().
      */
     public static function causeSilencieuse(?string $cause): bool
     {
@@ -88,7 +84,7 @@ final class Notifier
 
     public static function sendIncident(array $mon, array $incident, string $nature = 'nouveau'): void
     {
-        // La porte, avant toute construction de message : une cause d'apparence ne part pas.
+        // The gate, before any message is built: an appearance cause does not leave.
         if (self::causeSilencieuse($incident['reason_code'] ?? null)) {
             self::log($mon, 'silencieux', (string) ($incident['severity'] ?? 'degraded'), false,
                 (string) ($incident['reason_code'] ?? '') . ' · no-mail');
@@ -98,26 +94,25 @@ final class Notifier
 
         $sev   = $incident['severity'] === 'degraded' ? 'degraded' : 'down';
 
-        // TROIS NATURES ET NON DEUX, PARCE QUE « PAS NOUVEAU » N'EST PAS « RIEN DE NEUF ».
+        // THREE NATURES AND NOT TWO, BECAUSE "NOT NEW" IS NOT "NOTHING NEW".
         //
-        // Ce paramètre était un booléen « isNew », et tout ce qui n'était pas nouveau
-        // partait sous le titre « Toujours hors service ». Or l'aggravation d'un incident,
-        // quand une sonde passe de DÉGRADÉ à HORS SERVICE, est une information NEUVE :
-        // c'est le moment où un ralentissement devient une panne. Elle arrivait annoncée
-        // comme une répétition, donc au milieu de messages que le lecteur a appris à ne
-        // plus ouvrir. La seule alerte de rappel qui méritait d'être lue était la mieux
-        // déguisée en bruit.
+        // This parameter used to be an "isNew" boolean, and anything that was not new went
+        // out titled "Still down". But an incident getting WORSE, when a monitor moves from
+        // DEGRADED to DOWN, is NEW information: it is the moment a slowdown becomes an
+        // outage. It arrived announced as a repetition, therefore among messages the reader
+        // has learned not to open. The one reminder worth reading was the best disguised as
+        // noise.
         //
-        // Le rappel périodique, lui, ne dit rien de neuf par construction : il répète un
-        // incident déjà annoncé et déjà visible à l'écran. Il reste possible
-        // (« notify.resend_after_min »), mais il est désormais le seul à porter le 🔁.
+        // The periodic reminder, on the other hand, says nothing new by construction: it
+        // repeats an incident already announced and already visible on screen. It stays
+        // available ("notify.resend_after_min"), but it is now the only one carrying the 🔁.
         $titres = [
             'nouveau' => ($sev === 'down' ? '🔴 ' . t('HORS SERVICE') : '🟠 ' . t('DÉGRADÉ')),
             'aggrave' => '🔴 ' . t('AGGRAVÉ : la panne est maintenant totale'),
             'rappel'  => '🔁 ' . ($sev === 'down' ? t('Toujours hors service') : t('Toujours dégradé')),
         ];
-        // Le titre part dans une alerte : il suit la langue de l'installation,
-        // comme tout ce que le collecteur écrit.
+        // The title goes out in an alert: it follows the installation's language, like
+        // everything else the collector writes.
         $title = ($titres[$nature] ?? $titres['nouveau']) . ' : ' . $mon['name'];
         $isNew = $nature === 'nouveau';
 
@@ -141,55 +136,53 @@ final class Notifier
     }
 
     /**
-     * L'escalade : personne n'a acquitté, on prévient quelqu'un d'autre.
+     * Escalation: nobody acknowledged, so somebody else gets told.
      *
      * ------------------------------------------------------------------------------
-     * CE QUE L'ESCALADE EST, ET CE QU'ELLE N'EST PAS
+     * WHAT ESCALATION IS, AND WHAT IT IS NOT
      * ------------------------------------------------------------------------------
      *
-     * Ce n'est pas un rappel. Le rappel répète la même alerte aux mêmes personnes, et son
-     * seul effet quand personne ne regarde est d'allonger un fil que personne ne lit.
-     * L'escalade change de DESTINATAIRE : elle part sur une liste de canaux distincte,
-     * après un délai, et une seule fois. C'est la différence entre insister et passer la
-     * main.
+     * It is not a reminder. A reminder repeats the same alert to the same people, and when
+     * nobody is watching its only effect is to lengthen a thread nobody reads. Escalation
+     * changes RECIPIENT: it goes to a separate list of channels, after a delay, once. That is
+     * the difference between insisting and handing over.
      *
      * ------------------------------------------------------------------------------
-     * TROIS CONDITIONS, ET CHACUNE A COÛTÉ QUELQUE CHOSE AILLEURS
+     * THREE CONDITIONS, AND EACH ONE COST SOMETHING SOMEWHERE ELSE
      * ------------------------------------------------------------------------------
      *
-     * 1. UNE SEULE FOIS PAR INCIDENT. La colonne « escalated_at » porte cet état. Sans
-     *    elle, un incident non acquitté réescaladerait à chaque passe du collecteur, et
-     *    l'astreinte recevrait une alerte par minute : le mécanisme censé faire réagir
-     *    quelqu'un deviendrait la raison de couper ses notifications.
+     * 1. ONCE PER INCIDENT. The "escalated_at" column holds that state. Without it, an
+     *    unacknowledged incident would escalate again on every collector pass, and the person
+     *    on call would get one alert per minute: the mechanism meant to make someone react
+     *    would become the reason they mute their notifications.
      *
-     * 2. LES PANNES SEULEMENT. Un état « à surveiller » ne réveille pas une seconde
-     *    équipe. Une lenteur ou un certificat qui expire dans dix jours n'a jamais justifié
-     *    de sortir quelqu'un du lit, et l'escalader ferait perdre à l'escalade le seul
-     *    crédit qui la rend utile.
+     * 2. OUTAGES ONLY. A "worth watching" state does not wake a second team. A slowdown, or a
+     *    certificate expiring in ten days, has never justified getting anyone out of bed, and
+     *    escalating it would cost escalation the only credit that makes it useful.
      *
-     * 3. L'ACQUITTEMENT ANNULE. Si quelqu'un a dit « je m'en occupe », l'escalade n'a plus
-     *    d'objet. C'est aussi la seule façon honnête de fermer la boucle : le bouton
-     *    d'acquittement existait déjà et ne servait qu'à taire les rappels.
+     * 3. ACKNOWLEDGEMENT CANCELS IT. If someone said "I am on it", escalation has no purpose
+     *    left. It is also the only honest way to close the loop: the acknowledge button
+     *    already existed and only served to silence reminders.
      *
      * ------------------------------------------------------------------------------
-     * POURQUOI ELLE PASSE LES HEURES CALMES
+     * WHY IT GETS THROUGH QUIET HOURS
      * ------------------------------------------------------------------------------
      *
-     * Elle part avec l'urgence « critical », comme toute panne réelle. Une escalade
-     * retenue jusqu'à sept heures du matin n'est pas une escalade, c'est un rapport.
+     * It goes out with "critical" urgency, like any real outage. An escalation held back until
+     * seven in the morning is not an escalation, it is a report.
      *
      * @param array<string,mixed> $mon
      * @param array<string,mixed> $incident
-     * @return bool vrai si au moins un canal a reçu l'alerte
+     * @return bool true if at least one channel received the alert
      */
     public static function sendEscalation(array $mon, array $incident): bool
     {
         $canaux = self::escalationChannelsFor($mon);
 
         if ($canaux === []) {
-            // Aucun canal : on le DIT dans le journal plutôt que de laisser croire que
-            // l'escalade a eu lieu. Une astreinte configurée à moitié est pire qu'aucune,
-            // parce qu'on compte dessus.
+            // No channel: we SAY SO in the journal rather than letting anyone believe the
+            // escalation happened. An on-call setup half configured is worse than none,
+            // because people count on it.
             self::log($mon, 'escalade', 'down', false,
                 t('Aucun canal d\'escalade utilisable : rien n\'a été envoyé.'));
 
@@ -213,12 +206,12 @@ final class Notifier
     }
 
     /**
-     * Les canaux de l'escalade : une liste distincte, sinon tous les canaux actifs.
+     * The escalation channels: a separate list, otherwise every active channel.
      *
-     * ENVOYER LA MÊME ALERTE DEUX FOIS SUR LE MÊME CANAL NE PRÉVIENT PERSONNE DE PLUS,
-     * mais on ne peut pas non plus deviner qui est d'astreinte. Le réglage vide retombe
-     * donc sur les canaux actifs, ce qui rend l'escalade utile dès qu'on l'active, sans
-     * exiger un second paramétrage complet.
+     * SENDING THE SAME ALERT TWICE ON THE SAME CHANNEL WARNS NOBODY EXTRA, but neither can we
+     * guess who is on call. An empty setting therefore falls back to the active channels,
+     * which makes escalation useful the moment it is switched on, without demanding a second
+     * full configuration.
      *
      * @param array<string,mixed> $mon
      * @return array<int,string>
@@ -236,12 +229,12 @@ final class Notifier
     }
 
     /**
-     * Alerte groupée : plusieurs sites tombés en même temps sur la même
-     * infrastructure. Un seul message, qui nomme le serveur et liste les sites.
+     * Grouped alert: several sites down at the same time on the same infrastructure. One
+     * message, which names the server and lists the sites.
      *
      * @param array<int,array{monitor:array,incident:array}> $items
-     * @param string $scope IP ou domaine commun
-     * @param bool   $isIp  vrai si le regroupement s'appuie sur l'adresse IP
+     * @param string $scope shared IP or domain
+     * @param bool   $isIp  true when the grouping is based on the IP address
      */
     public static function sendGrouped(array $items, string $scope, bool $isIp): void
     {
@@ -301,28 +294,28 @@ final class Notifier
         } catch (\Throwable) {}
     }
 
-    /** Retour à la normale. */
+    /** Back to normal. */
     public static function sendRecovery(array $mon, array $incident): void
     {
         if (!Config::get('notify.notify_recovery', true)) return;
         $dur   = (int)($incident['duration_sec'] ?? 0);
 
-        // D2. Rien n'a été envoyé à l'ouverture, donc rien ne part à la fermeture : un
-        // « RÉTABLI » sans alerte préalable annonce la fin d'un problème dont le lecteur
-        // n'a jamais entendu parler.
+        // D2. Nothing was sent when it opened, so nothing leaves when it closes: a
+        // "RECOVERED" with no prior alert announces the end of a problem the reader never
+        // heard about.
         if (self::causeSilencieuse($incident['reason_code'] ?? null)) {
             return;
         }
 
-        // D4. UN INCIDENT DE ZÉRO SECONDE N'A PAS BESOIN D'ÊTRE ANNONCÉ RÉTABLI.
+        // D4. A ZERO-SECOND INCIDENT DOES NOT NEED TO BE ANNOUNCED AS RECOVERED.
         //
-        // Les captures du 2026-08-04 portaient « Downtime 0 s » sur presque tous les
-        // rétablissements : le contrôle voit un défaut, la passe suivante ne le voit plus, et
-        // deux courriels partent pour un incident qui n'a jamais duré. Sous ce plancher, le
-        // rétablissement reste dans l'outil et dans le journal.
+        // The screenshots of 2026-08-04 carried "Downtime 0 s" on almost every recovery: the
+        // check sees a defect, the next pass no longer sees it, and two e-mails go out for an
+        // incident that never lasted. Below this floor, the recovery stays in the tool and in
+        // the journal.
         //
-        // Soixante secondes, parce que c'est la cadence minimale d'une passe : en dessous,
-        // l'incident n'a pas survécu à un seul intervalle, donc il n'a rien décrit de stable.
+        // Sixty seconds, because that is the minimum cadence of a pass: below it the incident
+        // did not survive a single interval, so it described nothing stable.
         if ($dur < self::PLANCHER_RETABLISSEMENT) {
             self::log($mon, 'silencieux', 'up', false, $dur . 's · no-mail');
 
@@ -347,8 +340,8 @@ final class Notifier
     }
 
     /**
-     * Envoie sur tous les canaux actifs. Retourne le nombre d'envois réussis.
-     * $urgency : critical (passe les heures calmes) | warn | info
+     * Sends on every active channel. Returns the number of successful sends.
+     * $urgency: critical (gets through quiet hours) | warn | info
      */
     public static function dispatch(array $mon, string $sev, string $title, array $lines, string $urgency = 'warn'): int
     {
@@ -362,12 +355,12 @@ final class Notifier
     }
 
     /**
-     * L'envoi sur une liste de canaux IMPOSÉE, sans repasser par la politique d'envoi.
+     * Sending to an IMPOSED list of channels, without going through the sending policy again.
      *
-     * Extrait de dispatch() le 2026-08-03 pour l'escalade, qui doit choisir ses propres
-     * destinataires. Les heures calmes et le réglage « prévenir sur état à surveiller »
-     * restent dans dispatch() : ce sont des décisions sur l'OPPORTUNITÉ d'alerter, et
-     * l'escalade les a déjà prises quand elle arrive ici.
+     * Extracted from dispatch() on 2026-08-03 for escalation, which has to choose its own
+     * recipients. Quiet hours and the "warn on a watch state" setting stay in dispatch(): those
+     * are decisions about WHETHER to alert, and escalation has already made them by the time it
+     * gets here.
      *
      * @param array<int,string>   $canaux
      * @param array<string,mixed> $mon
@@ -376,26 +369,26 @@ final class Notifier
     private static function dispatchVers(array $canaux, array $mon, string $sev, string $title, array $lines): int
     {
         // ------------------------------------------------------------------------------
-        // UNE SUITE DE TESTS N'ENVOIE JAMAIS DE VRAIE ALERTE. Ajouté le 2026-08-04, après
-        // avoir envoyé deux fausses alertes à Laurent.
+        // A TEST SUITE NEVER SENDS A REAL ALERT. Added on 2026-08-04, after sending the
+        // operator two false alerts.
         // ------------------------------------------------------------------------------
         //
-        // CE QUI S'EST PASSÉ, ET C'EST ENTIÈREMENT DE MON FAIT. J'ai lancé bin/selftest.php en
-        // pointant UPTIMEEZ_CONFIG sur la configuration du parc, pour vérifier que le moteur
-        // allait bien après une mise à jour. Or la suite crée une sonde de battement nommée
-        // « Sauvegarde nocturne », antidate son dernier signal de deux heures, et appelle
-        // Heartbeat::sweep() pour éprouver la détection du silence. Ce sweep a fait ce qu'il
-        // devait : il a ouvert un incident et ENVOYÉ L'ALERTE, par le canal de courriel réel de
-        // l'installation. Deux exécutions, deux courriels, sur une sonde qui n'existe pas.
+        // WHAT HAPPENED, AND IT IS ENTIRELY MY DOING. I ran bin/selftest.php with
+        // UPTIMEEZ_CONFIG pointed at the live portfolio's configuration, to check the engine
+        // was fine after an update. But the suite creates a heartbeat monitor named "Nightly
+        // backup", backdates its last signal by two hours, and calls Heartbeat::sweep() to
+        // exercise silence detection. That sweep did exactly what it should: it opened an
+        // incident and SENT THE ALERT, through the installation's real e-mail channel. Two
+        // runs, two e-mails, about a monitor that does not exist.
         //
-        // La suite nettoie ses fixtures derrière elle : les sondes et les incidents avaient
-        // disparu quand j'ai cherché. Le courriel, lui, était parti. C'est le pire des états,
-        // parce qu'il ne reste aucune trace pour comprendre.
+        // The suite cleans its fixtures up behind it: the monitors and incidents were gone by
+        // the time I looked. The e-mail had left. That is the worst state of all, because
+        // nothing remains to understand it from.
         //
-        // POURQUOI SILENCIEUX ET NON REFUSÉ. Le README demande de lancer la suite après chaque
-        // mise à jour, sur l'installation qu'on vient de mettre à jour : refuser de tourner
-        // quand un canal est configuré rendrait ce conseil impossible à suivre. On garde donc
-        // tout le chemin, y compris le journal, et seul l'envoi n'a pas lieu.
+        // WHY SILENT AND NOT REFUSED. The README asks you to run the suite after every update,
+        // on the installation you have just updated: refusing to run when a channel is
+        // configured would make that advice impossible to follow. So the whole path stays, the
+        // journal included, and only the sending does not happen.
         if (defined('UPTIMEEZ_SUITE') && UPTIMEEZ_SUITE) {
             foreach ($canaux as $ch) {
                 self::log($mon, $ch, $sev, false, 'suite · no-mail');
@@ -406,8 +399,9 @@ final class Notifier
 
         $ok = 0;
         foreach ($canaux as $ch) {
-            // La classe vient du registre : un canal ajouté à CANAUX est envoyé sans qu'on
-            // touche ici, et un canal inconnu est journalisé au lieu d'être ignoré.
+            // The class comes from the registry: a channel added to CANAUX is sent without
+            // touching anything here, and an unknown channel is journalled rather than
+            // silently skipped.
             $classe = self::CANAUX[$ch]['classe'] ?? null;
             $res = $classe === null
                 ? ['ok' => false, 'info' => t('Canal inconnu')]
@@ -419,28 +413,27 @@ final class Notifier
     }
 
     /**
-     * LE REGISTRE DES CANAUX : une seule déclaration, là où il y en avait six.
+     * THE CHANNEL REGISTRY: one declaration where there used to be six.
      *
      * ------------------------------------------------------------------------------
-     * POURQUOI CETTE CONSTANTE EXISTE
+     * WHY THIS CONSTANT EXISTS
      * ------------------------------------------------------------------------------
      *
-     * Avant le 2026-08-03, la liste des canaux était écrite en dur dans six endroits : ici
-     * deux fois, dans le sélecteur de l'écran des réglages, dans l'enregistrement de ces
-     * réglages, dans le bouton de test, et dans le verrou de la démonstration publique.
-     * Ajouter Telegram demandait donc six modifications dont aucune ne signalait l'oubli
-     * des cinq autres, et l'oubli le plus probable est le verrou de la démonstration :
-     * un canal qui échapperait à Demo::silenced() enverrait de vrais messages depuis une
-     * installation publique dont le mot de passe est écrit dans la documentation.
+     * Before 2026-08-03 the list of channels was hard-coded in six places: here twice, in the
+     * settings screen's selector, in the saving of those settings, in the test button, and in
+     * the public demo's lock. Adding Telegram therefore took six edits, none of which would
+     * report the five others being forgotten, and the likeliest omission is the demo lock: a
+     * channel escaping Demo::silenced() would send real messages from a public installation
+     * whose password is printed in the documentation.
      *
-     * « requis » NE DIT PAS « CONFIGURÉ », IL DIT « UTILISABLE ». Un canal activé dont
-     * l'URL est vide n'enverra rien : le déclarer utilisable ferait compter un envoi qui
-     * n'a pas eu lieu, et l'écran annoncerait une alerte partie. Chaque clé listée doit
-     * donc porter une valeur non vide, et c'est la seule condition.
+     * "requis" DOES NOT MEAN "CONFIGURED", IT MEANS "USABLE". An enabled channel with an empty
+     * URL will send nothing: declaring it usable would count a send that never happened, and
+     * the screen would announce an alert as gone out. Every listed key must therefore hold a
+     * non-empty value, and that is the only condition.
      *
-     * L'ORDRE EST CELUI DE L'AFFICHAGE, et il n'est pas alphabétique : les deux canaux
-     * historiques d'abord, les trois ajoutés ensuite, le courriel et le webhook générique
-     * en dernier parce que ce sont les recours plutôt que les choix.
+     * THE ORDER IS THE DISPLAY ORDER, and it is not alphabetical: the two original channels
+     * first, the three later ones next, e-mail and the generic webhook last because they are
+     * fallbacks rather than choices.
      *
      * @var array<string, array{classe: class-string, libelle: string, requis: array<int, string>}>
      */
@@ -462,7 +455,7 @@ final class Notifier
                        'requis' => ['notify.webhook.url']],
     ];
 
-    /** Canaux retenus : réglage de la sonde sinon canaux globaux actifs. */
+    /** Channels kept: the monitor's own setting, otherwise the active global channels. */
     public static function channelsFor(array $mon): array
     {
         $perMon = trim((string)($mon['notify_channels'] ?? ''));
@@ -478,7 +471,7 @@ final class Notifier
         return $out;
     }
 
-    /** Un canal est utilisable quand tous ses réglages requis portent une valeur. */
+    /** A channel is usable when every setting it requires holds a value. */
     public static function utilisable(string $canal): bool
     {
         foreach (self::CANAUX[$canal]['requis'] ?? [] as $cle) {
@@ -497,11 +490,11 @@ final class Notifier
     }
 
     /**
-     * La plage calme couvre-t-elle cette minute de la journée ?
+     * Does the quiet range cover this minute of the day?
      *
-     * Séparée de l'heure courante pour être vérifiable : c'est exactement le
-     * genre de calcul dont l'erreur ne se voit qu'une nuit sur deux. Une plage à
-     * cheval sur minuit (« 23:00-07:00 ») est reconnue, bornes incluses.
+     * Separated from the current time so it can be checked: this is exactly the kind of
+     * arithmetic whose error only shows on one night out of two. A range straddling midnight
+     * ("23:00-07:00") is recognised, bounds included.
      */
     public static function quietHoursCover(string $spec, int $minutes): bool
     {
@@ -513,11 +506,10 @@ final class Notifier
     }
 
     /**
-     * Une plage horaire écrite « HH:MM-HH:MM », avec des heures qui existent.
+     * A time range written "HH:MM-HH:MM", with hours that exist.
      *
-     * « 25:00-99:00 » passait l'ancienne expression régulière et désactivait les
-     * heures calmes sans le dire : personne ne relie une alerte nocturne à une
-     * faute de frappe faite trois mois plus tôt.
+     * "25:00-99:00" passed the old regular expression and silently disabled quiet hours:
+     * nobody connects a 3 a.m. alert to a typo made three months earlier.
      */
     public static function validQuietHours(string $spec): bool
     {
@@ -607,7 +599,7 @@ final class Notifier
         return $ts ? date('d/m/Y H:i', strtotime($ts)) : '—';
     }
 
-    /** Lien vers la fiche de la sonde (si base_url est renseignée). */
+    /** Link to the monitor's page (when base_url is set). */
     public static function monitorLink(array $mon): ?string
     {
         $base = rtrim((string)Config::get('app.base_url', ''), '/');
@@ -624,9 +616,9 @@ final class Notifier
             [t('Message'), t('Ceci est un test envoyé depuis {app}.')],
             [t('Date'), date('d/m/Y H:i:s')],
         ];
-        // Le registre décide, comme pour l'envoi réel : un canal testable et un canal
-        // envoyable doivent être exactement les mêmes, sinon le bouton de test rassure sur
-        // un chemin que les alertes n'empruntent pas.
+        // The registry decides, as it does for real sending: a testable channel and a
+        // sendable channel must be exactly the same, or the test button reassures about a path
+        // the alerts never take.
         $classe = self::CANAUX[$channel]['classe'] ?? null;
         $res = $classe === null
             ? ['ok' => false, 'info' => t('Canal inconnu')]
