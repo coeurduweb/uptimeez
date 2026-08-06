@@ -81,6 +81,29 @@ file_put_contents("$tmp/site/contact.html", $page('Contact', $L));
 file_put_contents("$tmp/site/tarifs.html",  $page('Tarifs', $L));
 file_put_contents("$tmp/site/casse.html",   $page('Accueil', '<link rel="stylesheet" href="/wp-content/cache/min/1/absent.css">'));
 file_put_contents("$tmp/site/dberror.php",  "<?php http_response_code(200); ?><!doctype html><html><body><h1>Error establishing a database connection</h1></body></html>");
+
+// ------------------------------------------------------------------------------
+// LE DÉBIT REFUSÉ, ET POURQUOI CE CAS VIT ICI ET PAS DANS selftest.php
+// ------------------------------------------------------------------------------
+//
+// Css::audit() ne prend AUCUNE réponse injectée : il appelle Http::fetchMany()
+// lui-même (src/Check/Css.php, deux appels). La première version de ce test
+// passait des réponses par une clé d'option supposée, qui n'existe pas : le cas
+// 429 passait au vert et le cas 503, identique, restait rouge. Deux cas
+// symétriques qui divergent prouvent que le banc ne mesure pas ce qu'il croit.
+//
+// Ici, un vrai serveur répond vraiment 429 et 503 sur des feuilles de style.
+// C'est le seul endroit du dépôt où c'est possible.
+file_put_contents("$tmp/site/trop-de-requetes.php",
+    "<?php http_response_code(429); header('Retry-After: 30');"
+  . " header('Content-Type: text/css'); echo '/* rate limited */';");
+file_put_contents("$tmp/site/indisponible.php",
+    "<?php http_response_code(503); header('Content-Type: text/css'); echo '/* unavailable */';");
+// La page réclame la feuille normale ET deux feuilles que le serveur refuse par
+// débit. Un visiteur voit la page correctement mise en forme : style.css répond.
+file_put_contents("$tmp/site/debit.html", $page('Accueil',
+    $L . '<link rel="stylesheet" href="/trop-de-requetes.php">'
+       . '<link rel="stylesheet" href="/indisponible.php">'));
 file_put_contents("$tmp/site/api.php",      "<?php header('Content-Type: application/json'); echo json_encode(['status'=>'ok']);");
 // Page volontairement lourde, pour l'analyse de vitesse : trois feuilles
 // bloquantes, cinq scripts bloquants, une grande image en chargement différé,
@@ -353,6 +376,63 @@ ok('fiche : aucune erreur PHP', $noPhpError($r));
 
 $r = $req('/index.php?p=monitor&id=' . $dbId);
 ok('fiche base HS : diagnostic adapté', $has($r, 'base de données ne répond plus'));
+
+// =========================================================================
+title('Notre propre débit n\'est pas une panne du site');
+// =========================================================================
+//
+// LE DÉFAUT QUE CE TEST GARDE. Le 2026-08-04, 47 alertes en une matinée dont 43
+// fausses. Le collecteur demandait les feuilles de style de deux cents sondes
+// hébergées sur deux machines ; celles-ci répondaient 429, et Css.php lisait
+// « le fichier n'existe plus sur le serveur ». Le correctif est d'une ligne, la
+// difficulté était de le prouver.
+//
+// CE QUI REND CE TEST PROBANT : il vérifie les DEUX sens. Un 429 ne conclut
+// rien, un 404 conclut toujours. Un test qui ne montrerait que le silence
+// passerait aussi le jour où le détecteur de feuilles serait cassé en entier.
+$pageDebit = \Uptimeez\Http::fetch("$SITE/debit.html", ['timeout' => 8]);
+$auditDebit = \Uptimeez\Check\Css::audit("$SITE/debit.html", (string)$pageDebit->body, $pageDebit);
+
+ok('429 et 503 comptés à part', ($auditDebit['metrics']['throttled'] ?? 0) === 2,
+   'throttled=' . ($auditDebit['metrics']['throttled'] ?? 0));
+ok('aucune feuille déclarée en échec', (int)($auditDebit['metrics']['sheets_failed'] ?? -1) === 0,
+   'sheets_failed=' . ($auditDebit['metrics']['sheets_failed'] ?? '?'));
+ok('la page n\'est pas déclarée cassée', ($auditDebit['reason'] ?? null) === null,
+   'état=' . (string)($auditDebit['state'] ?? '?') . ' cause=' . (string)($auditDebit['reason'] ?? '—'));
+// Les messages sont des chaînes, les lignes de console sont des tableaux
+// ['level' => …, 'text' => …] : les aplatir séparément, sinon PHP convertit un
+// tableau en chaîne et le contrôle passe au vert sur un avertissement.
+$textesDebit = implode(' ', $auditDebit['messages'] ?? [])
+             . ' ' . implode(' ', array_column($auditDebit['console'] ?? [], 'text'));
+ok('rien ne prétend que le fichier a disparu',
+   stripos($textesDebit, 'n\'existe plus') === false && stripos($textesDebit, 'no longer exists') === false,
+   $textesDebit === '' ? 'aucun message' : substr($textesDebit, 0, 60));
+
+// LE CAS SYMÉTRIQUE, sur la même forme de page : un 404 doit rester un défaut,
+// parce qu'un fichier absent l'est aussi pour le visiteur.
+$pageCasse  = \Uptimeez\Http::fetch("$SITE/casse.html", ['timeout' => 8]);
+$auditCasse = \Uptimeez\Check\Css::audit("$SITE/casse.html", (string)$pageCasse->body, $pageCasse);
+ok('404 : la feuille est comptée en échec', (int)($auditCasse['metrics']['sheets_failed'] ?? 0) >= 1,
+   'sheets_failed=' . ($auditCasse['metrics']['sheets_failed'] ?? '?'));
+ok('404 : la cause est nommée', ($auditCasse['reason'] ?? null) !== null,
+   'cause=' . (string)($auditCasse['reason'] ?? '—'));
+ok('404 : aucun débit refusé compté', (int)($auditCasse['metrics']['throttled'] ?? 0) === 0);
+
+// LE PLAFOND PAR HÔTE NE DOIT RIEN PERDRE. Sa décision est éprouvée à l'unité dans
+// selftest ; ce qui se vérifie ici est le risque propre à l'ordonnanceur : une requête
+// oubliée dans la file, ou une boucle qui tourne sans jamais la relancer. Avec un
+// plafond de 1, tout passe en série : si une seule réponse manque, le compte le dit.
+$serie = \Uptimeez\Http::fetchMany([
+    'a' => ["$SITE/", ['timeout' => 8]],
+    'b' => ["$SITE/contact.html", ['timeout' => 8]],
+    'c' => ["$SITE/tarifs.html", ['timeout' => 8]],
+    'd' => ["$SITE/style.css", ['timeout' => 8]],
+], 8, 1);
+ok('plafond par hôte à 1 : les quatre réponses reviennent', count($serie) === 4, count($serie) . '/4');
+ok('plafond par hôte à 1 : aucune réponse en erreur',
+   count(array_filter($serie, fn($r) => $r->status === 200)) === 4);
+ok('plafond par hôte à 1 : les clés sont conservées',
+   array_keys($serie) === ['a', 'b', 'c', 'd'], implode(',', array_keys($serie)));
 
 // =========================================================================
 title('Silhouette : la page telle qu\'un visiteur la voit');

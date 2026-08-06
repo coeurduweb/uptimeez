@@ -4584,6 +4584,48 @@ check('la confirmation est courte devant un intervalle de 15 min',
 check('une panne réelle est confirmée en une demi-minute, pas au prochain créneau',
     Uptimeez\Runner::CONFIRMATION_SEC < 900, true);
 
+section('Le plafond par hôte : la décision, pas le réseau');
+// Le plafond par hôte est né du 2026-08-04 : dix requêtes simultanées vers la même
+// machine, un « trop de requêtes » en retour, et 43 fausses alertes. La décision qui
+// l'applique vit dans Http::prochainEligible(), extraite exprès de la boucle curl pour
+// être éprouvée sans monter de serveur. Le chemin réseau, lui, est couvert par bin/e2e.php.
+$eligible = fn(array $hotes, array $enVol, int $max) => Uptimeez\Http::prochainEligible($hotes, $enVol, $max);
+
+// Rien en vol : la première requête part, quel que soit le plafond.
+check('file vide en vol : la première part',
+    $eligible(['a' => 'exemple.fr', 'b' => 'exemple.fr'], [], 4), 'a');
+
+// L'hôte est saturé et c'est le SEUL de la file : il faut rendre null, et surtout pas
+// la requête suivante du même hôte. C'est ce cas qui protège la machine cible.
+check('hôte saturé, rien d\'autre en file : aucune requête ne part',
+    $eligible(['a' => 'exemple.fr', 'b' => 'exemple.fr'], ['exemple.fr' => 4], 4), null);
+
+// Un hôte saturé ne doit pas bloquer les autres : on saute jusqu'au premier éligible.
+check('un hôte saturé n\'empêche pas les autres d\'avancer',
+    $eligible(['a' => 'sature.fr', 'b' => 'sature.fr', 'c' => 'libre.fr'],
+             ['sature.fr' => 4], 4), 'c');
+
+// Le plafond est un « strictement moins que » : à 3 en vol pour un plafond de 4, il reste
+// une place. Cette borne est celle qu'on écrit à l'envers une fois sur deux.
+check('trois en vol sous un plafond de quatre : il reste une place',
+    $eligible(['a' => 'exemple.fr'], ['exemple.fr' => 3], 4), 'a');
+check('quatre en vol sous un plafond de quatre : plus de place',
+    $eligible(['a' => 'exemple.fr'], ['exemple.fr' => 4], 4), null);
+
+// Une URL illisible donne un hôte vide. Il forme sa propre grappe et se plafonne comme
+// les autres : sinon les adresses cassées deviendraient une voie sans limite.
+check('l\'hôte vide est une grappe comme une autre, et se sature',
+    $eligible(['a' => ''], ['' => 4], 4), null);
+
+// Le plafond ne réordonne pas ce qui n'a pas besoin de l'être : à égalité, l'ordre
+// d'origine est conservé, ce qui rend une passe reproductible.
+check('à places égales, l\'ordre d\'origine est gardé',
+    $eligible(['z' => 'un.fr', 'a' => 'deux.fr'], [], 4), 'z');
+
+// Et la valeur par défaut existe, sinon le plafond serait un réglage que personne n'a.
+check('le plafond par hôte a un défaut dans la configuration d\'exemple',
+    (bool)preg_match('/max_parallel_host/', (string)file_get_contents(__DIR__ . '/../config.sample.php')), true);
+
 // personne ne pense à le mettre à jour. Ce contrôle-ci s'ajoute à ceux qu'il compte,
 // donc le total qu'il exige inclut lui-même : c'est voulu, ça évite un décalage de un
 // qu'on passerait sa vie à se demander d'où il vient.

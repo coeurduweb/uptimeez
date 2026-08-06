@@ -57,6 +57,14 @@ return [
         'user_agent'     => 'Mozilla/5.0 (compatible; UptimeEZBot/1.0; +monitoring)',
         'css_drop_pct'   => 35,    // chute de poids CSS tolérée avant alerte
         'max_parallel'   => 10,    // requêtes simultanées par passe de cron
+        // PLAFOND PAR HÔTE, né d'un incident et pas d'une intuition. Le 2026-08-04,
+        // dix requêtes simultanées vers la MÊME machine lui ont fait répondre « trop
+        // de requêtes », et le collecteur lisait cette réponse comme un fichier
+        // disparu : 47 alertes en une matinée, 43 fausses. Ce plafond s'applique à
+        // tout ce qui passe par le client HTTP, donc aussi aux feuilles de style
+        // d'un audit, qui sont ce qui fait le volume. Le baisser à 2 sur un
+        // mutualisé strict ; le monter n'a d'intérêt que si la cible est à vous.
+        'max_parallel_host' => 4,
         'retention_days' => 60,   // purge des checks unitaires au-delà
     ],
 

@@ -56,10 +56,62 @@ final class Http
     }
 
     /**
+     * La prochaine requête lançable, ou null si aucune ne l'est maintenant.
+     *
+     * Extrait de fetchMany() pour une seule raison : c'est LA décision du
+     * plafond par hôte, et une décision qui vit dans une fermeture au milieu
+     * d'une boucle curl ne se teste qu'en montant un serveur. Ici elle se teste
+     * en une ligne, et les cas qui comptent sont les cas limites.
+     *
+     * Rendre null alors que la file n'est pas vide est un état NORMAL : il
+     * signifie « tout ce qui reste appartient à un hôte déjà saturé, attendre
+     * une fin de requête ». La boucle appelante ne doit donc pas en conclure que
+     * la file est terminée.
+     *
+     * @param array<string,string> $hotes  clé de requête en attente => hôte
+     * @param array<string,int>    $enVol  hôte => requêtes en vol
+     */
+    public static function prochainEligible(array $hotes, array $enVol, int $parHote): ?string
+    {
+        foreach ($hotes as $cle => $hote) {
+            if (($enVol[$hote] ?? 0) < $parHote) return (string)$cle;
+        }
+        return null;
+    }
+
+    /**
      * Requêtes parallèles : [clé => [url, opt]] → [clé => Response].
      * Permet d'auditer 20 feuilles de style en une poignée de secondes.
+     *
+     * ------------------------------------------------------------------------------
+     * DEUX PLAFONDS, ET LE SECOND EST NÉ D'UN INCIDENT
+     * ------------------------------------------------------------------------------
+     *
+     * `$concurrency` borne le nombre total de requêtes en vol. Il ne suffit pas :
+     * le 2026-08-04, une matinée a produit 47 alertes dont 43 fausses parce que
+     * dix requêtes parallèles tapaient la MÊME machine, qui a répondu « trop de
+     * requêtes », et que le collecteur lisait cette réponse comme un fichier
+     * disparu. La cause lue était corrigée le jour même ; la cause réelle, c'est
+     * le débit.
+     *
+     * `$parHote` borne donc aussi les requêtes en vol PAR HÔTE. Le plafond vit ici
+     * et pas chez l'appelant, parce que c'est ici que passent tous les appelants :
+     * les pages du collecteur ET les feuilles de style d'un audit, qui sont ce qui
+     * fait le volume.
+     *
+     * CE QUE CE PLAFOND NE FAIT PAS, et il faut le savoir avant de s'en croire
+     * protégé. Il borne une seule grappe d'appels. Deux appels successifs à cette
+     * méthode, par exemple l'audit de deux sondes voisines, ne se voient pas l'un
+     * l'autre : rien n'est en vol entre les deux. C'est l'étalement des sondes
+     * d'un même serveur entre les passes (`Runner::grappeServeur()`) qui couvre
+     * ce cas, et les deux mécanismes sont complémentaires, pas redondants.
+     *
+     * Deux hôtes différents sur une même adresse IP reçoivent chacun leur budget.
+     * Regrouper par IP demanderait une résolution DNS par requête, à l'intérieur
+     * de la boucle : le coût dépasserait le bénéfice, puisque les feuilles d'une
+     * page portent presque toujours le même hôte qu'elle.
      */
-    public static function fetchMany(array $requests, int $concurrency = 8): array
+    public static function fetchMany(array $requests, int $concurrency = 8, ?int $parHote = null): array
     {
         if (!$requests) return [];
         $refused = [];
@@ -72,18 +124,35 @@ final class Http
         }
         if (!$requests) return $refused;
         $concurrency = (int)max(1, min($concurrency, 20));
+        $parHote     = (int)max(1, $parHote ?? (int)Config::get('defaults.max_parallel_host', 4));
         $mh    = curl_multi_init();
         $jobs  = [];
         $out   = [];
         $queue = $requests;
 
-        $push = static function () use (&$queue, &$jobs, $mh): bool {
+        // L'hôte de chaque requête, calculé une fois. Une URL illisible donne un
+        // hôte vide, qui forme sa propre grappe : elle est plafonnée comme les
+        // autres au lieu de devenir une voie sans limite.
+        $hotes  = [];
+        foreach ($requests as $k => $r) {
+            $u = is_array($r) ? (string)($r[0] ?? $r['url'] ?? '') : (string)$r;
+            $hotes[$k] = strtolower((string)(parse_url($u, PHP_URL_HOST) ?: ''));
+        }
+        $enVol   = [];   // hôte => requêtes en vol
+        $hoteDe  = [];   // clé de requête en vol => hôte
+
+        $push = static function () use (&$queue, &$jobs, &$hotes, &$enVol, &$hoteDe, $parHote, $mh): bool {
             if (!$queue) return false;
-            $key = array_key_first($queue);
+            $enAttente = array_intersect_key($hotes, $queue);
+            $key = self::prochainEligible($enAttente, $enVol, $parHote);
+            if ($key === null) return false;   // hôtes saturés : attendre une fin
             $req = $queue[$key];
             unset($queue[$key]);
+            $hote = $hotes[$key] ?? '';
+            $enVol[$hote] = ($enVol[$hote] ?? 0) + 1;
             $job = self::prepare(is_array($req) ? (string)$req[0] : (string)$req, is_array($req) ? ($req[1] ?? []) : []);
             $job->key = $key;
+            $hoteDe[$key] = $hote;
             $jobs[(int)$job->ch] = $job;
             curl_multi_add_handle($mh, $job->ch);
             return true;
@@ -103,8 +172,19 @@ final class Http
                     curl_multi_remove_handle($mh, $job->ch);
                     curl_close($job->ch);
                     unset($jobs[$id]);
+                    // Libérer la place de l'hôte AVANT de relancer, sinon son
+                    // budget reste consommé par une requête déjà terminée.
+                    $h = $hoteDe[$job->key] ?? '';
+                    if (isset($enVol[$h])) {
+                        $enVol[$h]--;
+                        if ($enVol[$h] <= 0) unset($enVol[$h]);
+                    }
+                    unset($hoteDe[$job->key]);
                 }
-                $push();
+                // Relancer TANT QUE des places restent : une seule fin peut
+                // débloquer plusieurs requêtes d'hôtes différents, et n'en
+                // relancer qu'une ferait tomber le débit sans raison.
+                while (count($jobs) < $concurrency && $push()) { /* rempli */ }
             }
         } while (($running > 0 || $queue || $jobs) && $status === CURLM_OK);
 
