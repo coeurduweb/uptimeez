@@ -52,6 +52,35 @@ final class FeuillesDeStyle implements Regle
     /** Messages cités selon la gravité : une casse se diagnostique, un avertissement se résume. */
     private const MESSAGES_CITES = ['broken' => 3, 'warn' => 2];
 
+    /**
+     * Écart de silhouette en dessous duquel on refuse de dire « cassée ».
+     *
+     * ------------------------------------------------------------------------------
+     * DEUX MESURES ONT FIXÉ CE NOMBRE, PAS UNE INTUITION
+     * ------------------------------------------------------------------------------
+     *
+     * Le 2026-08-06, deux sites du parc étaient annoncés « mise en page cassée » et Laurent,
+     * en les ouvrant, n'a vu aucun problème. Mesures faites depuis le serveur de
+     * supervision :
+     *
+     *   jetfunevasion.com  sa SEULE feuille répond 404, poids CSS tombé de 655 Ko à 36 Ko,
+     *                      couverture 71 % contre 91 % en référence. Et l'écart de
+     *                      silhouette : 9 %. Le site est entièrement stylé en ligne, la
+     *                      feuille manquante était devenue redondante.
+     *   La vraie casse du 2026-08-02, pour comparer : couverture 31 % contre 96 %, poids en
+     *                      chute de 71 %, et un écart de silhouette de 71 %.
+     *
+     * Les indices (feuilles manquantes, poids en chute) disaient la même chose dans les deux
+     * cas. Seul l'écart mesuré les séparait. On tranche donc sur lui.
+     *
+     * CE QUE CE PLAFOND NE PRÉTEND PAS. Un écart faible dit que la STRUCTURE de la page n'a
+     * pas bougé, pas que les couleurs ou les polices sont intactes : la silhouette est faite
+     * de blocs. C'est pourquoi le défaut reste SIGNALÉ, avec sa cause et ses messages, et
+     * seulement requalifié en « dégradé ». Rien ne disparaît, et surtout pas le fichier en
+     * échec, qui reste à réparer.
+     */
+    private const ECART_APPARENCE_INCHANGEE = 20;
+
     public function evaluer(Contexte $c): ?Verdict
     {
         if (! $c->actif('check_css') || ! $c->htmlExploitable()) {
@@ -86,6 +115,17 @@ final class FeuillesDeStyle implements Regle
 
         if ($horodatage !== false) {
             $detail .= ' ' . t('(analyse du {date})', ['date' => date('d/m H:i', $horodatage)]);
+        }
+
+        // LA MESURE PASSE DEVANT LES INDICES. Une feuille en échec est un indice ; l'écart
+        // entre la page telle qu'elle est et la page telle qu'elle était est une mesure.
+        // Quand la seconde dit que rien n'a bougé, on ne garde pas le mot de la première.
+        $ecart = $css['silhouette_drift'] ?? null;
+
+        if ($etat === 'broken' && is_int($ecart) && $ecart <= self::ECART_APPARENCE_INCHANGEE) {
+            return Verdict::pour('degraded', 'CSS_DEGRADED',
+                'Ressource de style en échec, mais la page n\'a pas changé d\'aspect ({ecart} % d\'écart mesuré) : {detail}',
+                ['ecart' => (string)$ecart, 'detail' => $detail]);
         }
 
         return $etat === 'broken'

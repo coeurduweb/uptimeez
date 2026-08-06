@@ -609,7 +609,7 @@ testée contre de vraies pannes, et l'interface est testée dans un vrai navigat
 
 ```
 php bin/selftest.php      1 197 contrôles   logique de détection, hors ligne, sans réseau
-php bin/regles.php        130 contrôles   un fichier par règle, chacun seul en 0,04 s
+php bin/regles.php        138 contrôles   un fichier par règle, chacun seul en 0,04 s
 php bin/bench.php          74 contrôles   vraies pannes reproduites de bout en bout (dont badssl.com)
 php bin/e2e.php           304 contrôles   parcours complet en HTTP réel, instance isolée
 node bin/e2e-browser.mjs  105 contrôles   vrai Chromium : rendu, clavier, mobile, contrastes
@@ -622,7 +622,7 @@ php bin/deadcode.php       n/a            méthodes, fonctions, classes, CSS, ms
 php bin/i18n-audit.php     n/a            couverture des traductions, langue par langue
 ```
 
-**2 075 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
+**2 083 contrôles, tous verts**, plus zéro code mort et un catalogue par défaut complet.
 
 Quatre suites méritent un mot.
 

@@ -115,6 +115,12 @@ function verdict(?Verdict $v): ?array
     return $v === null ? null : ['etat' => $v->etat, 'cause' => $v->cause];
 }
 
+/** La seule cause, quand c'est elle qu'on éprouve et que l'état n'apporte rien. */
+function cause(?Verdict $v): ?string
+{
+    return $v?->cause;
+}
+
 /** Le message rendu, variables substituées, tel qu'un exploitant le lira. */
 function message(?Verdict $v): ?string
 {

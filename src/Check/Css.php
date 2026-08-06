@@ -507,6 +507,23 @@ final class Css
             $sil = Silhouette::build($html, $clean);
             $result['silhouette']     = $sil['svg'];
             $result['silhouette_sig'] = $sil['signature'];
+
+            // L'ÉCART EST CALCULÉ ICI, PARCE QUE C'EST UNE MESURE.
+            //
+            // Il était calculé par le collecteur au moment d'écrire en base, donc APRÈS le
+            // passage des règles : la seule mesure qui dit ce qu'un visiteur voit
+            // n'arrivait pas jusqu'à celles qui décident de la gravité. Elles jugeaient sur
+            // des feuilles manquantes et un poids en chute, c'est-à-dire sur des indices,
+            // en ignorant la preuve.
+            //
+            // Le collecteur passe la signature de référence quand il en a une ; sans elle
+            // l'écart reste nul et les règles n'ont rien à lire, ce qui est le bon défaut :
+            // en l'absence de mesure, on ne suppose pas que la page va bien.
+            $refSig = $opt['silhouette_ref_sig'] ?? null;
+
+            if (is_array($refSig) && $refSig !== [] && $sil['signature'] !== []) {
+                $result['silhouette_drift'] = (int) round(Silhouette::distance($refSig, $sil['signature']) * 100);
+            }
         }
 
         $result['metrics']  = $metrics;

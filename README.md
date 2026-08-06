@@ -591,7 +591,7 @@ real failures, and the interface is tested in a real browser.
 
 ```
 php bin/selftest.php      1,197 checks   detection logic, offline, no network needed
-php bin/regles.php        130 checks   one file per rule, each runnable alone in 0.04 s
+php bin/regles.php        138 checks   one file per rule, each runnable alone in 0.04 s
 php bin/bench.php          74 checks   real failures reproduced end to end (incl. badssl.com)
 php bin/e2e.php           304 checks   full user journey over real HTTP, isolated instance
 node bin/e2e-browser.mjs  105 checks   real Chromium: rendering, keyboard, mobile, contrast
@@ -604,7 +604,7 @@ php bin/deadcode.php       n/a         unused methods, functions, classes, CSS, 
 php bin/i18n-audit.php     n/a         translation coverage, per language
 ```
 
-**2,075 checks, all green**, plus zero dead code and a complete default catalogue.
+**2,083 checks, all green**, plus zero dead code and a complete default catalogue.
 
 Four suites deserve a word.
 

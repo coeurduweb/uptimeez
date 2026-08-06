@@ -86,4 +86,48 @@ check('avec une date d\'analyse, elle est jointe : sinon un défaut vieux d\'une
                   'analyse_le' => '2026-08-03 09:30:00'])))),
     'Mise en page cassée : a.css répond 404 (analyse du 03/08 09:30)');
 
+titre('L\'écart mesuré passe devant les indices');
+// Le 2026-08-06, deux sites du parc étaient annoncés « cassés » et n'avaient rien à l'œil.
+// Mesuré sur l'un d'eux : sa seule feuille répondait 404, son poids CSS était tombé de
+// 655 Ko à 36 Ko, et l'écart de silhouette valait 9 %. La vraie casse du 2 août, elle,
+// mesurait 71 % d'écart. Les indices se ressemblaient, la mesure les séparait.
+
+check('cassé mais la page n\'a pas bougé : requalifié en dégradé',
+    verdict($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'broken', 'messages' => ['a.css répond 404'], 'silhouette_drift' => 9])))),
+    ['etat' => 'degraded', 'cause' => 'CSS_DEGRADED']);
+
+check('et la phrase donne le chiffre, sinon la requalification est un acte de foi',
+    message($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'broken', 'messages' => ['a.css répond 404'], 'silhouette_drift' => 9])))),
+    'Ressource de style en échec, mais la page n\'a pas changé d\'aspect (9 % d\'écart mesuré) : a.css répond 404');
+
+check('la vraie casse garde son nom',
+    verdict($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'broken', 'messages' => ['a.css répond 404'], 'silhouette_drift' => 71])))),
+    ['etat' => 'degraded', 'cause' => 'CSS_BROKEN']);
+
+// La borne, dans les deux sens : elle s'écrit à l'envers une fois sur deux.
+check('à la borne exacte, on requalifie',
+    cause($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'broken', 'messages' => ['x'], 'silhouette_drift' => 20])))), 'CSS_DEGRADED');
+check('un point au-dessus, on ne requalifie plus',
+    cause($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'broken', 'messages' => ['x'], 'silhouette_drift' => 21])))), 'CSS_BROKEN');
+
+// SANS MESURE, ON NE SUPPOSE RIEN. Une sonde neuve n'a pas encore de référence : l'écart
+// est absent, et l'absence de preuve ne doit pas se lire comme une preuve d'innocence.
+check('sans écart mesuré, la casse reste une casse',
+    cause($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'broken', 'messages' => ['x']])))), 'CSS_BROKEN');
+check('un écart illisible ne vaut pas un écart nul',
+    cause($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'broken', 'messages' => ['x'], 'silhouette_drift' => null])))), 'CSS_BROKEN');
+
+// Et le plafond ne descend pas plus bas qu'il ne doit : un simple avertissement ne devient
+// pas silencieux parce que la page n'a pas bougé.
+check('un avertissement reste un avertissement',
+    cause($regle->evaluer(contexte(['check_css' => 1], reponse($page()),
+        $avecCss(['state' => 'warn', 'messages' => ['x'], 'silhouette_drift' => 0])))), 'CSS_DEGRADED');
+
 bilan('FeuillesDeStyle');

@@ -608,6 +608,10 @@ final class Runner
                     'timeout'  => (int)$mon['timeout_sec'],
                     'insecure' => (bool)$mon['ignore_ssl_errors'],
                     'ua'       => $mon['user_agent'] ?: null,
+                    // La signature de référence descend dans l'audit pour que l'écart
+                    // visuel soit mesuré AVANT les règles : c'est la seule mesure qui dit
+                    // ce qu'un visiteur voit, et les règles de gravité en ont besoin.
+                    'silhouette_ref_sig' => jdec($mon['silhouette_ref_sig'] ?? null) ?: null,
                 ]);
                 $details['css'] = $css;
                 // Vitesse ressentie : même page, mêmes ressources déjà téléchargées, donc
@@ -965,6 +969,10 @@ final class Runner
                     $upd['silhouette_ref_sig'] = jenc($sig);
                     $upd['silhouette_ref_at']  = $ts;
                     $upd['silhouette_drift']   = 0;
+                } elseif (isset($det['css']['silhouette_drift'])) {
+                    // Mesuré pendant l'audit, avec la même référence : le recalculer ici
+                    // ouvrait la porte à deux écarts différents pour une même passe.
+                    $upd['silhouette_drift'] = (int)$det['css']['silhouette_drift'];
                 } elseif ($refS) {
                     $upd['silhouette_drift'] = (int)round(Silhouette::distance($refS, $sig) * 100);
                 }
