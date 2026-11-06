@@ -3069,6 +3069,74 @@ foreach (['CSS_BROKEN' => true, 'CSS_DEGRADED' => true, 'NOINDEX' => true, 'SLOW
 check('le plancher de rétablissement vaut une minute',
     Uptimeez\Notify\Notifier::PLANCHER_RETABLISSEMENT, 60);
 
+// Les causes silencieuses et les avertissements arrivaient dans sendGrouped(),
+// qui annonce toujours une panne critique. On vérifie le journal réel : un test
+// qui recalculerait simplement les groupes ne verrait pas les règles contournées.
+section('Corrélation : seuls les sites hors service forment une panne groupée');
+$groupSettings = [];
+foreach (['db.driver' => 'sqlite', 'db.sqlite' => ':memory:',
+          'notify.quiet_hours' => '', 'notify.notify_degraded' => true,
+          'notify.mail.enabled' => true, 'notify.mail.to' => 'test@example.invalid'] as $key => $value) {
+    $groupSettings[$key] = Uptimeez\Config::get($key);
+}
+Uptimeez\Db::disconnect();
+Uptimeez\Config::set('db.driver', 'sqlite');
+Uptimeez\Config::set('db.sqlite', ':memory:');
+Uptimeez\Db::migrate();
+$pendingProperty = new ReflectionProperty(Runner::class, 'pendingAlerts');
+$groupCases = [
+    ['avertissements seuls', ['SSL_SOON', 'SSL_SOON', 'SSL_SOON'], [], 0, 3, 0],
+    ['lenteurs silencieuses seules', ['SLOW', 'SLOW', 'SLOW'], [], 0, 0, 0],
+    ['deux pannes et un avertissement', ['HTTP_5XX', 'HTTP_5XX', 'SSL_SOON'], [], 0, 1, 2],
+    ['trois vraies pannes', ['HTTP_5XX', 'HTTP_5XX', 'HTTP_5XX'], [], 1, 0, 1],
+    ['panne groupée et avertissement', ['HTTP_5XX', 'HTTP_5XX', 'HTTP_5XX', 'SSL_SOON'], [], 1, 1, 1],
+    ['avertissements désactivés', ['HTTP_5XX', 'HTTP_5XX', 'SSL_SOON'],
+        ['notify.notify_degraded' => false], 0, 0, 2],
+    ['heures calmes', ['HTTP_5XX', 'HTTP_5XX', 'SSL_SOON'],
+        ['notify.quiet_hours' => '00:00-23:59'], 0, 0, 2],
+    ['apparence dans une panne groupée', ['HTTP_5XX', 'HTTP_5XX', 'HTTP_5XX', 'SLOW'], [], 1, 0, 1],
+];
+foreach ($groupCases as [$label, $causes, $settings, $groupsExpected, $warningsExpected, $outagesExpected]) {
+    foreach (['notify.quiet_hours' => '', 'notify.notify_degraded' => true,
+              'notify.mail.enabled' => true, 'notify.mail.to' => 'test@example.invalid'] as $key => $value) {
+        Uptimeez\Config::set($key, $settings[$key] ?? $value);
+    }
+    foreach ([true, false] as $byIp) {
+        foreach (['incidents', 'notifications', 'events'] as $table) Uptimeez\Db::q('DELETE FROM ' . $table);
+        $pending = [];
+        foreach ($causes as $i => $cause) {
+            $severity = $cause === 'HTTP_5XX' ? 'down' : 'degraded';
+            $incidentId = Uptimeez\Db::insert('incidents', [
+                'monitor_id' => $i + 1, 'severity' => $severity, 'reason_code' => $cause,
+                'started_at' => now(), 'message' => 'Test',
+            ]);
+            $pending[] = [
+                'monitor' => ['id' => $i + 1, 'site_id' => $i + 1, 'name' => 'Site ' . ($i + 1),
+                    'url' => 'https://site' . ($i + 1) . '.example.invalid/',
+                    'last_ip' => $byIp ? '192.0.2.1' : '', 'notify_channels' => 'mail'],
+                'incident' => Uptimeez\Db::one('SELECT * FROM incidents WHERE id = ?', [$incidentId]),
+            ];
+        }
+        $pendingProperty->setValue(null, $pending);
+        Runner::flushAlerts();
+        $context = $label . ($byIp ? ' (IP)' : ' (domaine)');
+        $events = Uptimeez\Db::all("SELECT details FROM events WHERE kind = 'grouped_alert'");
+        check($context . ' : groupes', count($events), $groupsExpected);
+        check($context . ' : avertissements',
+            (int)Uptimeez\Db::val("SELECT COUNT(*) FROM notifications WHERE channel = 'mail' AND kind = 'degraded'"), $warningsExpected);
+        check($context . ' : pannes',
+            (int)Uptimeez\Db::val("SELECT COUNT(*) FROM notifications WHERE channel = 'mail' AND kind = 'down'"), $outagesExpected);
+        if ($groupsExpected > 0) {
+            check($context . ' : seulement trois sites en panne',
+                jdec($events[0]['details'])['sites'], ['Site 1', 'Site 2', 'Site 3']);
+        }
+        check($context . ' : file vidée', Runner::flushAlerts(), 0);
+    }
+}
+Runner::resetPassCounters();
+Uptimeez\Db::disconnect();
+foreach ($groupSettings as $key => $value) Uptimeez\Config::set($key, $value);
+
 // ET LE RAPPEL EST ÉTEINT PAR DÉFAUT. Le contrôle lit le fichier d'exemple, qui est ce qu'une
 // nouvelle installation reçoit : c'est lui qui décidait de la boîte pleine.
 check('le rappel périodique est éteint dans la configuration d\'exemple',
