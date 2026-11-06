@@ -1085,7 +1085,7 @@ final class Runner
             if ($open) {
                 $dur = max(0, time() - strtotime((string)$open['started_at']));
                 Db::update('incidents', ['ended_at' => $ts, 'duration_sec' => $dur], 'id = :__i', ['__i' => (int)$open['id']]);
-                Notifier::sendRecovery($mon, $open + ['duration_sec' => $dur]);
+                Notifier::sendRecovery($mon, array_replace($open, ['duration_sec' => $dur]));
             }
             return;
         }
