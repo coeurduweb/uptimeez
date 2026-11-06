@@ -113,14 +113,21 @@ final class Runner
         // Regroupement par adresse IP contactée, puis par domaine enregistrable :
         // deux signatures fiables d'une infrastructure commune.
         $groups = [];
+        $sent = 0;
         foreach ($pending as $item) {
+            // A warning must not complete an outage group or bypass its own
+            // delivery policy merely because it shares a server with outages.
+            if ($item['incident']['severity'] !== 'down') {
+                Notifier::sendIncident($item['monitor'], $item['incident'], 'nouveau');
+                $sent++;
+                continue;
+            }
             $mon = $item['monitor'];
             $ip  = (string)($mon['last_ip'] ?? '');
             $key = $ip !== '' ? 'ip:' . $ip : 'dom:' . registrable_domain(host_of((string)$mon['url']));
             $groups[$key][] = $item;
         }
 
-        $sent = 0;
         foreach ($groups as $key => $items) {
             // Un même site ne compte qu'une fois : trois pages d'un seul site en
             // panne, c'est un site en panne, pas trois.
