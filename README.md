@@ -590,6 +590,7 @@ A monitoring tool that lies to you is worse than no monitoring tool. So the dete
 real failures, and the interface is tested in a real browser.
 
 ```
+
 php bin/selftest.php      1,319 checks   detection logic, offline, no network needed
 php bin/regles.php        152 checks   one file per rule, each runnable alone in 0.04 s
 php bin/bench.php          74 checks   real failures reproduced end to end (incl. badssl.com)

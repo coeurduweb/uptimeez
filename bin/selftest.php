@@ -1445,6 +1445,42 @@ check('une gravité en baisse ne change pas le motif', $openI['reason_code'] ?? 
 check('ni la gravité de l\'incident', $openI['severity'] ?? null, 'down');
 check('mais le compteur d\'échecs monte', (int)($openI['checks_failed'] ?? 0) >= 3, true);
 
+// La clôture doit transmettre la durée calculée, pas la valeur encore vide lue
+// avant l'UPDATE : l'union de tableaux gardait duration_sec à gauche et faisait
+// taire même une panne d'une heure sous le plancher d'une minute.
+$recoverySettings = [];
+foreach (['notify.notify_recovery' => true, 'notify.quiet_hours' => '',
+          'notify.mail.enabled' => true, 'notify.mail.to' => 'test@example.invalid'] as $key => $value) {
+    $recoverySettings[$key] = Uptimeez\Config::get($key);
+    Uptimeez\Config::set($key, $value);
+}
+$monI['notify_channels'] = 'mail';
+foreach ([[4134, null], [4134, 0], [4134, 10], [10, null], [10, 120]] as [$elapsed, $stored]) {
+    Uptimeez\Db::q('DELETE FROM incidents');
+    Uptimeez\Db::q('DELETE FROM notifications');
+    $recoveryId = Uptimeez\Db::insert('incidents', [
+        'monitor_id' => $midI, 'severity' => 'down', 'reason_code' => 'HTTP_5XX',
+        'started_at' => date('Y-m-d H:i:s', time() - $elapsed),
+        'duration_sec' => $stored, 'notify_count' => 1,
+    ]);
+    $beforeClose = time();
+    $refl->invoke(null, $monI, 'up', []);
+    $closed = Uptimeez\Db::one('SELECT * FROM incidents WHERE id = ?', [$recoveryId]);
+    $notice = Uptimeez\Db::all('SELECT channel, kind, response FROM notifications');
+    $label = $elapsed . ' s, durée stockée ' . var_export($stored, true);
+    check('clôture avec durée réelle : ' . $label,
+        $closed['ended_at'] !== null && (int)$closed['duration_sec'] >= $elapsed
+        && (int)$closed['duration_sec'] <= $elapsed + time() - $beforeClose, true);
+    check('canal de rétablissement : ' . $label,
+        array_map(fn(array $n): array => [$n['channel'], $n['kind']], $notice),
+        [[$elapsed >= 60 ? 'mail' : 'silencieux', 'up']]);
+    if ($elapsed >= 60) {
+        check('rétablissement passe la politique : ' . $label,
+            $notice[0]['response'] ?? null, 'suite · no-mail');
+    }
+}
+foreach ($recoverySettings as $key => $value) Uptimeez\Config::set($key, $value);
+
 Uptimeez\Db::disconnect();
 Uptimeez\Config::set('db.sqlite', $prevDbI);
 Uptimeez\Db::migrate();
